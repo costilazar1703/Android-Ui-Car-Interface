@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shell-ul aplicației: bară de status (non-focusabilă, pur informativă, ca la iDrive)
+  + containerul de ecrane. Un singur ConstraintLayout, plat.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:keepScreenOn="true">
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/gTopBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.115" />
+
+    <TextView
+        android:id="@+id/clock"
+        style="@style/Text.Title"
+        android:layout_width="@dimen/clock_width"
+        android:layout_height="0dp"
+        android:layout_marginStart="@dimen/screen_margin"
+        android:gravity="center_vertical"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toTopOf="@id/gTopBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="14:32" />
+
+    <TextView
+        android:id="@+id/screenTitle"
+        style="@style/Text.Label"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="16dp"
+        android:gravity="center_vertical"
+        android:textColor="@color/text_primary"
+        android:textSize="13sp"
+        app:layout_constraintBottom_toTopOf="@id/gTopBar"
+        app:layout_constraintEnd_toStartOf="@id/statusMedia"
+        app:layout_constraintStart_toEndOf="@id/clock"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="HOME" />
+
+    <TextView
+        android:id="@+id/statusMedia"
+        style="@style/Text.Body"
+        android:layout_width="@dimen/status_field_width"
+        android:layout_height="0dp"
+        android:gravity="center_vertical|end"
+        app:layout_constraintBottom_toTopOf="@id/gTopBar"
+        app:layout_constraintEnd_toStartOf="@id/statusNet"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="Spotify" />
+
+    <TextView
+        android:id="@+id/statusNet"
+        style="@style/Text.Body"
+        android:layout_width="@dimen/status_field_width"
+        android:layout_height="0dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="@dimen/screen_margin"
+        android:gravity="center_vertical|end"
+        app:layout_constraintBottom_toTopOf="@id/gTopBar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="iPhone · online" />
+
+    <View
+        android:id="@+id/topDivider"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/divider_height"
+        android:background="@color/divider"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/gTopBar" />
+
+    <FrameLayout
+        android:id="@+id/screenContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/topDivider" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

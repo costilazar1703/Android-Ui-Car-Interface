@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ATENȚIE: valorile în dp presupun ~160 dpi (1280x480 px = 1280x480 dp).
+  Rulează `adb shell wm density` pe unitate ÎNAINTE de fine-tuning.
+  Dacă raportează 240 dpi ai doar ~853x320 dp — reduce tot ce e mai jos cu ~1/3.
+  Layout-ul în sine folosește procente (chain + Guideline), deci nu se sparge;
+  doar textul și padding-urile trebuie recalibrate aici, într-un singur loc.
+-->
+<resources>
+    <dimen name="screen_margin">10dp</dimen>
+    <dimen name="card_gap">8dp</dimen>
+    <dimen name="card_padding">12dp</dimen>
+    <dimen name="card_corner">2dp</dimen>
+    <dimen name="focus_stroke">2dp</dimen>
+    <dimen name="idle_stroke">1dp</dimen>
+
+    <!-- Rândurile de listă sunt intenționat mai înalte decât standardul Android (48dp). -->
+    <dimen name="row_height">52dp</dimen>
+    <dimen name="row_padding_h">14dp</dimen>
+    <dimen name="divider_height">1dp</dimen>
+
+    <dimen name="topbar_height">54dp</dimen>
+    <dimen name="clock_width">76dp</dimen>
+    <!-- Lățime fixă pe orice se updatează des: fără WRAP_CONTENT, fără relayout. -->
+    <dimen name="status_field_width">150dp</dimen>
+
+    <dimen name="gauge_size_card">120dp</dimen>
+    <dimen name="gauge_size_full">300dp</dimen>
+    <dimen name="app_icon_size">56dp</dimen>
+    <dimen name="app_cell_width">108dp</dimen>
+    <dimen name="cover_size">150dp</dimen>
+
+    <!-- Meniu principal. Înălțimea rândurilor NU e fixată aici: cele 5 rânduri
+         împart pe verticală spațiul disponibil cu weight, ca să încapă exact 5
+         indiferent de densitatea raportată de unitate. -->
+    <dimen name="menu_icon_size">30dp</dimen>
+    <dimen name="menu_row_padding_h">18dp</dimen>
+    <dimen name="menu_row_gap">3dp</dimen>
+    <dimen name="page_dot_size">7dp</dimen>
+
+    <!-- Ecrane split (Setări, Bluetooth, Telefon) -->
+    <dimen name="split_nav_row_height">46dp</dimen>
+    <dimen name="detail_row_height">48dp</dimen>
+</resources>

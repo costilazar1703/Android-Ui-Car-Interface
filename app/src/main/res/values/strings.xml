@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">E92</string>
+
+    <!-- ==================== Meniul principal (10 intrări) ==================== -->
+    <string name="menu_media">Media / Radio</string>
+    <string name="menu_bluetooth">Bluetooth Audio</string>
+    <string name="menu_telephone">Telephone</string>
+    <string name="menu_navigation">Navigation</string>
+    <string name="menu_carplay">Apple CarPlay</string>
+    <string name="menu_car_info">Car Info</string>
+    <string name="menu_dashboard">Dashboard</string>
+    <string name="menu_settings">Settings</string>
+    <string name="menu_connecteddrive">ConnectedDrive</string>
+    <string name="menu_messages">Messages</string>
+
+    <string name="nav_pick_waze">Waze</string>
+    <string name="nav_pick_chrome">Google Chrome</string>
+    <string name="nav_pick_hint">Rotate to choose, press to open, BACK to cancel</string>
+
+    <string name="app_not_set">Not assigned — set it in Settings</string>
+    <string name="app_not_installed">App not installed: %1$s</string>
+
+    <!-- ===================== Bluetooth / Telefon / Mesaje ==================== -->
+    <string name="bt_devices">Devices</string>
+    <string name="bt_audio">Audio</string>
+    <string name="bt_connect_new">Connect new mobile</string>
+    <string name="bt_paired">Paired devices</string>
+    <string name="bt_settings">Bluetooth settings</string>
+    <string name="bt_hint">Pairing is handled by the head unit\'s own Bluetooth stack</string>
+
+    <string name="tel_recent">Recent calls</string>
+    <string name="tel_contacts">Contacts</string>
+    <string name="tel_dialpad">Dial pad</string>
+    <string name="tel_hint">Awaiting HFP/PBAP discovery on the head unit</string>
+
+    <string name="msg_inbox">Inbox</string>
+    <string name="msg_empty">No messages</string>
+
+    <!-- ============================== Setări ================================ -->
+    <string name="set_nav_assigned">Assigned apps</string>
+    <string name="set_nav_buttons">Button mapping</string>
+    <string name="set_nav_system">System</string>
+    <string name="set_nav_launcher">Launcher</string>
+    <string name="set_carplay_pkg">Apple CarPlay app</string>
+    <string name="set_dashboard_pkg">Dashboard app</string>
+    <string name="set_carinfo_pkg">Car Info app</string>
+    <string name="set_clear">Clear</string>
+    <string name="set_assigned_hint">Press a row to pick an installed app. OPTION clears it.</string>
+    <string name="set_keymap_hint">Press a row, then press the physical button you want to bind.</string>
+    <string name="set_system_hint">Opens the head unit\'s own Android settings.</string>
+    <string name="set_bluetooth">Bluetooth settings</string>
+    <string name="set_diagnostics">Diagnostics</string>
+    <string name="set_dashboard_builtin">built-in gauges</string>
+
+    <string name="tile_dashboard">Dashboard</string>
+    <string name="tile_media">Media</string>
+    <string name="tile_nav">Navigation</string>
+    <string name="tile_apps">Apps</string>
+    <string name="tile_settings">Settings</string>
+    <string name="tile_phone">Telephone</string>
+    <string name="tile_diagnostics">Diagnostics</string>
+
+    <string name="speed">Speed</string>
+    <string name="rpm">Engine</string>
+    <string name="unit_kmh">km/h</string>
+    <string name="unit_rpm">x1000 rpm</string>
+
+    <string name="media_no_session">No active source</string>
+    <string name="media_grant_access">Notification access required</string>
+    <string name="media_sources">Sources</string>
+    <string name="media_queue">Queue</string>
+
+    <string name="net_online">Online</string>
+    <string name="net_offline">No connection</string>
+    <string name="net_connecting">Connecting…</string>
+    <string name="net_no_internet">Connected · no internet</string>
+    <string name="net_wifi_off">Wi-Fi off</string>
+
+    <string name="nav_launch">Start navigation</string>
+    <string name="nav_not_installed">Navigation app not installed</string>
+
+    <string name="learn_key_prompt">Press the key to bind…</string>
+    <string name="learn_cancel">Rotate to cancel</string>
+    <string name="unbound">not bound</string>
+
+    <string name="phone_placeholder">Telephone — pending Bluetooth HFP/PBAP discovery</string>
+
+    <string name="diag_keys">Key events</string>
+    <string name="diag_state">Vehicle state</string>
+    <string name="diag_clear">Clear log</string>
+
+    <string name="set_section_general">General</string>
+    <string name="set_section_keymap">Key mapping</string>
+    <string name="set_can_source">CAN source</string>
+    <string name="set_animations">Transitions</string>
+    <string name="set_nav_app">Navigation app</string>
+    <string name="set_notification_access">Notification access</string>
+    <string name="set_wifi">Wi-Fi settings</string>
+    <string name="set_reset_keymap">Reset key mapping</string>
+    <string name="set_android_settings">Android settings</string>
+    <string name="on">on</string>
+    <string name="off">off</string>
+    <string name="granted">granted</string>
+    <string name="not_granted">not granted</string>
+</resources>

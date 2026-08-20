@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Meniul principal, stil BMW NBT / ID6 aftermarket.
+
+    [ rotiță 3D ] ~~~linie~~~ [ listă de 5 meniuri, 2 pagini ]
+
+  Pozițiile sunt procentuale (Guideline), deci layout-ul nu depinde de densitatea
+  raportată de unitate. Rândurile din listă se construiesc în cod și împart
+  înălțimea cu weight, ca să încapă EXACT 5 pe pagină la orice densitate.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/gWheelEnd"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.255" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/gListStart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.325" />
+
+    <!-- ============================== ROTIȚA ============================= -->
+    <ro.e92.launcher.ui.widget.IDriveWheelView
+        android:id="@+id/wheel"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toStartOf="@id/gWheelEnd"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Iconița meniului focusat, la scară mică, în centrul rotiței.
+         Se schimbă instantaneu la fiecare mutare de focus. -->
+    <ImageView
+        android:id="@+id/wheelIcon"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:contentDescription="@null"
+        android:scaleType="fitCenter"
+        app:layout_constraintBottom_toBottomOf="@id/wheel"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toEndOf="@id/wheel"
+        app:layout_constraintStart_toStartOf="@id/wheel"
+        app:layout_constraintTop_toTopOf="@id/wheel"
+        app:layout_constraintWidth_default="percent"
+        app:layout_constraintWidth_percent="0.072"
+        tools:src="@drawable/ic_menu_media" />
+
+    <TextView
+        android:id="@+id/wheelLabel"
+        style="@style/Text.Label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:textColor="@color/accent_focus"
+        app:layout_constraintEnd_toEndOf="@id/wheel"
+        app:layout_constraintStart_toStartOf="@id/wheel"
+        app:layout_constraintTop_toBottomOf="@id/wheelIcon"
+        tools:text="MEDIA" />
+
+    <!-- ============================= CONECTOR ============================ -->
+    <ro.e92.launcher.ui.widget.ConnectorView
+        android:id="@+id/connector"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/gListStart"
+        app:layout_constraintStart_toStartOf="@id/gWheelEnd"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- =============================== LISTĂ ============================= -->
+    <FrameLayout
+        android:id="@+id/viewport"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginEnd="@dimen/screen_margin"
+        android:clipChildren="true"
+        android:clipToPadding="true"
+        app:layout_constraintBottom_toTopOf="@id/pageDots"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/gListStart"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <!-- Banda cu cele două pagini. Lățimea fiecărei pagini se fixează în cod,
+             după ce viewport-ul e măsurat; schimbarea de pagină e o translație. -->
+        <LinearLayout
+            android:id="@+id/pageStrip"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal" />
+
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/pageDots"
+        android:layout_width="wrap_content"
+        android:layout_height="18dp"
+        android:layout_marginEnd="@dimen/screen_margin"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
