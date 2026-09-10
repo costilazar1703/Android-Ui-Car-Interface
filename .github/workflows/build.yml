@@ -1,0 +1,61 @@
+# Compilează launcher-ul la fiecare push pe main și la fiecare pull request.
+#
+# Scopul practic: să vezi bifa verde pe PR ÎNAINTE să dai merge, ca să nu intre
+# în main cod care nu compilează — exact situația în care era repo-ul înainte.
+#
+# Bonus: APK-urile rămân atașate rulării, așa că poți descărca build-ul de pe
+# telefon sau de pe orice calculator, fără să mai compilezi local înainte de
+# drumul la mașină.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Permite pornirea manuală din tab-ul Actions.
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Compilează APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ia codul
+        uses: actions/checkout@v4
+
+      # JDK 17: e ce cere AGP 8.5 și ce e configurat în app/build.gradle.kts
+      # (sourceCompatibility / jvmTarget = 17). Nu urca la 21 fără să schimbi
+      # și acolo.
+      - name: Pregătește JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Ține cache-ul Gradle între rulări; fără el fiecare build ar redescărca
+      # tot lanțul de dependențe.
+      - name: Pregătește Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Runner-ul e Linux: dacă bitul de execuție nu a ajuns în git de pe
+      # Windows, ./gradlew ar da "Permission denied".
+      - name: Fă gradlew executabil
+        run: chmod +x ./gradlew
+
+      # Debug ȘI release. Release-ul e cel care ajunge pe unitate și e singurul
+      # care trece prin R8 + lintVital, deci e singurul care poate pica din
+      # motive pe care un build de debug nu le vede.
+      - name: Compilează debug + release
+        run: ./gradlew assembleDebug assembleRelease --stacktrace
+
+      - name: Atașează APK-urile
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: e92launcher-apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+          if-no-files-found: error

@@ -39,6 +39,16 @@ android {
         viewBinding = true
     }
 
+    lint {
+        // Aplicația nu ajunge niciodată în Google Play: se instalează cu adb pe o
+        // singură unitate. targetSdk 27 e o alegere, nu o scăpare — ridicarea lui
+        // ar strica exact lucrurile de care depinde launcher-ul pe Android 8.1
+        // (immersive sticky, comportamentul de HOME, permisiunile de overlay).
+        // Fără linia asta, `assembleRelease` eșuează la lintVital, deși APK-ul
+        // e deja construit și bun.
+        disable += "ExpiredTargetSdkVersion"
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
