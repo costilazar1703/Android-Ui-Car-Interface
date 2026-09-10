@@ -50,6 +50,17 @@ abstract class Screen(protected val host: ScreenHost) {
     /** Afișat în bara de sus. */
     abstract val title: String
 
+    /**
+     * Ecran desenat PESTE cel de dedesubt, care rămâne vizibil (un pop-up).
+     *
+     * Nu folosim [android.app.AlertDialog] pentru așa ceva: un dialog deschide o
+     * fereastră proprie, iar tastele fizice ajung la ea, nu la Activity — adică
+     * exact la `onKeyDown`-ul nostru, care e singurul loc unde rotița iDrive e
+     * tradusă în acțiuni. Un ecran obișnuit din [ScreenStack], doar cu fundal
+     * semi-transparent, păstrează întreg lanțul de input.
+     */
+    open val isOverlay: Boolean = false
+
     protected abstract fun onCreateView(inflater: LayoutInflater, container: ViewGroup): View
 
     fun createView(inflater: LayoutInflater, container: ViewGroup): View {

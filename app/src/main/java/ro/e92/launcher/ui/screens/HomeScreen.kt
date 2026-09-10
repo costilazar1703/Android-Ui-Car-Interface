@@ -146,6 +146,16 @@ class HomeScreen(host: ScreenHost) : Screen(host) {
             pageContainers.add(column)
         }
 
+        // Banda trebuie să fie lată cât TOATE paginile la un loc.
+        // wrap_content nu ajunge: într-un FrameLayout copilul e măsurat cu
+        // AT_MOST = lățimea viewport-ului, deci banda ar raporta o singură
+        // pagină, iar a doua coloană ar cădea în afara propriilor ei margini și
+        // ar fi tăiată la desenare (clipChildren e true implicit). Rezultatul ar
+        // fi o pagină 2 complet invizibilă, oricât am translata.
+        binding.pageStrip.layoutParams = binding.pageStrip.layoutParams.also {
+            it.width = pageWidth * MenuCatalog.pageCount
+        }
+
         built = true
 
         // Graful de focus există abia acum, când rândurile au view-uri reale.

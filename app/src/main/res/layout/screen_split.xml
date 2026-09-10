@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Layout-ul split BMW, folosit de Setări / Bluetooth / Telefon / Mesaje:
+
+    [ categorii ]│[ titlu categorie          ]
+    [           ]│[ rânduri de detaliu       ]
+    [           ]│[ hint                     ]
+
+  Coloana din stânga are lățime procentuală (Guideline), nu fixă: la 1280 px
+  iese ~410 px, suficient pentru etichete lungi fără să sufoce detaliul.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/gSplit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.32" />
+
+    <!-- ============================ NAVIGAȚIE ============================= -->
+    <View
+        android:id="@+id/navBackground"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/bg_split_nav"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/gSplit"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/navHeader"
+        style="@style/Text.Label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/row_padding_h"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="@dimen/row_padding_h"
+        android:textColor="@color/accent_focus"
+        app:layout_constraintEnd_toStartOf="@id/gSplit"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="SETTINGS" />
+
+    <!-- Puține intrări (3-4): un LinearLayout construit în cod e mai ieftin decât
+         un RecyclerView cu tot ce aduce el. -->
+    <LinearLayout
+        android:id="@+id/navList"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/gSplit"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/navHeader" />
+
+    <View
+        android:id="@+id/splitDivider"
+        android:layout_width="@dimen/divider_height"
+        android:layout_height="0dp"
+        android:background="@color/divider"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="@id/gSplit"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- ============================== DETALIU ============================= -->
+    <TextView
+        android:id="@+id/detailTitle"
+        style="@style/Text.Label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/row_padding_h"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="@dimen/screen_margin"
+        android:textColor="@color/text_primary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/gSplit"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="ASSIGNED APPS" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/detailList"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="@dimen/screen_margin"
+        android:clipToPadding="false"
+        android:scrollbars="none"
+        app:layout_constraintBottom_toTopOf="@id/detailHint"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/gSplit"
+        app:layout_constraintTop_toBottomOf="@id/detailTitle" />
+
+    <!-- Hint-ul e ultimul lucru din ecran, nu primul: explică o excepție
+         (OPTION șterge, apasă apoi butonul fizic), nu ce e evident. -->
+    <TextView
+        android:id="@+id/detailHint"
+        style="@style/Text.Body"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/row_padding_h"
+        android:layout_marginEnd="@dimen/screen_margin"
+        android:layout_marginBottom="8dp"
+        android:textColor="@color/text_tertiary"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/gSplit"
+        tools:text="Press a row to pick an installed app." />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

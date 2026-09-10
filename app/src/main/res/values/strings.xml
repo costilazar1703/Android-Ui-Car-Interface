@@ -103,4 +103,19 @@
     <string name="off">off</string>
     <string name="granted">granted</string>
     <string name="not_granted">not granted</string>
+    <!-- Rânduri adăugate de ecranele split Bluetooth / Telefon / Mesaje. -->
+    <string name="bt_play">Play</string>
+    <string name="bt_pause">Pause</string>
+    <string name="bt_next">Next track</string>
+    <string name="bt_prev">Previous track</string>
+    <string name="bt_no_devices">No paired devices</string>
+    <string name="bt_unavailable">Bluetooth unavailable on this unit</string>
+
+    <string name="tel_open_dialer">Open dialer</string>
+    <string name="tel_open_contacts">Open contacts</string>
+    <string name="tel_pending_hfp">Call list requires the head unit\'s HFP profile</string>
+    <string name="tel_pending_pbap">Phonebook requires the head unit\'s PBAP profile</string>
+
+    <string name="msg_open_app">Open messaging app</string>
+    <string name="msg_hint">Messages arrive over the head unit\'s Bluetooth MAP profile</string>
 </resources>
