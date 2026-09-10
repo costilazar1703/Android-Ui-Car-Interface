@@ -41,8 +41,11 @@ class ScreenStack(
     fun push(screen: Screen) {
         stack.lastOrNull()?.let { top ->
             top.savedFocusId = focus.focusedId
+            // Observatorii se opresc în ambele cazuri — nimic nu colectează date
+            // pentru un ecran cu care nu se mai poate interacționa. Doar view-ul
+            // rămâne pe ecran sub un pop-up, ca să se vadă peste ce s-a deschis.
             top.screen.hide()
-            top.screen.root?.visibility = View.GONE
+            if (!screen.isOverlay) top.screen.root?.visibility = View.GONE
         }
 
         val entry = Entry(screen)

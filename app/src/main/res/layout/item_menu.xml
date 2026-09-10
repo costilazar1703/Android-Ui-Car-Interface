@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Un card din meniul principal.
+
+  Înălțimea NU e fixată aici: HomeScreen îl adaugă cu weight=1 într-o coloană de
+  5, deci cele 5 carduri împart exact înălțimea paginii la orice densitate.
+
+  Iconița și textul au duplicateParentState="true" ca să preia state_activated de
+  la card și să-și schimbe culoarea din ColorStateList — un singur loc care
+  comandă tot aspectul selecției, fără cod în onFocus.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_menu_tile"
+    android:clickable="true"
+    android:duplicateParentState="false"
+    android:focusable="false">
+
+    <ImageView
+        android:id="@+id/menuIcon"
+        android:layout_width="@dimen/menu_icon_size"
+        android:layout_height="@dimen/menu_icon_size"
+        android:layout_marginStart="@dimen/menu_row_padding_h"
+        android:contentDescription="@null"
+        android:duplicateParentState="true"
+        android:scaleType="fitCenter"
+        android:tint="@color/menu_icon_tint"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:src="@drawable/ic_menu_media" />
+
+    <TextView
+        android:id="@+id/menuTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_marginEnd="12dp"
+        android:duplicateParentState="true"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-condensed"
+        android:includeFontPadding="false"
+        android:singleLine="true"
+        android:textColor="@color/menu_title_text"
+        android:textSize="19sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/menuChevron"
+        app:layout_constraintHorizontal_bias="0"
+        app:layout_constraintStart_toEndOf="@id/menuIcon"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="Media / Radio" />
+
+    <!-- Săgeata de submeniu. Nu e decorativă: spune că elementul DESCHIDE ceva,
+         spre deosebire de rândurile care doar comută o valoare. -->
+    <TextView
+        android:id="@+id/menuChevron"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/menu_row_padding_h"
+        android:duplicateParentState="true"
+        android:fontFamily="sans-serif-condensed"
+        android:includeFontPadding="false"
+        android:text="\u203A"
+        android:textColor="@color/menu_icon_tint"
+        android:textSize="24sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

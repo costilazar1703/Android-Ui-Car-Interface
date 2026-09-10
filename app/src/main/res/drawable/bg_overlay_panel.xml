@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Panoul pop-up-urilor desenate peste ecranul curent (ex. alegerea navigației). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/bg_alt" />
+    <stroke
+        android:width="@dimen/idle_stroke"
+        android:color="@color/accent_focus_dim" />
+    <corners android:radius="@dimen/card_corner" />
+</shape>

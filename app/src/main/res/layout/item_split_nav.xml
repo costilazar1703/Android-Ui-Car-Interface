@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- O categorie din coloana stângă a unui ecran split. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/navTitle"
+    style="@style/ListRow"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/split_nav_row_height"
+    android:clickable="true"
+    android:focusable="false"
+    tools:text="Assigned apps" />

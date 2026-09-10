@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- Normal permission pe API 27: doar citirea listei de aparate imperecheate. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
     <!-- Necesară doar dacă unitatea permite install ca system app; ignorată altfel. -->
     <uses-permission
         android:name="android.permission.MEDIA_CONTENT_CONTROL"
