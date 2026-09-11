@@ -207,6 +207,15 @@ class SettingsScreen(
             id = "diagnostics",
             title = context.getString(R.string.set_diagnostics),
             onActivate = { host.push(DiagnosticsScreen(host)) }
+        ),
+        // Salutul de mod se declanseaza normal din CAN, pe tranzitia spre Sport.
+        // Randul asta exista ca sa poata fi vazut si reglat fara masina - si ca
+        // sa se poata verifica in masina ca animatia merge, separat de intrebarea
+        // daca unitatea raporteaza sau nu butonul Sport.
+        DetailRow(
+            id = "sport_preview",
+            title = context.getString(R.string.diag_sport_test),
+            onActivate = { host.push(DriveSportScreen(host)) }
         )
     )
 

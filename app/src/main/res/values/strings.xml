@@ -141,4 +141,9 @@
     <string name="weather_assign">Assign weather app</string>
 
     <string name="not_installed_short">not installed</string>
+    <!-- Salutul de mod de condus. -->
+    <string name="drive_mode_kicker">Drive</string>
+    <string name="drive_mode_sport">Sport</string>
+    <string name="drive_mode_comfort">Comfort</string>
+    <string name="diag_sport_test">Test Drive Sport animation</string>
 </resources>

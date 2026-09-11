@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Linia de sub numele modului: aprinsă la mijloc, stinsă spre capete, ca un
+     filament. Un dreptunghi plin ar arăta a bară de progres. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="0"
+        android:startColor="@color/transparent"
+        android:centerColor="@color/glow_core"
+        android:endColor="@color/transparent"
+        android:type="linear" />
+</shape>
