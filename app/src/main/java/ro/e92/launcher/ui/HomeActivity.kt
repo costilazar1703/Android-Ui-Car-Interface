@@ -354,11 +354,19 @@ class HomeActivity : ComponentActivity(), ScreenHost {
      * JPEG de 1280x480 dureaza cateva milisecunde si ar manca primele cadre.
      */
     private fun showBackground(resId: Int) {
-        if (resId == 0 || resId == currentBackground) return
+        if (resId == currentBackground) return
+        currentBackground = resId
 
-        if (currentBackground == 0 || !Services.prefs.animationsEnabled) {
+        // 0 = ecran fara fotografie. Stingem imaginea si eliberam bitmap-ul:
+        // pe 2 GB nu are rost sa tinem 2,4 MB decodati pentru ceva ce nu se vede.
+        if (resId == 0) {
+            binding.screenBackground.animate().cancel()
+            binding.screenBackground.setImageDrawable(null)
+            return
+        }
+
+        if (!Services.prefs.animationsEnabled) {
             binding.screenBackground.setImageResource(resId)
-            currentBackground = resId
             return
         }
 
@@ -373,7 +381,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                 binding.screenBackgroundNext.setImageDrawable(null)
             }
             .start()
-        currentBackground = resId
     }
 
     // ------------------------------------------------------------- top bar

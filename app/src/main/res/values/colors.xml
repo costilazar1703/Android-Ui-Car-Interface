@@ -66,4 +66,7 @@
     <color name="row_idle_stroke">#2EFFFFFF</color>
     <color name="row_focus_start">#D9662A00</color>
     <color name="row_focus_end">#73200E02</color>
+    <!-- Fundalul ecranelor de meniu (fara fotografie). -->
+    <color name="bg_menu_center">#12100F</color>
+    <color name="bg_menu_edge">#050505</color>
 </resources>

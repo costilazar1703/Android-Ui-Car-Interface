@@ -9,9 +9,9 @@
       │   ╰───╯        [ rând ]              • ○     │
       └──────────────────────────────────────────────┘
 
-  Treimea de sus rămâne GOALĂ intenționat. Fotografia de fundal își ține
-  subiectul în dreapta-sus, iar un ecran care ocupă toată suprafața ar acoperi
-  exact partea care merită văzută. Conținutul coboară, fundalul respiră.
+  Treimea de sus rămâne GOALĂ intenționat: un ecran plin până sus, cu doar patru
+  rânduri de conținut, arată înghesuit. Aerul de deasupra e ce face diferența
+  dintre un meniu de mașină și o listă de setări Android.
 
   Costul e că intră 4 rânduri pe pagină în loc de 5 — vezi PAGE_SIZE în
   WheelMenuScreen. Meniurile cu 5 intrări capătă a doua pagină, semnalată de
@@ -27,13 +27,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Voalul diagonal: opac jos-stânga, unde stă conținutul; transparent
-         sus-dreapta, unde e motorul. -->
+    <!-- Fundalul ecranelor de meniu: un gradient simplu, nu o fotografie.
+         Ecranele astea sunt de lucru — te uiți la ce scrie pe rând. -->
     <View
         android:id="@+id/menuScrim"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="@drawable/scrim_menu"
+        android:background="@drawable/bg_menu_screen"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

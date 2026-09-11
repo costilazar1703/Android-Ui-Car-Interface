@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fundalul ecranelor de meniu: gradient radial discret, nu negru plat.
+
+  Un negru uniform pe 1280x480 arată ca un ecran stins, mai ales lângă grila
+  principală care are fotografie. Un centru puțin mai deschis dă adâncime fără
+  să coste nimic — e un shader, nu un bitmap.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:type="radial"
+        android:centerX="0.32"
+        android:centerY="0.62"
+        android:gradientRadius="70%p"
+        android:startColor="@color/bg_menu_center"
+        android:endColor="@color/bg_menu_edge" />
+</shape>

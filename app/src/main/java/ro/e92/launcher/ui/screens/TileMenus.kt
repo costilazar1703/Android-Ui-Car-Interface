@@ -190,7 +190,7 @@ class CarInfoMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
             ),
             WheelEntry(
                 id = "car_app",
-                icon = R.drawable.ic_tile_e92,
+                icon = R.drawable.ic_menu_car_info,
                 title = context.getString(R.string.car_vendor_app),
                 value = AppLaunch.statusLabel(context, prefs.carInfoPackage),
                 onActivate = { AppLaunch.launch(context, prefs.carInfoPackage, menuTitle) }
