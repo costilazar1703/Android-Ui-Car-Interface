@@ -6,44 +6,62 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import androidx.annotation.DrawableRes
 import ro.e92.launcher.R
 import ro.e92.launcher.core.Services
 import ro.e92.launcher.databinding.ItemMenuBinding
 import ro.e92.launcher.databinding.ScreenHomeBinding
 import ro.e92.launcher.focus.FocusTarget
-import ro.e92.launcher.ui.MainMenuAction
-import ro.e92.launcher.ui.MenuCatalog
 import ro.e92.launcher.ui.Screen
 import ro.e92.launcher.ui.ScreenHost
 import kotlin.math.abs
 
+/** Un rând dintr-un meniu cu rotiță. */
+class WheelEntry(
+    val id: String,
+    @DrawableRes val icon: Int,
+    val title: String,
+    val value: String = "",
+    val onActivate: () -> Unit = {},
+    /** Butonul OPTION pe rândul selectat. De obicei „șterge / dezleagă". */
+    val onOption: (() -> Unit)? = null
+)
+
 /**
- * Meniul principal: rotița 3D în stânga, cele 10 meniuri în dreapta,
- * 5 pe pagină, două pagini.
+ * Al doilea nivel al interfeței: rotița în stânga, rândurile meniului în dreapta.
  *
- * Trei elemente vizuale se mișcă împreună la fiecare mutare de focus și sunt
- * conduse dintr-un singur loc ([onItemFocused]):
- *   1. iconița din centrul rotiței devine iconița meniului focusat;
- *   2. marcajul aprins de pe rim se rotește la unghiul indexului focusat;
+ * Ăsta era ecranul principal înainte să intre grila de dale ID6 deasupra lui.
+ * Acum e un ȘABLON: fiecare dală din [ro.e92.launcher.ui.TileCatalog] își
+ * deschide propriul meniu cu aceeași înfățișare, dar cu rânduri proprii.
+ *
+ * Trei elemente se mișcă împreună la fiecare mutare de focus, conduse dintr-un
+ * singur loc ([onItemFocused]):
+ *   1. iconița din centrul rotiței devine iconița rândului focusat;
+ *   2. segmentul aprins de pe inel se rotește la unghiul indexului focusat;
  *   3. conectorul se re-trasează spre mijlocul rândului focusat.
  *
- * Paginarea nu e un gest separat de navigare: focusul e sursa de adevăr, iar
- * pagina îl urmează. Rotești peste elementul 5 → pagina alunecă singură.
- * Swipe-ul cu degetul e doar o scurtătură care mută focusul, nu un al doilea
- * model de stare.
+ * Paginarea nu e un gest separat: focusul e sursa de adevăr, pagina îl urmează.
+ *
+ * [entries] e o funcție, nu o listă: rândurile arată valori care se schimbă
+ * (aplicația atribuită, piesa care cântă), iar [reload] le recitește fără să
+ * reconstruiască ecranul.
  */
-class HomeScreen(host: ScreenHost) : Screen(host) {
+abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
 
-    override val title: String get() = "MENU"
+    /** Textul de sub iconița din centrul rotiței, când nu e nimic focusat. */
+    protected abstract val menuTitle: String
+
+    protected abstract fun entries(): List<WheelEntry>
 
     private lateinit var binding: ScreenHomeBinding
 
-    private val rowViews = ArrayList<View>(MenuCatalog.items.size)
-    private val pageContainers = ArrayList<LinearLayout>(MenuCatalog.pageCount)
-    private val dotViews = ArrayList<View>(MenuCatalog.pageCount)
+    private var rows: List<WheelEntry> = emptyList()
+    private val rowViews = ArrayList<View>(PAGE_SIZE * 2)
+    private val dotViews = ArrayList<View>(2)
 
     private var currentPage = 0
     private var pageWidth = 0
+    private var pageCount = 1
     private var built = false
 
     // Reutilizate la fiecare mutare de focus — rotița poate genera zeci de
@@ -53,14 +71,13 @@ class HomeScreen(host: ScreenHost) : Screen(host) {
 
     private lateinit var swipeDetector: GestureDetector
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup) =
+    override val title: String get() = menuTitle.uppercase()
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup): View =
         ScreenHomeBinding.inflate(inflater, container, false).also { binding = it }.root
 
     override fun onShow() {
-        buildDots()
         setupSwipe()
-
-        // Lățimea unei pagini = lățimea viewport-ului, cunoscută abia după măsurare.
         binding.viewport.post {
             if (!built) buildPages()
         }
@@ -68,37 +85,51 @@ class HomeScreen(host: ScreenHost) : Screen(host) {
 
     override fun focusTargets(): List<FocusTarget> {
         if (!built) return emptyList()
-        return MenuCatalog.items.mapIndexed { index, item ->
+        return rows.mapIndexed { index, entry ->
             FocusTarget(
-                id = item.id,
+                id = entry.id,
                 view = rowViews[index],
-                onActivate = { activate(item.action) },
+                onActivate = entry.onActivate,
+                onOption = entry.onOption,
                 onFocus = { focused -> if (focused) onItemFocused(index) },
-                // Tilt sus/jos = vecinul din aceeași pagină; la capete trece
-                // în pagina alăturată, exact ca rotirea.
-                up = MenuCatalog.items.getOrNull(index - 1)?.id,
-                down = MenuCatalog.items.getOrNull(index + 1)?.id
+                up = rows.getOrNull(index - 1)?.id,
+                down = rows.getOrNull(index + 1)?.id
             )
         }
     }
 
+    /**
+     * Recitește rândurile păstrând focusul. De folosit după o acțiune care
+     * schimbă ce scrie pe ele (o aplicație atribuită, un play/pause).
+     */
+    protected fun reload(keepId: String? = null) {
+        if (!built) return
+        val restore = keepId ?: rowViews.indices
+            .firstOrNull { rowViews[it].isActivated }
+            ?.let { rows[it].id }
+        built = false
+        buildPages(restore)
+    }
+
     // ------------------------------------------------------------ construcție
 
-    private fun buildPages() {
+    private fun buildPages(restoreId: String? = null) {
         val viewportWidth = binding.viewport.width
         if (viewportWidth <= 0) return
 
+        rows = entries()
+        pageCount = maxOf(1, (rows.size + PAGE_SIZE - 1) / PAGE_SIZE)
         pageWidth = viewportWidth
+
         val inflater = LayoutInflater.from(context)
-
         binding.pageStrip.removeAllViews()
+        binding.pageStrip.translationX = 0f
         rowViews.clear()
-        pageContainers.clear()
+        currentPage = 0
 
-        for (page in 0 until MenuCatalog.pageCount) {
-            // Cele 5 rânduri împart înălțimea cu weight. Un nivel de LinearLayout
-            // cu 5 copii se măsoară de două ori, dar e singurul mod de a garanta
-            // fix 5 rânduri vizibile indiferent ce densitate raportează unitatea.
+        for (page in 0 until pageCount) {
+            // Cele 5 rânduri împart înălțimea cu weight: exact 5 vizibile
+            // indiferent ce densitate raportează unitatea.
             val column = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 layoutParams = LinearLayout.LayoutParams(
@@ -107,17 +138,18 @@ class HomeScreen(host: ScreenHost) : Screen(host) {
                 )
             }
 
-            val first = page * MenuCatalog.PAGE_SIZE
-            val last = minOf(first + MenuCatalog.PAGE_SIZE, MenuCatalog.items.size)
+            val first = page * PAGE_SIZE
+            val last = minOf(first + PAGE_SIZE, rows.size)
 
             for (index in first until last) {
-                val item = MenuCatalog.items[index]
+                val entry = rows[index]
                 val rowBinding = ItemMenuBinding.inflate(inflater, column, false)
-                rowBinding.menuIcon.setImageResource(item.icon)
-                rowBinding.menuTitle.setText(item.title)
+                rowBinding.menuIcon.setImageResource(entry.icon)
+                rowBinding.menuTitle.text = entry.title
+                rowBinding.menuValue.text = entry.value
                 rowBinding.root.setOnClickListener {
-                    host.rebuildFocus(item.id)
-                    activate(item.action)
+                    host.rebuildFocus(entry.id)
+                    entry.onActivate()
                 }
                 // Swipe-ul se ascultă pe rânduri, nu pe viewport: rândurile sunt
                 // clickable, deci consumă ACTION_DOWN și părintele n-ar mai vedea
@@ -127,15 +159,14 @@ class HomeScreen(host: ScreenHost) : Screen(host) {
                     false
                 }
 
-                val lp = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
-                ).apply { topMargin = if (index == first) 0 else rowGapPx() }
+                val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+                    .apply { topMargin = if (index == first) 0 else rowGapPx() }
                 column.addView(rowBinding.root, lp)
                 rowViews.add(rowBinding.root)
             }
 
             // Pagină incompletă: umplem cu spațiu, ca rândurile să nu se întindă.
-            repeat(MenuCatalog.PAGE_SIZE - (last - first)) {
+            repeat(PAGE_SIZE - (last - first)) {
                 column.addView(
                     View(context),
                     LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
@@ -143,32 +174,28 @@ class HomeScreen(host: ScreenHost) : Screen(host) {
             }
 
             binding.pageStrip.addView(column)
-            pageContainers.add(column)
         }
 
-        // Banda trebuie să fie lată cât TOATE paginile la un loc.
-        // wrap_content nu ajunge: într-un FrameLayout copilul e măsurat cu
-        // AT_MOST = lățimea viewport-ului, deci banda ar raporta o singură
-        // pagină, iar a doua coloană ar cădea în afara propriilor ei margini și
-        // ar fi tăiată la desenare (clipChildren e true implicit). Rezultatul ar
-        // fi o pagină 2 complet invizibilă, oricât am translata.
+        // Vezi TileGridScreen: wrap_content într-un FrameLayout se măsoară cu
+        // AT_MOST, deci paginile de după prima ar fi tăiate la desenare.
         binding.pageStrip.layoutParams = binding.pageStrip.layoutParams.also {
-            it.width = pageWidth * MenuCatalog.pageCount
+            it.width = pageWidth * pageCount
         }
 
+        buildDots()
         built = true
-
-        // Graful de focus există abia acum, când rândurile au view-uri reale.
-        val restoreId = MenuCatalog.items
-            .getOrNull(Services.prefs.lastMenuPage * MenuCatalog.PAGE_SIZE)?.id
-        host.rebuildFocus(restoreId)
+        host.rebuildFocus(restoreId ?: rows.firstOrNull()?.id)
     }
 
     private fun buildDots() {
         binding.pageDots.removeAllViews()
         dotViews.clear()
+        // Un singur punct nu spune nimic: dacă meniul încape pe o pagină,
+        // indicatorul dispare de tot.
+        if (pageCount < 2) return
+
         val size = context.resources.getDimensionPixelSize(R.dimen.page_dot_size)
-        for (page in 0 until MenuCatalog.pageCount) {
+        for (page in 0 until pageCount) {
             val dot = View(context).apply {
                 setBackgroundResource(R.drawable.bg_page_dot)
                 isActivated = page == currentPage
@@ -195,37 +222,30 @@ class HomeScreen(host: ScreenHost) : Screen(host) {
             ): Boolean {
                 if (abs(velocityX) < abs(velocityY)) return false
                 if (abs(velocityX) < MIN_FLING_VELOCITY) return false
-                // Swipe stânga = pagina următoare.
                 val next = if (velocityX < 0) currentPage + 1 else currentPage - 1
-                return focusFirstItemOfPage(next)
+                if (next < 0 || next >= pageCount) return false
+                val entry = rows.getOrNull(next * PAGE_SIZE) ?: return false
+                host.rebuildFocus(entry.id)
+                return true
             }
         })
-    }
-
-    /** @return true dacă pagina cerută există și focusul s-a mutat acolo. */
-    private fun focusFirstItemOfPage(page: Int): Boolean {
-        if (page < 0 || page >= MenuCatalog.pageCount) return false
-        val index = page * MenuCatalog.PAGE_SIZE
-        val item = MenuCatalog.items.getOrNull(index) ?: return false
-        host.rebuildFocus(item.id)
-        return true
     }
 
     // --------------------------------------------------------------- focus
 
     private fun onItemFocused(index: Int) {
-        val item = MenuCatalog.items[index]
+        val entry = rows.getOrNull(index) ?: return
 
-        binding.wheelIcon.setImageResource(item.icon)
-        binding.wheelLabel.setText(item.title)
-        binding.wheel.setSelection(index, MenuCatalog.items.size)
+        binding.wheelIcon.setImageResource(entry.icon)
+        binding.wheelLabel.text = entry.title
+        binding.wheel.setSelection(index, rows.size)
 
-        goToPage(MenuCatalog.pageOf(index))
+        goToPage(index / PAGE_SIZE)
         updateConnector(index)
     }
 
     private fun goToPage(page: Int) {
-        if (page == currentPage || page !in 0 until MenuCatalog.pageCount) return
+        if (page == currentPage || page !in 0 until pageCount) return
         currentPage = page
         dotViews.forEachIndexed { i, dot -> dot.isActivated = i == page }
 
@@ -248,8 +268,6 @@ class HomeScreen(host: ScreenHost) : Screen(host) {
      */
     private fun updateConnector(index: Int) {
         val row = rowViews.getOrNull(index) ?: return
-        // Rândurile sunt deja așezate în cazul normal (rotire prin meniu); post-ul
-        // e doar pentru primul focus, imediat după construcția paginilor.
         if (row.height == 0) row.post { applyConnector(row) } else applyConnector(row)
     }
 
@@ -259,14 +277,10 @@ class HomeScreen(host: ScreenHost) : Screen(host) {
         binding.connector.setTargetY(rowLocation[1] + row.height / 2f - connectorLocation[1])
     }
 
-    // -------------------------------------------------------------- acțiuni
+    protected companion object {
+        /** Cinci rânduri pe pagină: pe 480 px verticali, al șaselea ar fi ilizibil. */
+        const val PAGE_SIZE = 5
 
-    private fun activate(action: MainMenuAction) {
-        Services.prefs.lastMenuPage = currentPage
-        host.openMenu(action)
-    }
-
-    private companion object {
         const val PAGE_ANIM_MS = 180L
         const val MIN_FLING_VELOCITY = 600f
     }

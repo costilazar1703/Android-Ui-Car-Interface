@@ -26,11 +26,20 @@ interface ScreenHost {
     fun dispatch(action: LauncherAction)
 
     /**
-     * Deschide una dintre cele 10 intrări ale meniului principal.
-     * Trăiește în shell, nu în [ro.e92.launcher.ui.screens.HomeScreen]: aceleași
-     * destinații trebuie atinse și de butoanele hard, fără ca home-ul să fie afișat.
+     * Deschide meniul unei dale din grila principala.
+     *
+     * Traieste in shell, nu in [ro.e92.launcher.ui.screens.TileGridScreen]:
+     * aceleasi destinatii trebuie atinse si de butoanele hard (NAV, TEL, MEDIA),
+     * fara ca grila sa fie afisata.
      */
-    fun openMenu(action: MainMenuAction)
+    fun openTile(action: TileAction)
+
+    /**
+     * ConnectedDrive nu e un ecran, ci o lansare de browser cu o adresa din
+     * Prefs. Sta in shell din acelasi motiv ca [openTile]: are nevoie de
+     * PackageManager si de startActivity, nu de un Screen.
+     */
+    fun dispatchConnectedDrive()
 }
 
 /**

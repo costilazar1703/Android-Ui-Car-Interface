@@ -100,10 +100,18 @@ class IDriveWheelView @JvmOverloads constructor(
         if (!Services.prefs.animationsEnabled) {
             animator?.cancel()
             drawnAngle = target
-            invalidate()
-            return
+        } else {
+            animateTo(target)
         }
-        animateTo(target)
+
+        // invalidate() NECONDIȚIONAT, chiar dacă unghiul nu s-a mișcat.
+        //
+        // Numărul de marcaje se schimbă odată cu meniul, iar primul rând al
+        // oricărui meniu e tot la -90°: intrând dintr-un meniu de 5 în unul de 4,
+        // unghiul rămâne identic, [animateTo] nu are ce anima și iese imediat.
+        // Fără linia asta inelul ar rămâne desenat cu marcajele meniului
+        // anterior — sau, la prima afișare, cu unul singur.
+        invalidate()
     }
 
     /**
@@ -185,7 +193,12 @@ class IDriveWheelView @JvmOverloads constructor(
         // 3. Segmentul aprins: trei arce suprapuse, de la difuz la aprins.
         //    Lățimile sunt sub-unitare față de banda marcajelor — un arc mai lat
         //    decât banda pe care stă nu mai arată a segment de inel, ci a pată.
-        val sweep = (FULL_CIRCLE / itemCount) * SECTOR_FILL
+        // Sectorul e proporțional cu numărul de intrări, dar PLAFONAT: un meniu
+        // cu 3 rânduri ar da un sector de 120°, iar segmentul aprins ar acoperi
+        // o treime de inel — ar arăta ca un indicator de încărcare, nu ca marcajul
+        // poziției curente. Marcajul trebuie să spună „ești aici", nu „felia ta
+        // e atât de mare".
+        val sweep = minOf((FULL_CIRCLE / itemCount) * SECTOR_FILL, MAX_SWEEP_DEG)
         val start = drawnAngle - sweep / 2f
         val arcWidth = rNotchOuter - rNotchInner
         for (layer in 0 until GLOW_LAYERS) {
@@ -245,6 +258,9 @@ class IDriveWheelView @JvmOverloads constructor(
 
         /** Cât din sectorul unui meniu e acoperit de arcul aprins. */
         const val SECTOR_FILL = 0.86f
+
+        /** Plafonul sectorului aprins, oricat de putine intrari ar avea meniul. */
+        const val MAX_SWEEP_DEG = 34f
 
         /** Lățimile arcelor, ca fracțiune din banda marcajelor: 1.5 → 0.45. */
         const val GLOW_WIDTH_MAX = 1.5f

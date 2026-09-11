@@ -41,6 +41,20 @@ class Prefs(context: Context) {
         get() = sp.getString(KEY_CARINFO_PKG, "") ?: ""
         set(value) = sp.edit().putString(KEY_CARINFO_PKG, value).apply()
 
+    /** Meniul "Weather" - aplicatia de vreme atribuita de utilizator. */
+    var weatherPackage: String
+        get() = sp.getString(KEY_WEATHER_PKG, "") ?: ""
+        set(value) = sp.edit().putString(KEY_WEATHER_PKG, value).apply()
+
+    /**
+     * A doua aplicatie de harti, distincta de [navPackage]: meniul Navigation
+     * ofera doua destinatii (de obicei Waze si Google Maps), iar utilizatorul
+     * le alege separat.
+     */
+    var mapsPackage: String
+        get() = sp.getString(KEY_MAPS_PKG, DEFAULT_MAPS_PKG) ?: DEFAULT_MAPS_PKG
+        set(value) = sp.edit().putString(KEY_MAPS_PKG, value).apply()
+
     /** Browser-ul folosit de meniul ConnectedDrive și de opțiunea „Chrome". */
     var browserPackage: String
         get() = sp.getString(KEY_BROWSER_PKG, DEFAULT_BROWSER_PKG) ?: DEFAULT_BROWSER_PKG
@@ -85,6 +99,7 @@ class Prefs(context: Context) {
 
         const val DEFAULT_NAV_PKG = "com.waze"
         const val DEFAULT_BROWSER_PKG = "com.android.chrome"
+        const val DEFAULT_MAPS_PKG = "com.google.android.apps.maps"
         const val DEFAULT_CD_URL = "https://www.bmw-connecteddrive.com"
 
         private const val KEY_NAV_PKG = "nav_package"
@@ -92,6 +107,8 @@ class Prefs(context: Context) {
         private const val KEY_DASHBOARD_PKG = "dashboard_package"
         private const val KEY_CARINFO_PKG = "carinfo_package"
         private const val KEY_BROWSER_PKG = "browser_package"
+        private const val KEY_WEATHER_PKG = "weather_package"
+        private const val KEY_MAPS_PKG = "maps_package"
         private const val KEY_CD_URL = "connecteddrive_url"
         private const val KEY_LAST_PAGE = "last_menu_page"
         private const val KEY_CAN_MODE = "can_mode"

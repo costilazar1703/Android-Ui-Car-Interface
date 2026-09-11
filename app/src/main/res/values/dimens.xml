@@ -51,4 +51,11 @@
     <!-- Pop-up-uri desenate peste ecranul curent (nu AlertDialog). -->
     <dimen name="overlay_panel_width">420dp</dimen>
     <dimen name="overlay_padding">14dp</dimen>
+    <!-- Dalele ID6. Inset-urile sunt identice pe ambele stari ale selectorului,
+         ca dala sa nu-si schimbe geometria cand primeste focus. -->
+    <dimen name="tile_corner">3dp</dimen>
+    <dimen name="tile_glow_step">3dp</dimen>
+    <dimen name="tile_body_inset">6dp</dimen>
+    <dimen name="tile_gap">4dp</dimen>
+    <dimen name="tile_grid_margin_v">8dp</dimen>
 </resources>

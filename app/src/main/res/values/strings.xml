@@ -16,7 +16,6 @@
 
     <string name="nav_pick_waze">Waze</string>
     <string name="nav_pick_chrome">Google Chrome</string>
-    <string name="nav_pick_hint">Rotate to choose, press to open, BACK to cancel</string>
 
     <string name="app_not_set">Not assigned — set it in Settings</string>
     <string name="app_not_installed">App not installed: %1$s</string>
@@ -118,4 +117,28 @@
 
     <string name="msg_open_app">Open messaging app</string>
     <string name="msg_hint">Messages arrive over the head unit\'s Bluetooth MAP profile</string>
+    <!-- Dale noi fata de vechiul meniu de 10. -->
+    <string name="menu_weather">Weather</string>
+    <string name="menu_apps">Applications</string>
+    <!-- Meniurile de nivel 2 (cate unul pentru fiecare dala). -->
+    <string name="nav_pick_maps">Google Maps</string>
+    <string name="nav_assign_primary">Assign primary nav app</string>
+    <string name="nav_assign_maps">Assign maps app</string>
+
+    <string name="media_now_playing">Now playing</string>
+    <string name="media_oem_radio">Radio</string>
+
+    <string name="car_live_data">Live vehicle data</string>
+    <string name="car_vendor_app">Vehicle app</string>
+    <string name="car_assign_app">Assign application</string>
+
+    <string name="cp_launch">Launch projection</string>
+
+    <string name="cd_portal">Open portal</string>
+    <string name="cd_choose_browser">Choose browser</string>
+
+    <string name="weather_open">Open weather</string>
+    <string name="weather_assign">Assign weather app</string>
+
+    <string name="not_installed_short">not installed</string>
 </resources>

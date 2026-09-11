@@ -48,11 +48,33 @@
         android:textColor="@color/menu_title_text"
         android:textSize="19sp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/menuChevron"
+        app:layout_constraintEnd_toStartOf="@id/menuValue"
         app:layout_constraintHorizontal_bias="0"
         app:layout_constraintStart_toEndOf="@id/menuIcon"
         app:layout_constraintTop_toTopOf="parent"
         tools:text="Media / Radio" />
+
+    <!-- Valoarea curentă a rândului: numele aplicației atribuite, piesa care
+         cântă, starea unei comutări. Goală pentru rândurile care doar deschid
+         altceva. -->
+    <TextView
+        android:id="@+id/menuValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:duplicateParentState="true"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-condensed"
+        android:includeFontPadding="false"
+        android:maxWidth="180dp"
+        android:singleLine="true"
+        android:textColor="@color/menu_value_text"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/menuChevron"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="Waze" />
 
     <!-- Săgeata de submeniu. Nu e decorativă: spune că elementul DESCHIDE ceva,
          spre deosebire de rândurile care doar comută o valoare. -->

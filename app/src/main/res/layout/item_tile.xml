@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  O dală din meniul principal ID6: etichetă deasupra, pătrat dedesubt.
+
+  NIMIC nu are dimensiune fixă aici. Înălțimile, mărimea iconiței și corpul de
+  literă se pun din [TileGridScreen], calculate din lățimea reală măsurată a
+  dalei. Motivul e concret: unitatea din mașină raportează o densitate pe care nu
+  o știm (pe emulator e 120, în dimens.xml presupunem 160), iar la 120 o valoare
+  scrisă în dp iese cu 25% mai mică. Proporțiile față de lățimea dalei arată la
+  fel la orice densitate.
+
+  FocusEngine aprinde `isActivated` pe RĂDĂCINĂ; corpul, reflexia, iconița și
+  eticheta preiau starea prin duplicateParentState și își schimbă culorile din
+  ColorStateList. Zero cod de culoare în onFocus.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clickable="true"
+    android:focusable="false"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/tileLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:duplicateParentState="true"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-condensed"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:singleLine="true"
+        android:textColor="@color/tile_label_text"
+        tools:text="Navigation" />
+
+    <FrameLayout
+        android:id="@+id/tileBody"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_tile"
+        android:duplicateParentState="true">
+
+        <!-- Reflexia de sticlă, inset-ată cât corpul din bg_tile: peste zona de
+             halo ar acoperi exact lumina care trebuie să se difuzeze. -->
+        <View
+            android:id="@+id/tileGloss"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="@dimen/tile_body_inset"
+            android:background="@drawable/tile_gloss"
+            android:duplicateParentState="true" />
+
+        <ImageView
+            android:id="@+id/tileIcon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:contentDescription="@null"
+            android:duplicateParentState="true"
+            android:scaleType="fitCenter"
+            android:tint="@color/tile_icon_tint"
+            tools:src="@drawable/ic_menu_navigation" />
+
+    </FrameLayout>
+
+</LinearLayout>

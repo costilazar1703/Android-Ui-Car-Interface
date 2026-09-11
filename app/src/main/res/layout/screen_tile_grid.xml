@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Meniul principal EVO ID5/ID6: 6 dale pe pagină, 2 pagini.
+
+    [ dală ][ dală ][ dală ][ dală ][ dală ][ dală ]   • ○
+
+  Aceeași mecanică de paginare ca la ecranele cu rotiță: banda conține toate
+  paginile una după alta, iar schimbarea de pagină e o translație pe X. Focusul
+  e sursa de adevăr — pagina îl urmează, nu invers.
+
+  Nu e RecyclerView: dalele sunt 12, fixe, și fiecare primește o transformare 3D
+  proprie. Reciclarea ar complica exact partea care trebuie să fie stabilă.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Viewport-ul taie exact o pagină. Banda dinăuntru e mai lată decât el. -->
+    <FrameLayout
+        android:id="@+id/tileViewport"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipChildren="true"
+        android:clipToPadding="true"
+        app:layout_constraintBottom_toTopOf="@id/tilePageDots"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:id="@+id/tileStrip"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:clipChildren="false"
+            android:orientation="horizontal" />
+
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/tilePageDots"
+        android:layout_width="wrap_content"
+        android:layout_height="16dp"
+        android:layout_marginBottom="4dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:ignore="UselessLeaf" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
