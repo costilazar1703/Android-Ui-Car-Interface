@@ -27,13 +27,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Fundalul ecranelor de meniu: un gradient simplu, nu o fotografie.
-         Ecranele astea sunt de lucru — te uiți la ce scrie pe rând. -->
+    <!-- Voalul diagonal: opac jos-stânga, unde stă conținutul; transparent
+         sus-dreapta, unde e motorul. -->
     <View
         android:id="@+id/menuScrim"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="@drawable/bg_menu_screen"
+        android:background="@drawable/scrim_menu"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

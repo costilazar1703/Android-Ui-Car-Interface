@@ -69,4 +69,5 @@
     <!-- Fundalul ecranelor de meniu (fara fotografie). -->
     <color name="bg_menu_center">#12100F</color>
     <color name="bg_menu_edge">#050505</color>
+    <color name="split_divider">#1FFFFFFF</color>
 </resources>

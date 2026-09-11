@@ -40,7 +40,9 @@
 
     <!-- Ecrane split (Setări, Bluetooth, Telefon) -->
     <dimen name="split_nav_row_height">46dp</dimen>
-    <dimen name="detail_row_height">48dp</dimen>
+    <dimen name="detail_row_height">44dp</dimen>
+    <!-- Randurile sunt placi detasate, nu o lista cu separatoare. -->
+    <dimen name="detail_row_gap">4dp</dimen>
     <!-- Glow-ul cardului focusat. Straturile din <layer-list> sunt inset-ate cu
          acesti pasi: cu cat pasul e mai mare, cu atat halo-ul pare mai difuz.
          2dp/4dp sunt calibrate pentru 1280x480 la ~160dpi. -->

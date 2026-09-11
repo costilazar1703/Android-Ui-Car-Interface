@@ -41,6 +41,7 @@ import ro.e92.launcher.ui.screens.MediaMenuScreen
 import ro.e92.launcher.ui.screens.MediaScreen
 import ro.e92.launcher.ui.screens.MessagesScreen
 import ro.e92.launcher.ui.screens.NavigationMenuScreen
+import ro.e92.launcher.ui.screens.SettingsMenuScreen
 import ro.e92.launcher.ui.screens.SettingsScreen
 import ro.e92.launcher.ui.screens.TelephoneScreen
 import ro.e92.launcher.ui.screens.TileGridScreen
@@ -249,9 +250,11 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             TileAction.WEATHER ->
                 pushUnique(WeatherMenuScreen::class.java) { WeatherMenuScreen(this) }
 
-            // Astea SUNT deja meniuri (categorii in stanga, detaliu in dreapta),
-            // deci un meniu cu rotita in fata lor ar fi un clic in plus fara
-            // niciun castig. Se deschid direct.
+            // Telefonul si Mesajele SUNT deja meniuri (categorii in stanga,
+            // detaliu in dreapta), iar App drawer-ul e o grila - toate trei au
+            // propria forma si n-ar castiga nimic dintr-un meniu cu rotita in
+            // fata lor. Setarile, in schimb, au primit unul: erau singura dala
+            // care se deschidea altfel decat celelalte unsprezece.
             TileAction.TELEPHONE ->
                 pushUnique(TelephoneScreen::class.java) { TelephoneScreen(this) }
 
@@ -259,7 +262,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                 pushUnique(MessagesScreen::class.java) { MessagesScreen(this) }
 
             TileAction.SETTINGS ->
-                pushUnique(SettingsScreen::class.java) { SettingsScreen(this) }
+                pushUnique(SettingsMenuScreen::class.java) { SettingsMenuScreen(this) }
 
             TileAction.APPS ->
                 pushUnique(AppDrawerScreen::class.java) { AppDrawerScreen(this) }

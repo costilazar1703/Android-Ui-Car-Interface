@@ -10,22 +10,27 @@ import ro.e92.launcher.ui.ScreenHost
 /**
  * Meniurile de nivel 2 — câte unul pentru fiecare dală din grila ID6.
  *
- * Toate arată la fel (rotița în stânga, rândurile în dreapta) pentru că toate
- * extind [WheelMenuScreen]; diferă doar rândurile. Stau într-un singur fișier
- * fiindcă fiecare e de 15-30 de linii și le citești mai ușor una lângă alta
- * decât împrăștiate în zece fișiere.
+ * **Exact trei rânduri fiecare.** Nu e o limită tehnică, e regula de compoziție
+ * a întregii interfețe: oricare dală ai apăsa, ecranul care se deschide arată la
+ * fel. Înainte un meniu avea două rânduri și altul cinci, iar interfața părea că
+ * se rearanjează singură la fiecare apăsare.
+ *
+ * Ce nu încape în trei coboară un nivel. Al treilea rând e de obicei poarta spre
+ * restul: un ecran split cu categorii, sau Setările deschise DIRECT pe secțiunea
+ * potrivită (vezi [SettingsScreen.initialNavId]) — nu pe prima, urmată de o
+ * căutare.
+ *
+ * Toate arată la fel și pentru că toate extind [WheelMenuScreen]; diferă doar
+ * rândurile. Stau într-un singur fișier fiindcă fiecare e de 15-25 de linii și
+ * se citesc mai ușor una lângă alta decât împrăștiate în zece fișiere.
  *
  * Regula comună: un rând care LANSEAZĂ ceva își arată în coloana din dreapta
- * starea reală — numele aplicației, „not bound" sau „not installed". Rândul nu
- * trebuie apăsat ca să afli că nu e configurat.
+ * starea reală — numele aplicației, „not bound" sau „not installed". Nu trebuie
+ * apăsat ca să afli că nu e configurat.
  */
 
 // ============================================================== NAVIGATION ===
 
-/**
- * Meniul cerut explicit: alegi între cele două aplicații de navigație, iar
- * atribuirea lor se face tot de aici — fără drum prin Setări.
- */
 class NavigationMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 
     override val menuTitle: String get() = context.getString(R.string.menu_navigation)
@@ -38,49 +43,19 @@ class NavigationMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 icon = R.drawable.ic_menu_navigation,
                 title = context.getString(R.string.nav_pick_waze),
                 value = AppLaunch.statusLabel(context, prefs.navPackage),
-                onActivate = {
-                    AppLaunch.launch(context, prefs.navPackage, menuTitle)
-                }
+                onActivate = { AppLaunch.launch(context, prefs.navPackage, menuTitle) }
             ),
             WheelEntry(
                 id = "nav_maps",
                 icon = R.drawable.ic_menu_navigation,
                 title = context.getString(R.string.nav_pick_maps),
                 value = AppLaunch.statusLabel(context, prefs.mapsPackage),
-                onActivate = {
-                    AppLaunch.launch(context, prefs.mapsPackage, menuTitle)
-                }
+                onActivate = { AppLaunch.launch(context, prefs.mapsPackage, menuTitle) }
             ),
-            WheelEntry(
-                id = "nav_assign_primary",
-                icon = R.drawable.ic_menu_apps,
-                title = context.getString(R.string.nav_assign_primary),
-                onActivate = {
-                    host.push(AppDrawerScreen(host) { entry ->
-                        prefs.navPackage = entry.packageName
-                        reload("nav_assign_primary")
-                    })
-                },
-                onOption = {
-                    prefs.navPackage = ""
-                    reload("nav_assign_primary")
-                }
-            ),
-            WheelEntry(
-                id = "nav_assign_maps",
-                icon = R.drawable.ic_menu_apps,
-                title = context.getString(R.string.nav_assign_maps),
-                onActivate = {
-                    host.push(AppDrawerScreen(host) { entry ->
-                        prefs.mapsPackage = entry.packageName
-                        reload("nav_assign_maps")
-                    })
-                },
-                onOption = {
-                    prefs.mapsPackage = ""
-                    reload("nav_assign_maps")
-                }
-            )
+            // Atribuirea celor două aplicații se face în Setări → Assigned apps,
+            // unde stau oricum toate celelalte. Aici ar fi fost două rânduri în
+            // plus care fac același lucru.
+            settingsEntry(host, context, SettingsScreen.NAV_APPS)
         )
     }
 }
@@ -112,12 +87,6 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 icon = R.drawable.ic_menu_media,
                 title = context.getString(R.string.media_oem_radio),
                 onActivate = { host.dispatch(LauncherAction.RADIO) }
-            ),
-            WheelEntry(
-                id = "media_apps",
-                icon = R.drawable.ic_menu_apps,
-                title = context.getString(R.string.menu_apps),
-                onActivate = { host.push(AppDrawerScreen(host)) }
             )
         )
     }
@@ -126,13 +95,14 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 // =============================================================== BLUETOOTH ===
 
 /**
- * Meniul Bluetooth, cerut explicit cu rotiță.
- *
  * Împerecherea NU se face aici. Pe unitățile astea stack-ul Bluetooth e al
  * vendorului, iar dialogul lui de pairing e singurul care chiar leagă telefonul;
- * dacă l-am dubla, am avea două stări care se contrazic. Rândurile de pairing
- * duc, deci, în ecranul de sistem — dar din meniul nostru, nu de undeva din
- * adâncul Android-ului.
+ * dacă l-am dubla, am avea două stări care se contrazic. Rândul de pairing duce,
+ * deci, în ecranul de sistem — dar din meniul nostru, nu de undeva din adâncul
+ * Android-ului.
+ *
+ * „Paired devices" deschide ecranul split, care ține mai departe și setările de
+ * Bluetooth și starea accesului la notificări.
  */
 class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 
@@ -157,18 +127,6 @@ class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
             title = context.getString(R.string.bt_audio),
             value = Services.media.snapshot.value.title.orEmpty(),
             onActivate = { host.push(MediaScreen(host)) }
-        ),
-        WheelEntry(
-            id = "bt_phone",
-            icon = R.drawable.ic_menu_telephone,
-            title = context.getString(R.string.menu_telephone),
-            onActivate = { host.push(TelephoneScreen(host)) }
-        ),
-        WheelEntry(
-            id = "bt_settings",
-            icon = R.drawable.ic_menu_settings,
-            title = context.getString(R.string.bt_settings),
-            onActivate = { AppLaunch.openSystem(context, Settings.ACTION_BLUETOOTH_SETTINGS) }
         )
     )
 }
@@ -194,21 +152,6 @@ class CarInfoMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 title = context.getString(R.string.car_vendor_app),
                 value = AppLaunch.statusLabel(context, prefs.carInfoPackage),
                 onActivate = { AppLaunch.launch(context, prefs.carInfoPackage, menuTitle) }
-            ),
-            WheelEntry(
-                id = "car_assign",
-                icon = R.drawable.ic_menu_apps,
-                title = context.getString(R.string.car_assign_app),
-                onActivate = {
-                    host.push(AppDrawerScreen(host) { entry ->
-                        prefs.carInfoPackage = entry.packageName
-                        reload("car_assign")
-                    })
-                },
-                onOption = {
-                    prefs.carInfoPackage = ""
-                    reload("car_assign")
-                }
             ),
             WheelEntry(
                 id = "car_diag",
@@ -242,21 +185,7 @@ class DashboardMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 value = AppLaunch.statusLabel(context, prefs.dashboardPackage),
                 onActivate = { AppLaunch.launch(context, prefs.dashboardPackage, menuTitle) }
             ),
-            WheelEntry(
-                id = "dash_assign",
-                icon = R.drawable.ic_menu_apps,
-                title = context.getString(R.string.car_assign_app),
-                onActivate = {
-                    host.push(AppDrawerScreen(host) { entry ->
-                        prefs.dashboardPackage = entry.packageName
-                        reload("dash_assign")
-                    })
-                },
-                onOption = {
-                    prefs.dashboardPackage = ""
-                    reload("dash_assign")
-                }
-            )
+            settingsEntry(host, context, SettingsScreen.NAV_APPS)
         )
     }
 }
@@ -278,26 +207,12 @@ class CarPlayMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 onActivate = { AppLaunch.launch(context, prefs.carPlayPackage, menuTitle) }
             ),
             WheelEntry(
-                id = "cp_assign",
-                icon = R.drawable.ic_menu_apps,
-                title = context.getString(R.string.car_assign_app),
-                onActivate = {
-                    host.push(AppDrawerScreen(host) { entry ->
-                        prefs.carPlayPackage = entry.packageName
-                        reload("cp_assign")
-                    })
-                },
-                onOption = {
-                    prefs.carPlayPackage = ""
-                    reload("cp_assign")
-                }
-            ),
-            WheelEntry(
                 id = "cp_bt",
                 icon = R.drawable.ic_menu_bluetooth,
                 title = context.getString(R.string.menu_bluetooth),
                 onActivate = { host.push(BluetoothMenuScreen(host)) }
-            )
+            ),
+            settingsEntry(host, context, SettingsScreen.NAV_APPS)
         )
     }
 }
@@ -308,74 +223,104 @@ class ConnectedDriveMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 
     override val menuTitle: String get() = context.getString(R.string.menu_connecteddrive)
 
-    override fun entries(): List<WheelEntry> {
-        val prefs = Services.prefs
-        return listOf(
-            WheelEntry(
-                id = "cd_portal",
-                icon = R.drawable.ic_menu_connecteddrive,
-                title = context.getString(R.string.cd_portal),
-                value = AppLaunch.statusLabel(context, prefs.browserPackage),
-                onActivate = { host.dispatchConnectedDrive() }
-            ),
-            WheelEntry(
-                id = "cd_browser",
-                icon = R.drawable.ic_menu_apps,
-                title = context.getString(R.string.cd_choose_browser),
-                onActivate = {
-                    host.push(AppDrawerScreen(host) { entry ->
-                        prefs.browserPackage = entry.packageName
-                        reload("cd_browser")
-                    })
-                }
-            ),
-            WheelEntry(
-                id = "cd_weather",
-                icon = R.drawable.ic_menu_weather,
-                title = context.getString(R.string.menu_weather),
-                onActivate = { host.push(WeatherMenuScreen(host)) }
-            )
-        )
-    }
+    override fun entries(): List<WheelEntry> = listOf(
+        WheelEntry(
+            id = "cd_portal",
+            icon = R.drawable.ic_menu_connecteddrive,
+            title = context.getString(R.string.cd_portal),
+            value = AppLaunch.statusLabel(context, Services.prefs.browserPackage),
+            onActivate = { host.dispatchConnectedDrive() }
+        ),
+        WheelEntry(
+            id = "cd_weather",
+            icon = R.drawable.ic_menu_weather,
+            title = context.getString(R.string.menu_weather),
+            onActivate = { host.push(WeatherMenuScreen(host)) }
+        ),
+        settingsEntry(host, context, SettingsScreen.NAV_APPS)
+    )
 }
 
 // ================================================================= WEATHER ===
 
 /**
- * Cerut explicit ca „atribuire directă": rândul de sus lansează aplicația de
- * vreme, cel de jos o alege. Atât. Vremea nu se citește din niciun API propriu —
- * ar cere cheie și cont, iar aplicația pe care o ai deja pe tabletă o face mai
- * bine.
+ * Vremea nu se citește din niciun API propriu — ar cere cheie și cont, iar
+ * aplicația de pe tabletă o face mai bine. Meniul doar o lansează și o atribuie.
  */
 class WeatherMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 
     override val menuTitle: String get() = context.getString(R.string.menu_weather)
 
-    override fun entries(): List<WheelEntry> {
-        val prefs = Services.prefs
-        return listOf(
-            WheelEntry(
-                id = "weather_open",
-                icon = R.drawable.ic_menu_weather,
-                title = context.getString(R.string.weather_open),
-                value = AppLaunch.statusLabel(context, prefs.weatherPackage),
-                onActivate = { AppLaunch.launch(context, prefs.weatherPackage, menuTitle) }
-            ),
-            WheelEntry(
-                id = "weather_assign",
-                icon = R.drawable.ic_menu_apps,
-                title = context.getString(R.string.weather_assign),
-                onActivate = {
-                    host.push(AppDrawerScreen(host) { entry ->
-                        prefs.weatherPackage = entry.packageName
-                        reload("weather_assign")
-                    })
-                },
-                onOption = {
-                    prefs.weatherPackage = ""
-                    reload("weather_assign")
-                }
-            )
-        )
-    }
+    override fun entries(): List<WheelEntry> = listOf(
+        WheelEntry(
+            id = "weather_open",
+            icon = R.drawable.ic_menu_weather,
+            title = context.getString(R.string.weather_open),
+            value = AppLaunch.statusLabel(context, Services.prefs.weatherPackage),
+            onActivate = {
+                AppLaunch.launch(context, Services.prefs.weatherPackage, menuTitle)
+            }
+        ),
+        WheelEntry(
+            id = "weather_cd",
+            icon = R.drawable.ic_menu_connecteddrive,
+            title = context.getString(R.string.menu_connecteddrive),
+            onActivate = { host.dispatchConnectedDrive() }
+        ),
+        settingsEntry(host, context, SettingsScreen.NAV_APPS)
+    )
 }
+
+// ================================================================ SETTINGS ===
+
+/**
+ * Setările primesc și ele rotița.
+ *
+ * Erau singurul meniu care se deschidea direct într-un ecran split, și se vedea:
+ * apăsai o dală identică cu celelalte și primeai altă interfață. Acum au aceeași
+ * poartă ca tot restul — trei categorii — iar fiecare duce în ecranul split
+ * deschis DIRECT pe secțiunea ei.
+ */
+class SettingsMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
+
+    override val menuTitle: String get() = context.getString(R.string.menu_settings)
+
+    override fun entries(): List<WheelEntry> = listOf(
+        WheelEntry(
+            id = "set_apps",
+            icon = R.drawable.ic_menu_apps,
+            title = context.getString(R.string.set_nav_assigned),
+            onActivate = { host.push(SettingsScreen(host, SettingsScreen.NAV_APPS)) }
+        ),
+        WheelEntry(
+            id = "set_buttons",
+            icon = R.drawable.ic_menu_car_info,
+            title = context.getString(R.string.set_nav_buttons),
+            onActivate = { host.push(SettingsScreen(host, SettingsScreen.NAV_BUTTONS)) }
+        ),
+        WheelEntry(
+            id = "set_system",
+            icon = R.drawable.ic_menu_settings,
+            title = context.getString(R.string.set_nav_system),
+            onActivate = { host.push(SettingsScreen(host, SettingsScreen.NAV_SYSTEM)) }
+        )
+    )
+}
+
+// ------------------------------------------------------------------ comun ---
+
+/**
+ * Al treilea rând al majorității meniurilor: poarta spre Setări, deschise fix pe
+ * categoria cerută. Definit o singură dată pentru că altfel ar fi fost copiat în
+ * cinci locuri, cu cinci ocazii să ajungă să arate spre altceva.
+ */
+private fun settingsEntry(
+    host: ScreenHost,
+    context: android.content.Context,
+    navId: String
+) = WheelEntry(
+    id = "row_settings",
+    icon = R.drawable.ic_menu_settings,
+    title = context.getString(R.string.menu_settings),
+    onActivate = { host.push(SettingsScreen(host, navId)) }
+)

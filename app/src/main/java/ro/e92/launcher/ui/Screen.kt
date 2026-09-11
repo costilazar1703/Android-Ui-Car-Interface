@@ -61,15 +61,14 @@ abstract class Screen(protected val host: ScreenHost) {
     abstract val title: String
 
     /**
-     * Fotografia din spatele ecranului, sau 0 pentru fundal simplu.
+     * Fotografia din spatele ecranului.
      *
-     * Implicit: NICIUNA. Doar grila principala are fotografie. Meniurile stau pe
-     * fundal plat - nu din lipsa de idei, ci pentru ca sunt ecrane de lucru: te
-     * uiti la ce scrie pe rand, nu la poza din spate. In plus, o a doua
-     * fotografie ar tine inca ~2,4 MB de bitmap decodat in memorie pe o unitate
-     * cu 2 GB, pentru ceva ce oricum e acoperit de continut.
+     * Nivelul 1 (grila de dale) are masina; tot ce se deschide dintr-o dala are
+     * motorul. Se schimba cu un fade in [HomeActivity], nu prin reincarcarea
+     * unui fundal per layout - altfel bitmap-ul s-ar decoda la fiecare push si
+     * am tine doua copii in memorie cat timp un ecran e acoperit.
      */
-    open val backgroundRes: Int get() = 0
+    open val backgroundRes: Int get() = R.drawable.bg_menu
 
     /**
      * Ecran desenat PESTE cel de dedesubt, care rămâne vizibil (un pop-up).

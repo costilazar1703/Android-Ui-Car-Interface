@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Rând din panoul de detaliu (Setări, Bluetooth, Telefon, Mesaje).
+
+  Aceeași gramatică vizuală ca rândurile meniurilor cu rotiță: colțuri rotunjite,
+  corp semi-transparent, gradient care se stinge spre dreapta. Înainte erau benzi
+  plate cu separator, iar trecerea de la nivelul 2 la nivelul 3 arăta ca intrarea
+  într-o altă aplicație.
+
+  Umplerea plină pe toată lățimea la selecție ar fi prea agresivă pe o listă de
+  douăzeci de rânduri, deci selecția e conturul plus bara din stânga — semnalul
+  ID6 care arată unde ești fără să aprindă tot ecranul.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_activated="true">
+        <layer-list>
+            <item>
+                <shape android:shape="rectangle">
+                    <gradient
+                        android:angle="0"
+                        android:startColor="@color/row_focus_start"
+                        android:endColor="@color/row_focus_end"
+                        android:type="linear" />
+                    <stroke
+                        android:width="@dimen/idle_stroke"
+                        android:color="@color/glow_core" />
+                    <corners android:radius="@dimen/card_corner" />
+                </shape>
+            </item>
+            <item android:width="@dimen/tile_marker_width" android:gravity="start|fill_vertical">
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/glow_core" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="0"
+                android:startColor="#8C121212"
+                android:endColor="#3D0A0A0A"
+                android:type="linear" />
+            <corners android:radius="@dimen/card_corner" />
+        </shape>
+    </item>
+
+</selector>

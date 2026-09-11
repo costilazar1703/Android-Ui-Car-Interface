@@ -279,14 +279,17 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
 
     protected companion object {
         /**
-         * Patru rânduri pe pagină.
+         * Trei rânduri pe pagină.
          *
-         * Erau cinci cât timp lista ocupa toată înălțimea. De când conținutul a
-         * coborât în două treimi de ecran (ca fotografia de fundal să rămână
-         * vizibilă sus-dreapta), al cincilea rând ar scădea sub ~46 px și n-ar
-         * mai fi nici lizibil, nici ușor de nimerit cu degetul în mers.
+         * Nu e o limită tehnică, e una de compoziție: toate meniurile au acum
+         * exact trei categorii, deci oricare ai deschide arată la fel. Un meniu
+         * cu două rânduri lângă unul cu cinci făcea interfața să pară că se
+         * rearanjează singură la fiecare apăsare.
+         *
+         * Ce nu încape în trei coboară un nivel — vezi rândurile care duc în
+         * Setări sau într-un ecran split.
          */
-        const val PAGE_SIZE = 4
+        const val PAGE_SIZE = 3
 
         const val PAGE_ANIM_MS = 180L
         const val MIN_FLING_VELOCITY = 600f
