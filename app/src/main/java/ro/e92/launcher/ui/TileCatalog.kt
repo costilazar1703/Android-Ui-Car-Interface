@@ -40,16 +40,7 @@ class Tile(
     val id: String,
     @DrawableRes val icon: Int,
     @StringRes val title: Int,
-    val action: TileAction,
-    /**
-     * Multiplicator peste marimea standard a iconitei.
-     *
-     * Vectorii sunt siluete compacte si arata bine la marimea implicita. O
-     * fotografie de masina e insa de doua ori si jumatate mai lata decat inalta:
-     * la aceeasi marime ar fi o dunga in mijlocul patratului. Dala Car Info isi
-     * cere latimea ei.
-     */
-    val iconScale: Float = 1f
+    val action: TileAction
 )
 
 object TileCatalog {
@@ -64,7 +55,7 @@ object TileCatalog {
 
     val items: List<Tile> = listOf(
         // ---- pagina 1: ce se atinge cel mai des in mers ----
-        Tile("carinfo", R.drawable.tile_e92, R.string.menu_car_info, TileAction.CAR_INFO, iconScale = 2.1f),
+        Tile("carinfo", R.drawable.ic_menu_car_info, R.string.menu_car_info, TileAction.CAR_INFO),
         Tile("carplay", R.drawable.ic_menu_carplay, R.string.menu_carplay, TileAction.CARPLAY),
         Tile("bt", R.drawable.ic_menu_bluetooth, R.string.menu_bluetooth, TileAction.BLUETOOTH),
         Tile("dash", R.drawable.ic_menu_dashboard, R.string.menu_dashboard, TileAction.DASHBOARD),

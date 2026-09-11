@@ -149,10 +149,8 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                 tileBinding.tileBody.layoutParams.height = bodySize
                 tileBinding.tileShadow.layoutParams.height = shadowHeight
                 tileBinding.tileIcon.layoutParams.also {
-                    // Plafonat la latura dalei: o fotografie cu iconScale mare
-                    // ar iesi altfel din patrat si ar fi taiata de rama.
-                    it.width = minOf((iconSize * tile.iconScale).toInt(), bodySize - 10)
-                    it.height = (iconSize * tile.iconScale).toInt()
+                    it.width = iconSize
+                    it.height = iconSize
                 }
 
                 tileBinding.root.setOnClickListener {
