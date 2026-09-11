@@ -144,4 +144,8 @@ def main():
             os.path.getsize(path) / 1024.0))
 
 
-main()
+# Garda: fisierul e importat de cut_single_icon.py pentru `extract`. Fara ea,
+# un simplu import ar re-taia toata plansa peste iconitele existente - inclusiv
+# peste cele inlocuite manual intre timp.
+if __name__ == '__main__':
+    main()

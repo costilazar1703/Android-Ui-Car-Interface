@@ -113,6 +113,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         val available = viewportHeight - 2 * marginV - labelHeight - shadowHeight
         val bodySize = minOf(tileWidth, available)
         val iconSize = (bodySize * ICON_RATIO).toInt()
+        val iconMargin = context.resources.getDimensionPixelSize(R.dimen.tile_body_inset) * 3
         val labelTextPx = bodySize * LABEL_TEXT_RATIO
 
         binding.tileStrip.removeAllViews()
@@ -149,8 +150,11 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                 tileBinding.tileBody.layoutParams.height = bodySize
                 tileBinding.tileShadow.layoutParams.height = shadowHeight
                 tileBinding.tileIcon.layoutParams.also {
-                    it.width = iconSize
-                    it.height = iconSize
+                    // Plafonat la corpul dalei minus rama: o iconita cu
+                    // iconScale mare ar iesi altfel din patrat si ar fi taiata.
+                    val scaled = (iconSize * tile.iconScale).toInt()
+                    it.width = minOf(scaled, bodySize - iconMargin)
+                    it.height = scaled
                 }
 
                 tileBinding.root.setOnClickListener {

@@ -40,7 +40,22 @@ class Tile(
     val id: String,
     @DrawableRes val icon: Int,
     @StringRes val title: Int,
-    val action: TileAction
+    val action: TileAction,
+    /**
+     * Multiplicator peste marimea standard a iconitei.
+     *
+     * Exista pentru o singura problema, masurata nu presupusa: o iconita e
+     * desenata intr-o caseta PATRATA, iar greutatea ei vizuala vine din cat din
+     * patratul ala umple. Celelalte unsprezece umplu 69-82%, fiind siluete
+     * aproximativ patrate. Masina e de 1.8 ori mai lata decat inalta, deci
+     * umple latimea dar doar jumatate din inaltime - 47%, cel mai putin din tot
+     * setul, si se vedea imediat in rand.
+     *
+     * O masina nu va egala niciodata un cerc la aceeasi latime; singura cale e
+     * sa i se dea mai multa latime. Latimea ramane plafonata la corpul dalei,
+     * deci nu poate iesi din rama.
+     */
+    val iconScale: Float = 1f
 )
 
 object TileCatalog {
@@ -55,8 +70,8 @@ object TileCatalog {
 
     val items: List<Tile> = listOf(
         // ---- pagina 1: ce se atinge cel mai des in mers ----
-        Tile("carinfo", R.drawable.ic_menu_car_info, R.string.menu_car_info, TileAction.CAR_INFO),
         Tile("carplay", R.drawable.ic_menu_carplay, R.string.menu_carplay, TileAction.CARPLAY),
+        Tile("carinfo", R.drawable.ic_menu_car_info, R.string.menu_car_info, TileAction.CAR_INFO, iconScale = 1.55f),
         Tile("bt", R.drawable.ic_menu_bluetooth, R.string.menu_bluetooth, TileAction.BLUETOOTH),
         Tile("dash", R.drawable.ic_menu_dashboard, R.string.menu_dashboard, TileAction.DASHBOARD),
         Tile("settings", R.drawable.ic_menu_settings, R.string.menu_settings, TileAction.SETTINGS),
