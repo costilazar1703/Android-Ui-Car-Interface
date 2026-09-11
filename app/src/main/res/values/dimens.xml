@@ -56,6 +56,8 @@
     <dimen name="tile_corner">3dp</dimen>
     <dimen name="tile_glow_step">3dp</dimen>
     <dimen name="tile_body_inset">6dp</dimen>
+    <!-- Golul dintre rama exterioara si cea interioara. -->
+    <dimen name="tile_frame_inset">9dp</dimen>
     <dimen name="tile_gap">4dp</dimen>
     <dimen name="tile_grid_margin_v">8dp</dimen>
 </resources>

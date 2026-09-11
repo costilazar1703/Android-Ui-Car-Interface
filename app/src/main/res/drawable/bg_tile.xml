@@ -1,22 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Dala din meniul principal ID6.
+  Dala din meniul principal ID6: ramă dublă, corp semi-transparent, halo la focus.
 
-  Halo-ul e construit din <layer-list>, nu din elevation: pe API 27 elevation
-  desenează o umbră NEAGRĂ sub view, care pe fundal negru nu se vede deloc și, la
-  colțuri, lasă un dreptunghi mai închis. Straturile de aici merg invers — cel
-  mai din afară e cel mai transparent, fiecare inset următor e mai aprins — deci
-  lumina pare că iese din dală, ca pe ecranul din mașină.
+  **Semi-transparent, nu opac.** Fotografia din spate e subiectul, nu decorul.
+  Corpul lasă lumina orașului și reflexiile de pe asfalt să treacă prin el, dar
+  stă suficient de închis cât iconița albă să rămână lizibilă peste orice cade
+  dedesubt. Alfa e în culori (`@color/tile_*`), nu pe view: un `alpha` pe view ar
+  fi stins și conturul, nu doar umplutura.
 
-  Geometria e IDENTICĂ pe cele două stări (aceleași inset-uri): la mutarea
-  focusului se schimbă doar culorile, nu poziția. Altfel dalele ar tresări.
+  **Rama dublă** e desenată din două straturi inset-ate diferit, nu dintr-un
+  stroke gros: un singur contur de 3 px arată ca o bordură, două de 1 px
+  despărțite de un gol arată ca o ramă frezată — diferența dintre un dreptunghi
+  desenat și o piesă montată în bord.
+
+  Halo-ul vine din `<layer-list>`, NU din elevation: pe API 27 elevation desenează
+  o umbră neagră, invizibilă pe fundal întunecat, iar peste o fotografie lasă și
+  un dreptunghi mai murdar la colțuri.
+
+  Geometria e IDENTICĂ pe cele două stări — se schimbă doar culorile. Altfel dala
+  ar tresări la fiecare mutare de focus.
 -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item android:state_activated="true">
         <layer-list>
 
-            <!-- Difuzia exterioară. -->
+            <!-- 1. Difuzia exterioară, cea mai transparentă. -->
             <item>
                 <shape android:shape="rectangle">
                     <solid android:color="@color/glow_outer" />
@@ -24,6 +33,7 @@
                 </shape>
             </item>
 
+            <!-- 2. Difuzia intermediară. -->
             <item
                 android:bottom="@dimen/tile_glow_step"
                 android:left="@dimen/tile_glow_step"
@@ -35,13 +45,28 @@
                 </shape>
             </item>
 
-            <!-- Corpul dalei. Gradientul urcă spre portocaliu în partea de sus,
-                 ca reflexia de pe sticla din ID6. -->
+            <!-- 3. Rama EXTERIOARĂ, aprinsă. -->
             <item
                 android:bottom="@dimen/tile_body_inset"
                 android:left="@dimen/tile_body_inset"
                 android:right="@dimen/tile_body_inset"
                 android:top="@dimen/tile_body_inset">
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/transparent" />
+                    <stroke
+                        android:width="@dimen/focus_stroke"
+                        android:color="@color/glow_core" />
+                    <corners android:radius="@dimen/tile_corner" />
+                </shape>
+            </item>
+
+            <!-- 4. Rama INTERIOARĂ + corpul. Gradientul urcă spre portocaliu în
+                 partea de sus, ca reflexia de pe sticlă din mașină. -->
+            <item
+                android:bottom="@dimen/tile_frame_inset"
+                android:left="@dimen/tile_frame_inset"
+                android:right="@dimen/tile_frame_inset"
+                android:top="@dimen/tile_frame_inset">
                 <shape android:shape="rectangle">
                     <gradient
                         android:angle="270"
@@ -50,8 +75,8 @@
                         android:endColor="@color/tile_focus_bottom"
                         android:type="linear" />
                     <stroke
-                        android:width="@dimen/focus_stroke"
-                        android:color="@color/glow_core" />
+                        android:width="@dimen/idle_stroke"
+                        android:color="@color/tile_focus_inner_stroke" />
                     <corners android:radius="@dimen/tile_corner" />
                 </shape>
             </item>
@@ -59,13 +84,29 @@
         </layer-list>
     </item>
 
+    <!-- Neselectată: aceeași ramă dublă, doar stinsă. -->
     <item>
         <layer-list>
+
             <item
                 android:bottom="@dimen/tile_body_inset"
                 android:left="@dimen/tile_body_inset"
                 android:right="@dimen/tile_body_inset"
                 android:top="@dimen/tile_body_inset">
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/transparent" />
+                    <stroke
+                        android:width="@dimen/idle_stroke"
+                        android:color="@color/tile_idle_stroke" />
+                    <corners android:radius="@dimen/tile_corner" />
+                </shape>
+            </item>
+
+            <item
+                android:bottom="@dimen/tile_frame_inset"
+                android:left="@dimen/tile_frame_inset"
+                android:right="@dimen/tile_frame_inset"
+                android:top="@dimen/tile_frame_inset">
                 <shape android:shape="rectangle">
                     <gradient
                         android:angle="270"
@@ -74,10 +115,11 @@
                         android:type="linear" />
                     <stroke
                         android:width="@dimen/idle_stroke"
-                        android:color="@color/tile_idle_stroke" />
+                        android:color="@color/tile_idle_inner_stroke" />
                     <corners android:radius="@dimen/tile_corner" />
                 </shape>
             </item>
+
         </layer-list>
     </item>
 

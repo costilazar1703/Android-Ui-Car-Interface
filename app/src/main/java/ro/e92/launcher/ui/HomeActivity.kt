@@ -88,6 +88,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             animationsEnabled = { Services.prefs.animationsEnabled }
         ).apply {
             onTitleChanged = { binding.screenTitle.text = it }
+            onBackgroundChanged = ::showBackground
         }
 
         stack.setRoot(TileGridScreen(this))
@@ -336,6 +337,45 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         stack.push(factory())
     }
 
+    // ---------------------------------------------------------- fundal
+
+    /** Drawable-ul afisat acum; fara el am reporni fade-ul la fiecare push. */
+    private var currentBackground = 0
+
+    /**
+     * Schimba fotografia de fundal cu un fade incrucisat.
+     *
+     * Doua ImageView-uri suprapuse: cel de deasupra primeste imaginea noua si
+     * urca de la alpha 0 la 1, apoi valorile se copiaza in cel de dedesubt si
+     * cel de sus se goleste. Asa nu exista niciun cadru in care ecranul sa fie
+     * negru intre doua fotografii.
+     *
+     * Bitmap-ul nou se pune ÎNAINTE de animatie, nu in timpul ei: decodarea unui
+     * JPEG de 1280x480 dureaza cateva milisecunde si ar manca primele cadre.
+     */
+    private fun showBackground(resId: Int) {
+        if (resId == 0 || resId == currentBackground) return
+
+        if (currentBackground == 0 || !Services.prefs.animationsEnabled) {
+            binding.screenBackground.setImageResource(resId)
+            currentBackground = resId
+            return
+        }
+
+        binding.screenBackgroundNext.setImageResource(resId)
+        binding.screenBackgroundNext.alpha = 0f
+        binding.screenBackgroundNext.animate()
+            .alpha(1f)
+            .setDuration(BACKGROUND_FADE_MS)
+            .withEndAction {
+                binding.screenBackground.setImageResource(resId)
+                binding.screenBackgroundNext.alpha = 0f
+                binding.screenBackgroundNext.setImageDrawable(null)
+            }
+            .start()
+        currentBackground = resId
+    }
+
     // ------------------------------------------------------------- top bar
 
     private fun observeStatusBar() {
@@ -468,5 +508,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     private companion object {
         const val REQ_PERMISSIONS = 1001
         const val IMMERSIVE_REAPPLY_MS = 400L
+        const val BACKGROUND_FADE_MS = 260L
     }
 }

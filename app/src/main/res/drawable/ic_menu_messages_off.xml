@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GENERAT de scripts/gen_icons.py - nu edita direct, editeaza scriptul. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <path
+        android:fillType="evenOdd"
+        android:pathData="M3.2,5h17.6A1.2,1.2 0 0 1 22,6.2v11.6A1.2,1.2 0 0 1 20.8,19H3.2A1.2,1.2 0 0 1 2,17.8V6.2A1.2,1.2 0 0 1 3.2,5zM4.6,6.8l7.4,5 7.4,-5zM3.8,8.3v8.9h16.4V8.3l-7.8,5.3c-0.4,0.3 -0.9,0.3 -1.2,0z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="0" android:endY="24">
+                <item android:offset="0" android:color="#FFFFFFFF" />
+                <item android:offset="0.55" android:color="#FFC2C9D2" />
+                <item android:offset="1" android:color="#FF6E7783" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+</vector>

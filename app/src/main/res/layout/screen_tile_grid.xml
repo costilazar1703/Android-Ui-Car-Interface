@@ -18,6 +18,18 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- Voal slab peste fotografia cu mașina: dalele semi-transparente își aduc
+         singure contrastul, aici doar așezăm baza ecranului. -->
+    <View
+        android:id="@+id/homeScrim"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/scrim_home"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <!-- Viewport-ul taie exact o pagină. Banda dinăuntru e mai lată decât el. -->
     <FrameLayout
         android:id="@+id/tileViewport"

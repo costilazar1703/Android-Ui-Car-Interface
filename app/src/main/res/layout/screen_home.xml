@@ -1,12 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Meniul principal, stil BMW NBT / ID6 aftermarket.
+  Meniul de nivel 2: rotița în stânga-jos, rândurile în dreapta-jos.
 
-    [ rotiță 3D ] ~~~linie~~~ [ listă de 5 meniuri, 2 pagini ]
+      ┌──────────────────────────────────────────────┐
+      │                            (fotografia)      │  ← treimea de sus, liberă
+      │   ╭───╮                                      │
+      │   │ ◉ │ ~~~~~  [ rând ]                      │
+      │   ╰───╯        [ rând ]              • ○     │
+      └──────────────────────────────────────────────┘
 
-  Pozițiile sunt procentuale (Guideline), deci layout-ul nu depinde de densitatea
-  raportată de unitate. Rândurile din listă se construiesc în cod și împart
-  înălțimea cu weight, ca să încapă EXACT 5 pe pagină la orice densitate.
+  Treimea de sus rămâne GOALĂ intenționat. Fotografia de fundal își ține
+  subiectul în dreapta-sus, iar un ecran care ocupă toată suprafața ar acoperi
+  exact partea care merită văzută. Conținutul coboară, fundalul respiră.
+
+  Costul e că intră 4 rânduri pe pagină în loc de 5 — vezi PAGE_SIZE în
+  WheelMenuScreen. Meniurile cu 5 intrări capătă a doua pagină, semnalată de
+  punctele din dreapta-jos.
+
+  Pozițiile sunt procentuale (Guideline), deci nu depind de densitatea raportată
+  de unitate. Rândurile se construiesc în cod și împart înălțimea cu weight.
 -->
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -15,35 +27,54 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- Voalul diagonal: opac jos-stânga, unde stă conținutul; transparent
+         sus-dreapta, unde e motorul. -->
+    <View
+        android:id="@+id/menuScrim"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/scrim_menu"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Linia de unde începe conținutul. Tot ce e deasupra e fotografie curată. -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/gContentTop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.36" />
+
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/gWheelEnd"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.255" />
+        app:layout_constraintGuide_percent="0.205" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/gListStart"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.325" />
+        app:layout_constraintGuide_percent="0.265" />
 
     <!-- ============================== ROTIȚA ============================= -->
     <ro.e92.launcher.ui.widget.IDriveWheelView
         android:id="@+id/wheel"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="10dp"
+        android:layout_marginBottom="6dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toStartOf="@id/gWheelEnd"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="@id/gContentTop" />
 
-    <!-- Iconița meniului focusat, la scară mică, în centrul rotiței.
-         Se schimbă instantaneu la fiecare mutare de focus. -->
+    <!-- Iconița rândului focusat, în centrul rotiței. Se schimbă instantaneu la
+         fiecare mutare de focus. -->
     <ImageView
         android:id="@+id/wheelIcon"
         android:layout_width="0dp"
@@ -55,8 +86,9 @@
         app:layout_constraintEnd_toEndOf="@id/wheel"
         app:layout_constraintStart_toStartOf="@id/wheel"
         app:layout_constraintTop_toTopOf="@id/wheel"
+        app:layout_constraintVertical_bias="0.42"
         app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="0.072"
+        app:layout_constraintWidth_percent="0.055"
         tools:src="@drawable/ic_menu_media" />
 
     <TextView
@@ -64,7 +96,7 @@
         style="@style/Text.Label"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="5dp"
         android:gravity="center"
         android:textColor="@color/accent_focus"
         app:layout_constraintEnd_toEndOf="@id/wheel"
@@ -77,10 +109,10 @@
         android:id="@+id/connector"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toBottomOf="@id/wheel"
         app:layout_constraintEnd_toStartOf="@id/gListStart"
         app:layout_constraintStart_toStartOf="@id/gWheelEnd"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="@id/wheel" />
 
     <!-- =============================== LISTĂ ============================= -->
     <FrameLayout
@@ -93,10 +125,10 @@
         app:layout_constraintBottom_toTopOf="@id/pageDots"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="@id/gListStart"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="@id/gContentTop">
 
-        <!-- Banda cu cele două pagini. Lățimea fiecărei pagini se fixează în cod,
-             după ce viewport-ul e măsurat; schimbarea de pagină e o translație. -->
+        <!-- Banda cu paginile. Lățimea se fixează în cod, după măsurare;
+             schimbarea de pagină e o translație. -->
         <LinearLayout
             android:id="@+id/pageStrip"
             android:layout_width="wrap_content"
@@ -108,8 +140,9 @@
     <LinearLayout
         android:id="@+id/pageDots"
         android:layout_width="wrap_content"
-        android:layout_height="18dp"
+        android:layout_height="16dp"
         android:layout_marginEnd="@dimen/screen_margin"
+        android:layout_marginBottom="4dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Voalul de pe pagina principală. Deliberat SLAB: dalele sunt semi-transparente
+  și își aduc singure contrastul, iar fotografia cu mașina e subiectul, nu
+  decorul. Se întunecă doar spre bază, unde stau punctele de pagină.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="90"
+        android:startColor="#A6000000"
+        android:centerColor="#33000000"
+        android:endColor="#59000000"
+        android:type="linear" />
+</shape>

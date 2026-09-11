@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M4,4h4.2v4.2H4zM9.9,4h4.2v4.2H9.9zM15.8,4H20v4.2h-4.2zM4,9.9h4.2v4.2H4zM9.9,9.9h4.2v4.2H9.9zM15.8,9.9H20v4.2h-4.2zM4,15.8h4.2V20H4zM9.9,15.8h4.2V20H9.9zM15.8,15.8H20V20h-4.2z" />
-</vector>
+<!-- GENERAT. Forma e aceeasi; se schimba doar materialul. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_activated="true" android:drawable="@drawable/ic_menu_apps_on" />
+    <item android:drawable="@drawable/ic_menu_apps_off" />
+</selector>

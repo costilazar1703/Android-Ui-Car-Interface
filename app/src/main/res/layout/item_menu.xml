@@ -28,7 +28,6 @@
         android:contentDescription="@null"
         android:duplicateParentState="true"
         android:scaleType="fitCenter"
-        android:tint="@color/menu_icon_tint"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"

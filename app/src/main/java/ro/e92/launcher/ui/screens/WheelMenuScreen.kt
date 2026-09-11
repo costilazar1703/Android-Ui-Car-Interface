@@ -128,7 +128,7 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
         currentPage = 0
 
         for (page in 0 until pageCount) {
-            // Cele 5 rânduri împart înălțimea cu weight: exact 5 vizibile
+            // Rândurile împart înălțimea cu weight: intră exact PAGE_SIZE
             // indiferent ce densitate raportează unitatea.
             val column = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
@@ -278,8 +278,15 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
     }
 
     protected companion object {
-        /** Cinci rânduri pe pagină: pe 480 px verticali, al șaselea ar fi ilizibil. */
-        const val PAGE_SIZE = 5
+        /**
+         * Patru rânduri pe pagină.
+         *
+         * Erau cinci cât timp lista ocupa toată înălțimea. De când conținutul a
+         * coborât în două treimi de ecran (ca fotografia de fundal să rămână
+         * vizibilă sus-dreapta), al cincilea rând ar scădea sub ~46 px și n-ar
+         * mai fi nici lizibil, nici ușor de nimerit cu degetul în mers.
+         */
+        const val PAGE_SIZE = 4
 
         const val PAGE_ANIM_MS = 180L
         const val MIN_FLING_VELOCITY = 600f

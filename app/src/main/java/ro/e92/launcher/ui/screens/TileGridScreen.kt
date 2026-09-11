@@ -42,6 +42,9 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
 
     override val title: String get() = "MENU"
 
+    /** Nivelul 1 are masina; tot ce se deschide din el are motorul. */
+    override val backgroundRes: Int get() = R.drawable.bg_home
+
     private lateinit var binding: ScreenTileGridBinding
 
     private val tileViews = ArrayList<View>(TileCatalog.items.size)
@@ -104,7 +107,10 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         // dacă înălțimea disponibilă nu ajunge, ea comandă și lățimea rămâne
         // doar spațiu liber între dale.
         val labelHeight = (tileWidth * LABEL_HEIGHT_RATIO).toInt()
-        val available = viewportHeight - 2 * marginV - labelHeight
+        // Umbra ocupă spațiu real sub pătrat: dacă n-o scădem aici, pătratul
+        // crește până umple înălțimea și umbra iese din viewport.
+        val shadowHeight = (tileWidth * SHADOW_HEIGHT_RATIO).toInt()
+        val available = viewportHeight - 2 * marginV - labelHeight - shadowHeight
         val bodySize = minOf(tileWidth, available)
         val iconSize = (bodySize * ICON_RATIO).toInt()
         val labelTextPx = bodySize * LABEL_TEXT_RATIO
@@ -141,6 +147,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                 tileBinding.tileLabel.layoutParams.height = labelHeight
                 tileBinding.tileLabel.setTextSize(TypedValue.COMPLEX_UNIT_PX, labelTextPx)
                 tileBinding.tileBody.layoutParams.height = bodySize
+                tileBinding.tileShadow.layoutParams.height = shadowHeight
                 tileBinding.tileIcon.layoutParams.also {
                     it.width = iconSize
                     it.height = iconSize
@@ -324,5 +331,6 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         const val LABEL_HEIGHT_RATIO = 0.20f
         const val LABEL_TEXT_RATIO = 0.125f
         const val ICON_RATIO = 0.44f
+        const val SHADOW_HEIGHT_RATIO = 0.16f
     }
 }

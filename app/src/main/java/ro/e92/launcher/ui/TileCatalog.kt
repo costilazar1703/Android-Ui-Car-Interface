@@ -54,21 +54,21 @@ object TileCatalog {
     const val PAGE_SIZE = 6
 
     val items: List<Tile> = listOf(
-        // ------------------------------ pagina 1 ------------------------------
+        // ---- pagina 1: ce se atinge cel mai des in mers ----
+        Tile("carinfo", R.drawable.ic_menu_car_info, R.string.menu_car_info, TileAction.CAR_INFO),
+        Tile("carplay", R.drawable.ic_menu_carplay, R.string.menu_carplay, TileAction.CARPLAY),
+        Tile("bt", R.drawable.ic_menu_bluetooth, R.string.menu_bluetooth, TileAction.BLUETOOTH),
+        Tile("dash", R.drawable.ic_menu_dashboard, R.string.menu_dashboard, TileAction.DASHBOARD),
+        Tile("settings", R.drawable.ic_menu_settings, R.string.menu_settings, TileAction.SETTINGS),
+        Tile("apps", R.drawable.ic_menu_apps, R.string.menu_apps, TileAction.APPS),
+
+        // ---- pagina 2 ----
         Tile("nav", R.drawable.ic_menu_navigation, R.string.menu_navigation, TileAction.NAVIGATION),
         Tile("media", R.drawable.ic_menu_media, R.string.menu_media, TileAction.MEDIA),
         Tile("tel", R.drawable.ic_menu_telephone, R.string.menu_telephone, TileAction.TELEPHONE),
-        Tile("bt", R.drawable.ic_menu_bluetooth, R.string.menu_bluetooth, TileAction.BLUETOOTH),
-        Tile("carinfo", R.drawable.ic_tile_e92, R.string.menu_car_info, TileAction.CAR_INFO),
-        Tile("dash", R.drawable.ic_menu_dashboard, R.string.menu_dashboard, TileAction.DASHBOARD),
-
-        // ------------------------------ pagina 2 ------------------------------
-        Tile("carplay", R.drawable.ic_menu_carplay, R.string.menu_carplay, TileAction.CARPLAY),
         Tile("cd", R.drawable.ic_menu_connecteddrive, R.string.menu_connecteddrive, TileAction.CONNECTED_DRIVE),
         Tile("weather", R.drawable.ic_menu_weather, R.string.menu_weather, TileAction.WEATHER),
-        Tile("msg", R.drawable.ic_menu_messages, R.string.menu_messages, TileAction.MESSAGES),
-        Tile("apps", R.drawable.ic_menu_apps, R.string.menu_apps, TileAction.APPS),
-        Tile("settings", R.drawable.ic_menu_settings, R.string.menu_settings, TileAction.SETTINGS)
+        Tile("msg", R.drawable.ic_menu_messages, R.string.menu_messages, TileAction.MESSAGES)
     )
 
     val pageCount: Int = (items.size + PAGE_SIZE - 1) / PAGE_SIZE

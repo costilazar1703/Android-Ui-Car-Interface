@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import ro.e92.launcher.R
 import ro.e92.launcher.focus.FocusTarget
 import ro.e92.launcher.input.LauncherAction
 
@@ -58,6 +59,15 @@ abstract class Screen(protected val host: ScreenHost) {
 
     /** Afișat în bara de sus. */
     abstract val title: String
+
+    /**
+     * Fotografia din spatele ecranului.
+     *
+     * Nivelul 1 (grila de dale) are masina; tot ce se deschide dintr-o dala are
+     * motorul. Schimbarea se face cu un fade in [HomeActivity], nu prin
+     * reincarcarea unui fundal per layout.
+     */
+    open val backgroundRes: Int get() = R.drawable.bg_menu
 
     /**
      * Ecran desenat PESTE cel de dedesubt, care rămâne vizibil (un pop-up).

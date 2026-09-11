@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Umbra de sub dală — și indicatorul principal al selecției.
+
+  Nu e o umbră de obiect, ci LUMINĂ care se scurge din dala aprinsă pe suprafața
+  de dedesubt, ca reflexia farurilor pe asfaltul ud din fotografie. De aceea la
+  starea selectată e portocalie, nu neagră: pe un fundal întunecat o umbră neagră
+  nu se vede, dar lumina se vede imediat.
+
+  Dala neselectată păstrează o umbră discretă, ca să pară așezată pe ceva, nu
+  lipită peste fotografie.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_activated="true">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#8CFF6B00"
+                android:centerColor="#33FF4A00"
+                android:endColor="@color/transparent"
+                android:type="linear" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#73000000"
+                android:endColor="@color/transparent"
+                android:type="linear" />
+        </shape>
+    </item>
+</selector>

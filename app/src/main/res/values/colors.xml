@@ -44,14 +44,26 @@
     <!-- Dalele meniului principal ID6. Gradient de sus in jos: dala neselectata
          e gri inchis, cea selectata are portocaliul BMW infiltrat in partea de
          sus, ca reflexia de pe sticla din masina. -->
-    <color name="tile_idle_top">#1C1C1C</color>
-    <color name="tile_idle_bottom">#0D0D0D</color>
-    <color name="tile_idle_stroke">#2E2E2E</color>
+    <color name="tile_idle_top">#B8181818</color>
+    <color name="tile_idle_bottom">#CC050505</color>
+    <color name="tile_idle_stroke">#59FFFFFF</color>
 
-    <color name="tile_focus_top">#331700</color>
-    <color name="tile_focus_mid">#1B0D04</color>
-    <color name="tile_focus_bottom">#0E0805</color>
+    <color name="tile_focus_top">#B3512000</color>
+    <color name="tile_focus_mid">#BF1F0E04</color>
+    <color name="tile_focus_bottom">#D90A0603</color>
 
     <color name="tile_icon_idle">#C8C8C8</color>
     <color name="tile_label_idle">#7E7E7E</color>
+    <!-- Conturul interior al ramei duble. Cel exterior e portocaliu/alb-stins;
+         asta e doar o muchie fina care da senzatia de piesa frezata. -->
+    <color name="tile_idle_inner_stroke">#26FFFFFF</color>
+    <color name="tile_focus_inner_stroke">#66FFB37F</color>
+    <!-- Randurile meniurilor de nivel 2. Gradient pe ORIZONTALA, stins spre
+         dreapta: randul se agata de muchia din stanga (de unde vine conectorul)
+         si lasa fotografia sa se vada spre capatul liber. -->
+    <color name="row_idle_start">#B3141414</color>
+    <color name="row_idle_end">#59080808</color>
+    <color name="row_idle_stroke">#2EFFFFFF</color>
+    <color name="row_focus_start">#D9662A00</color>
+    <color name="row_focus_end">#73200E02</color>
 </resources>

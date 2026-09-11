@@ -59,9 +59,19 @@
             android:contentDescription="@null"
             android:duplicateParentState="true"
             android:scaleType="fitCenter"
-            android:tint="@color/tile_icon_tint"
             tools:src="@drawable/ic_menu_navigation" />
 
     </FrameLayout>
+
+    <!-- Umbra / lumina scursă sub dală. Înălțimea se pune din cod, proporțional
+         cu latura pătratului. -->
+    <View
+        android:id="@+id/tileShadow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/tile_frame_inset"
+        android:layout_marginEnd="@dimen/tile_frame_inset"
+        android:background="@drawable/tile_shadow"
+        android:duplicateParentState="true" />
 
 </LinearLayout>

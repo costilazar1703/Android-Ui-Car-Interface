@@ -1,29 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Cardul de meniu, cu halo-ul roșu-portocaliu BMW ID6 pe elementul focusat.
+  Rândul unui meniu de nivel 2.
 
-  Glow-ul e făcut din <layer-list>, NU din elevation: pe API 27 umbra desenată de
-  elevation e o umbră NEAGRĂ sub view — pe fundal negru nu se vede nimic, iar la
-  colțuri apare un dreptunghi mai închis. Aici straturile merg invers: cel mai
-  din afară e cel mai transparent, iar fiecare inset următor e mai aprins, deci
-  lumina pare că iese din card.
+  Semi-transparent din același motiv ca dalele: fotografia de fundal trebuie să
+  treacă prin el. Alfa stă în culori, nu într-un `alpha` pe view — acela ar fi
+  stins și conturul, nu doar umplutura.
 
-  state_activated e pus de FocusEngine, nu de sistem — nu folosim focus-ul nativ.
+  Glow-ul vine din straturi, NU din elevation: pe API 27 elevation desenează o
+  umbră neagră, care pe fundal întunecat nu se vede și lasă colțurile murdare.
 -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item android:state_activated="true">
         <layer-list>
-
-            <!-- Halo exterior: aproape invizibil singur, dar dă senzația de difuzie. -->
             <item>
                 <shape android:shape="rectangle">
                     <solid android:color="@color/glow_outer" />
                     <corners android:radius="@dimen/card_corner" />
                 </shape>
             </item>
-
-            <!-- Halo intermediar. -->
             <item
                 android:bottom="@dimen/glow_step"
                 android:left="@dimen/glow_step"
@@ -34,8 +29,6 @@
                     <corners android:radius="@dimen/card_corner" />
                 </shape>
             </item>
-
-            <!-- Corpul cardului + conturul aprins. -->
             <item
                 android:bottom="@dimen/glow_body_inset"
                 android:left="@dimen/glow_body_inset"
@@ -44,8 +37,8 @@
                 <shape android:shape="rectangle">
                     <gradient
                         android:angle="0"
-                        android:endColor="@color/surface_focused"
-                        android:startColor="@color/accent_focus_dim"
+                        android:startColor="@color/row_focus_start"
+                        android:endColor="@color/row_focus_end"
                         android:type="linear" />
                     <stroke
                         android:width="@dimen/focus_stroke"
@@ -53,9 +46,8 @@
                     <corners android:radius="@dimen/card_corner" />
                 </shape>
             </item>
-
-            <!-- Bara verticală de pe muchia din stânga: reperul ID6 care arată
-                 de unde „intră" linia venită de la rotiță. -->
+            <!-- Bara de pe muchia din stânga: reperul ID6 care arată de unde
+                 „intră" linia venită de la rotiță. -->
             <item
                 android:width="@dimen/tile_marker_width"
                 android:bottom="@dimen/glow_body_inset"
@@ -66,12 +58,9 @@
                     <solid android:color="@color/glow_core" />
                 </shape>
             </item>
-
         </layer-list>
     </item>
 
-    <!-- Neselectat: card discret, aceeași geometrie ca cel aprins ca să nu
-         „sară" nimic la mutarea focusului. -->
     <item>
         <layer-list>
             <item
@@ -80,10 +69,14 @@
                 android:right="@dimen/glow_body_inset"
                 android:top="@dimen/glow_body_inset">
                 <shape android:shape="rectangle">
-                    <solid android:color="@color/surface" />
+                    <gradient
+                        android:angle="0"
+                        android:startColor="@color/row_idle_start"
+                        android:endColor="@color/row_idle_end"
+                        android:type="linear" />
                     <stroke
                         android:width="@dimen/idle_stroke"
-                        android:color="@color/stroke" />
+                        android:color="@color/row_idle_stroke" />
                     <corners android:radius="@dimen/card_corner" />
                 </shape>
             </item>
