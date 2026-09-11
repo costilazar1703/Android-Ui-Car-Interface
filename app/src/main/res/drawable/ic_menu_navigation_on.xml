@@ -9,7 +9,7 @@
 
     <path
         android:fillType="evenOdd"
-        android:pathData="M12,1.6A10.4,10.4 0 1 0 12,22.4A10.4,10.4 0 1 0 12,1.6zM12,3.4A8.6,8.6 0 1 1 12,20.6A8.6,8.6 0 1 1 12,3.4z">
+        android:pathData="M20.5,3L20.34,3.03L15,5.1L9,3L3.38,4.9C3.16,4.97 3,5.15 3,5.38V20.5C3,20.78 3.22,21 3.5,21L3.66,20.97L9,18.9L15,21L20.62,19.1C20.84,19.03 21,18.85 21,18.62V3.5C21,3.22 20.78,3 20.5,3ZM9.6,5.16L14.4,6.84V18.84L9.6,17.16Z">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:type="linear"
@@ -23,7 +23,7 @@
     </path>
 
     <path
-        android:pathData="M14.19,14.19L6,18l3.81,-8.19L18,6z">
+        android:pathData="M6.3,16.4C6.3,14.2 8.1,13.4 9.6,12.8C11.1,12.2 12.2,11.8 12.2,10.6C12.2,9.6 11.4,8.9 10.4,8.7L10.8,7.4C12.5,7.7 13.7,8.9 13.7,10.6C13.7,12.8 11.9,13.6 10.4,14.2C8.9,14.8 7.8,15.2 7.8,16.4Z">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:type="linear"
@@ -37,7 +37,8 @@
     </path>
 
     <path
-        android:pathData="M11.4,0.4h1.2v2.2h-1.2z M11.4,21.4h1.2v2.2h-1.2zM21.4,11.4h2.2v1.2h-2.2z M0.4,11.4h2.2v1.2H0.4z">
+        android:fillType="evenOdd"
+        android:pathData="M17.2,7.3C16.0,7.3 15.1,8.2 15.1,9.4C15.1,11.0 17.2,13.3 17.2,13.3S19.3,11.0 19.3,9.4C19.3,8.2 18.4,7.3 17.2,7.3ZM17.2,10.2A0.85,0.85 0 1 1 17.2,8.5A0.85,0.85 0 1 1 17.2,10.2Z">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:type="linear"

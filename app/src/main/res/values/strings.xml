@@ -4,7 +4,7 @@
 
     <!-- ==================== Meniul principal (10 intrări) ==================== -->
     <string name="menu_media">Media / Radio</string>
-    <string name="menu_bluetooth">Bluetooth Audio</string>
+    <string name="menu_bluetooth">Bluetooth</string>
     <string name="menu_telephone">Telephone</string>
     <string name="menu_navigation">Navigation</string>
     <string name="menu_carplay">Apple CarPlay</string>
@@ -119,7 +119,7 @@
     <string name="msg_hint">Messages arrive over the head unit\'s Bluetooth MAP profile</string>
     <!-- Dale noi fata de vechiul meniu de 10. -->
     <string name="menu_weather">Weather</string>
-    <string name="menu_apps">Applications</string>
+    <string name="menu_apps">Apps</string>
     <!-- Meniurile de nivel 2 (cate unul pentru fiecare dala). -->
     <string name="nav_pick_maps">Google Maps</string>
     <string name="nav_assign_primary">Assign primary nav app</string>

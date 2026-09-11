@@ -52,26 +52,30 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.205" />
+        app:layout_constraintGuide_percent="0.235" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/gListStart"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.265" />
+        app:layout_constraintGuide_percent="0.295" />
 
     <!-- ============================== ROTIȚA ============================= -->
+    <!-- Rotița stă pe toată înălțimea și centrată, nu coborâtă odată cu
+         rândurile: e ancora vizuală a ecranului, iar din centrul ei pleacă
+         linia. Coborâtă, arăta ca o piesă care a alunecat în colț. -->
     <ro.e92.launcher.ui.widget.IDriveWheelView
         android:id="@+id/wheel"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginBottom="6dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toStartOf="@id/gWheelEnd"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/gContentTop" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Iconița rândului focusat, în centrul rotiței. Se schimbă instantaneu la
          fiecare mutare de focus. -->
@@ -88,7 +92,7 @@
         app:layout_constraintTop_toTopOf="@id/wheel"
         app:layout_constraintVertical_bias="0.42"
         app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="0.055"
+        app:layout_constraintWidth_percent="0.062"
         tools:src="@drawable/ic_menu_media" />
 
     <TextView
@@ -105,14 +109,16 @@
         tools:text="MEDIA" />
 
     <!-- ============================= CONECTOR ============================ -->
+    <!-- Pe toată înălțimea, nu doar cât rotița: rândurile sunt mai jos decât
+         centrul ei, iar un view mai scurt ar tăia capătul curbei la desenare. -->
     <ro.e92.launcher.ui.widget.ConnectorView
         android:id="@+id/connector"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="@id/wheel"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/gListStart"
         app:layout_constraintStart_toStartOf="@id/gWheelEnd"
-        app:layout_constraintTop_toTopOf="@id/wheel" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <!-- =============================== LISTĂ ============================= -->
     <FrameLayout

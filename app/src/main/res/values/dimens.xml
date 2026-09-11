@@ -10,7 +10,7 @@
     <dimen name="screen_margin">10dp</dimen>
     <dimen name="card_gap">8dp</dimen>
     <dimen name="card_padding">12dp</dimen>
-    <dimen name="card_corner">2dp</dimen>
+    <dimen name="card_corner">6dp</dimen>
     <dimen name="focus_stroke">2dp</dimen>
     <dimen name="idle_stroke">1dp</dimen>
 
@@ -53,7 +53,9 @@
     <dimen name="overlay_padding">14dp</dimen>
     <!-- Dalele ID6. Inset-urile sunt identice pe ambele stari ale selectorului,
          ca dala sa nu-si schimbe geometria cand primeste focus. -->
-    <dimen name="tile_corner">3dp</dimen>
+    <!-- Rotunjire discreta: destul cat sa nu mai fie un dreptunghi taiat,
+         prea putin cat sa devina un buton de telefon. -->
+    <dimen name="tile_corner">7dp</dimen>
     <dimen name="tile_glow_step">3dp</dimen>
     <dimen name="tile_body_inset">6dp</dimen>
     <!-- Golul dintre rama exterioara si cea interioara. -->

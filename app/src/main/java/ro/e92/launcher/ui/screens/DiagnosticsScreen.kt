@@ -8,6 +8,9 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import ro.e92.launcher.can.CanDataSource
 import ro.e92.launcher.core.Services
+import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
+import android.content.Context
 import ro.e92.launcher.databinding.ScreenDiagnosticsBinding
 import ro.e92.launcher.focus.FocusTarget
 import ro.e92.launcher.input.KeyEventLog
@@ -112,11 +115,86 @@ class DiagnosticsScreen(host: ScreenHost) : Screen(host) {
         sb.append("location   = ").append(Services.net.hasLocationPermission()).append('\n')
         sb.append("su binary  = ").append(suBinaryPresent()).append("\n\n")
 
+        appendBluetoothAndMedia(sb)
+
         val raw = Services.broadcastCan.lastRaw.value
         sb.append("last CAN broadcast:\n")
         sb.append(if (raw.isEmpty()) "  (niciunul)" else raw)
 
         binding.txtState.text = sb
+    }
+
+    /**
+     * Ce vede ANDROID din Bluetooth și din media.
+     *
+     * Blocul ăsta există ca să răspundă la o singură întrebare, direct în mașină:
+     * modulul Bluetooth al unității (BC5 / BC6 / BC8) trece prin Android sau e
+     * legat direct la MCU?
+     *
+     * Pe multe unități aftermarket modulul vorbește cu MCU-ul pe serial, iar
+     * aplicația de Bluetooth a vendorului doar îi trimite comenzi. În cazul ăla
+     * Android nu vede nici adaptor, nici aparate împerecheate, iar sunetul ajunge
+     * la amplificator fără să treacă prin sistemul de operare — deci nu există
+     * nici MediaSession, iar butoanele noastre n-au ce comanda.
+     *
+     * Cum se citește, cu muzica pornită de pe telefon:
+     *   - „sessions" listează ceva     → merge, inclusiv din meniul principal
+     *   - adapter absent / bonded 0    → modulul e pe MCU, comenzile rămân la vendor
+     *   - sessions 0, notif acc false  → nu e modulul, e permisiunea neacordată
+     */
+    private fun appendBluetoothAndMedia(sb: StringBuilder) {
+        sb.append("--- bluetooth ---\n")
+
+        val adapter = runCatching {
+            (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+        }.getOrNull()
+
+        if (adapter == null) {
+            sb.append("adapter    = absent (modul pe MCU?)\n")
+        } else {
+            sb.append("adapter    = ")
+                .append(if (adapter.isEnabled) "on" else "off")
+                .append(" · ").append(runCatching { adapter.name }.getOrNull() ?: "—")
+                .append('\n')
+
+            val bonded = runCatching { adapter.bondedDevices }.getOrNull()
+            sb.append("bonded     = ").append(bonded?.size ?: 0).append('\n')
+            bonded?.take(4)?.forEach { device ->
+                sb.append("  ")
+                    .append(runCatching { device.name }.getOrNull() ?: device.address)
+                    .append('\n')
+            }
+            sb.append("a2dp       = ")
+                .append(profileName(runCatching {
+                    adapter.getProfileConnectionState(BluetoothProfile.A2DP)
+                }.getOrDefault(-1)))
+                .append('\n')
+            sb.append("headset    = ")
+                .append(profileName(runCatching {
+                    adapter.getProfileConnectionState(BluetoothProfile.HEADSET)
+                }.getOrDefault(-1)))
+                .append('\n')
+        }
+
+        sb.append("\n--- media ---\n")
+        val sessions = Services.media.sessions.value
+        sb.append("sessions   = ").append(sessions.size).append('\n')
+        sessions.take(5).forEach { session ->
+            sb.append("  ").append(session.packageName)
+                .append(" · ").append(if (session.isPlaying) "playing" else "paused")
+                .append('\n')
+        }
+        val snapshot = Services.media.snapshot.value
+        sb.append("controlled = ").append(snapshot.packageName ?: "—").append('\n')
+        sb.append("track      = ").append(snapshot.title ?: "—").append("\n\n")
+    }
+
+    private fun profileName(state: Int): String = when (state) {
+        BluetoothProfile.STATE_CONNECTED -> "connected"
+        BluetoothProfile.STATE_CONNECTING -> "connecting"
+        BluetoothProfile.STATE_DISCONNECTING -> "disconnecting"
+        BluetoothProfile.STATE_DISCONNECTED -> "disconnected"
+        else -> "—"
     }
 
     /**

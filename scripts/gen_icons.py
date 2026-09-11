@@ -55,6 +55,46 @@ SELECTOR = (
     '</selector>\n'
 )
 
+
+import math
+
+
+def gear(cx, cy, teeth, r_out, r_root, hole, twist=0.0):
+    """
+    Path data pentru o roata dintata.
+
+    Calculata, nu desenata de mana: o roata cu 12 dinti scrisa manual inseamna 48
+    de perechi de coordonate in care o singura greseala se vede imediat ca un dinte
+    strambat. Aici se schimba un parametru.
+
+    Dintii au varful plat (doua puncte pe raza exterioara) si radacina plata, cu
+    flancurile inclinate - profilul care citeste a piesa frezata, nu a stea.
+    """
+    step = 2 * math.pi / teeth
+    pts = []
+    for i in range(teeth):
+        a = i * step + twist
+        # varful dintelui
+        pts.append((cx + r_out * math.cos(a + step * 0.09), cy + r_out * math.sin(a + step * 0.09)))
+        pts.append((cx + r_out * math.cos(a + step * 0.41), cy + r_out * math.sin(a + step * 0.41)))
+        # radacina dintre dinti
+        pts.append((cx + r_root * math.cos(a + step * 0.59), cy + r_root * math.sin(a + step * 0.59)))
+        pts.append((cx + r_root * math.cos(a + step * 0.91), cy + r_root * math.sin(a + step * 0.91)))
+    d = 'M%.2f,%.2f' % pts[0] + ''.join('L%.2f,%.2f' % q for q in pts[1:]) + 'Z'
+    # gaura centrala, in sens invers -> evenOdd o scoate
+    d += 'M%.2f,%.2fA%.2f,%.2f 0 1 0 %.2f,%.2fA%.2f,%.2f 0 1 0 %.2f,%.2fZ' % (
+        cx - hole, cy, hole, hole, cx + hole, cy, hole, hole, cx - hole, cy)
+    return d
+
+
+def ring(cx, cy, r_out, r_in):
+    """Inel plin: cerc exterior plus cerc interior in sens invers (evenOdd)."""
+    return ('M%.2f,%.2fA%.2f,%.2f 0 1 1 %.2f,%.2fA%.2f,%.2f 0 1 1 %.2f,%.2fZ'
+            'M%.2f,%.2fA%.2f,%.2f 0 1 0 %.2f,%.2fA%.2f,%.2f 0 1 0 %.2f,%.2fZ') % (
+        cx - r_out, cy, r_out, r_out, cx + r_out, cy, r_out, r_out, cx - r_out, cy,
+        cx - r_in, cy, r_in, r_in, cx + r_in, cy, r_in, r_in, cx - r_in, cy)
+
+
 # ---------------------------------------------------------------- iconitele
 # name -> (viewport_w, viewport_h, [(pathData, evenOdd), ...])
 ICONS = {}
@@ -73,48 +113,36 @@ ICONS['ic_menu_car_info'] = (24, 24, [
 
 # --- Apple CarPlay: masina in insigna rotunjita ----------------------------
 ICONS['ic_menu_carplay'] = (24, 24, [
-    # insigna
-    ('M5.2,2h13.6A3.2,3.2 0 0 1 22,5.2v13.6A3.2,3.2 0 0 1 18.8,22H5.2'
-     'A3.2,3.2 0 0 1 2,18.8V5.2A3.2,3.2 0 0 1 5.2,2z'
-     'M5.2,3.9A1.3,1.3 0 0 0 3.9,5.2v13.6a1.3,1.3 0 0 0 1.3,1.3h13.6'
-     'a1.3,1.3 0 0 0 1.3,-1.3V5.2a1.3,1.3 0 0 0 -1.3,-1.3z', True),
-    # botul masinii vazut din fata
-    ('M8.1,7.6h7.8c0.5,0 0.9,0.3 1.1,0.8l1,2.6c0.4,0.2 0.7,0.6 0.7,1.1v3.3'
-     'c0,0.4 -0.3,0.7 -0.7,0.7h-0.8c-0.4,0 -0.7,-0.3 -0.7,-0.7v-0.5H7.5v0.5'
-     'c0,0.4 -0.3,0.7 -0.7,0.7H6c-0.4,0 -0.7,-0.3 -0.7,-0.7v-3.3'
-     'c0,-0.5 0.3,-0.9 0.7,-1.1l1,-2.6c0.2,-0.5 0.6,-0.8 1.1,-0.8z'
-     'M7.7,11.3h8.6l-0.7,-1.8H8.4z'
-     'M7.4,12.4a0.8,0.8 0 1 0 0,1.6a0.8,0.8 0 1 0 0,-1.6z'
-     'M16.6,12.4a0.8,0.8 0 1 0 0,1.6a0.8,0.8 0 1 0 0,-1.6z', True),
+    # Inelul deschis spre dreapta. Golul nu e decorativ: prin el iese varful
+    # triunghiului, si exact asta face silueta recognoscibila de la distanta.
+    ('M18.46,17.05A8.2,8.2 0 1 1 18.46,6.95L17.36,7.81A6.8,6.8 0 1 0 17.36,16.19Z', False),
+    # Triunghiul de redare, cu varful in dreptul golului.
+    ('M9.5,7.2L18.9,12L9.5,16.8Z', False),
 ])
 
 # --- Bluetooth: runa cu fateta ---------------------------------------------
 ICONS['ic_menu_bluetooth'] = (24, 24, [
-    ('M12.4,1.4 L18,7 L13.4,11.6 L18,16.2 L12.4,21.8 H11.1 V14 L6.9,18.2 '
-     'L5.5,16.8 L10.8,11.5 L5.5,6.2 L6.9,4.8 L11.1,9 V1.4z'
-     'M13,4.6 V9 L15.2,6.8z'
-     'M13,14 V18.4 L15.2,16.2z', True),
+    # Runa, mutata spre stanga ca sa faca loc undelor.
+    ('M10.3,1.6L15.6,6.9L11.3,11.2L15.6,15.5L10.3,20.8H9.1V13.4L5.1,17.4'
+     'L3.8,16.1L8.8,11.1L3.8,6.1L5.1,4.8L9.1,8.8V1.6z'
+     'M11,4.6V8.6L13,6.6z'
+     'M11,13.8V17.8L13,15.8z', True),
+    # Doua unde: arata ca modulul EMITE, nu ca sta doar acolo.
+    ('M17.1,8.1a1,1 0 0 1 1.4,0 5.6,5.6 0 0 1 0,7.9 1,1 0 1 1 -1.4,-1.4'
+     '3.6,3.6 0 0 0 0,-5.1 1,1 0 0 1 0,-1.4z', False),
+    ('M19.7,5.5a1,1 0 0 1 1.4,0 9.3,9.3 0 0 1 0,13.1 1,1 0 1 1 -1.4,-1.4'
+     '7.3,7.3 0 0 0 0,-10.3 1,1 0 0 1 0,-1.4z', False),
 ])
 
 # --- Settings: roata dintata cu inel interior si bolt ----------------------
 ICONS['ic_menu_settings'] = (24, 24, [
-    ('M19.14,12.94c0.04,-0.3 0.06,-0.61 0.06,-0.94c0,-0.32 -0.02,-0.64 -0.07,-0.94'
-     'l2.03,-1.58c0.18,-0.14 0.23,-0.41 0.12,-0.61l-1.92,-3.32'
-     'c-0.12,-0.22 -0.37,-0.29 -0.59,-0.22l-2.39,0.96'
-     'c-0.5,-0.38 -1.03,-0.7 -1.62,-0.94L14.4,2.81'
-     'c-0.04,-0.24 -0.24,-0.41 -0.48,-0.41h-3.84c-0.24,0 -0.43,0.17 -0.47,0.41'
-     'L9.25,5.35C8.66,5.59 8.12,5.92 7.63,6.29L5.24,5.33'
-     'c-0.22,-0.08 -0.47,0 -0.59,0.22L2.74,8.87C2.62,9.08 2.66,9.34 2.86,9.48'
-     'l2.03,1.58C4.84,11.36 4.8,11.69 4.8,12s0.02,0.64 0.07,0.94'
-     'l-2.03,1.58c-0.18,0.14 -0.23,0.41 -0.12,0.61l1.92,3.32'
-     'c0.12,0.22 0.37,0.29 0.59,0.22l2.39,-0.96c0.5,0.38 1.03,0.7 1.62,0.94'
-     'l0.36,2.54c0.05,0.24 0.24,0.41 0.48,0.41h3.84c0.24,0 0.44,-0.17 0.47,-0.41'
-     'l0.36,-2.54c0.59,-0.24 1.13,-0.56 1.62,-0.94l2.39,0.96'
-     'c0.22,0.08 0.47,0 0.59,-0.22l1.92,-3.32c0.12,-0.22 0.07,-0.47 -0.12,-0.61z'
-     'M12,15.9A3.9,3.9 0 1 1 12,8.1A3.9,3.9 0 1 1 12,15.9z', True),
-    # lip-ul frezat din jurul gaurii centrale
-    ('M12,6.9A5.1,5.1 0 1 0 12,17.1A5.1,5.1 0 1 0 12,6.9z'
-     'M12,7.9A4.1,4.1 0 1 1 12,16.1A4.1,4.1 0 1 1 12,7.9z', True),
+    # Roata mare, 12 dinti. Nu mai e roata Material plata: e un angrenaj.
+    (gear(10.2, 10.2, 12, 8.4, 6.5, 3.0), True),
+    # Lip-ul frezat din jurul butucului.
+    (ring(10.2, 10.2, 4.5, 3.6), True),
+    # Roata mica, angrenata jos-dreapta. Dintii ei sunt decalati cu jumatate
+    # de pas ca sa intre intre dintii celei mari, nu peste ei.
+    (gear(18.3, 18.3, 8, 5.4, 4.0, 1.7, twist=0.39), True),
 ])
 
 # --- Dashboard: vitezometru cu ac ------------------------------------------
@@ -130,18 +158,39 @@ ICONS['ic_menu_dashboard'] = (24, 24, [
 
 # --- Applications: grila 3x3 -----------------------------------------------
 ICONS['ic_menu_apps'] = (24, 24, [
-    ('M4,4h4.2v4.2H4zM9.9,4h4.2v4.2H9.9zM15.8,4H20v4.2h-4.2z'
-     'M4,9.9h4.2v4.2H4zM9.9,9.9h4.2v4.2H9.9zM15.8,9.9H20v4.2h-4.2z'
-     'M4,15.8h4.2V20H4zM9.9,15.8h4.2V20H9.9zM15.8,15.8H20V20h-4.2z', False),
+    # Noua placi cu colturi rotunjite. Una e mai lata, ca un widget: grila
+    # perfect uniforma citea a tabel, nu a ecran de aplicatii.
+    ('M4.3,3.6h4.1a0.9,0.9 0 0 1 0.9,0.9v4.1a0.9,0.9 0 0 1 -0.9,0.9H4.3'
+     'a0.9,0.9 0 0 1 -0.9,-0.9V4.5a0.9,0.9 0 0 1 0.9,-0.9z'
+     'M10.6,3.6h9.1a0.9,0.9 0 0 1 0.9,0.9v4.1a0.9,0.9 0 0 1 -0.9,0.9h-9.1'
+     'a0.9,0.9 0 0 1 -0.9,-0.9V4.5a0.9,0.9 0 0 1 0.9,-0.9z'
+     'M4.3,10.8h4.1a0.9,0.9 0 0 1 0.9,0.9v4.1a0.9,0.9 0 0 1 -0.9,0.9H4.3'
+     'a0.9,0.9 0 0 1 -0.9,-0.9v-4.1a0.9,0.9 0 0 1 0.9,-0.9z'
+     'M11.5,10.8h4.1a0.9,0.9 0 0 1 0.9,0.9v4.1a0.9,0.9 0 0 1 -0.9,0.9h-4.1'
+     'a0.9,0.9 0 0 1 -0.9,-0.9v-4.1a0.9,0.9 0 0 1 0.9,-0.9z'
+     'M18.7,10.8h1a0.9,0.9 0 0 1 0.9,0.9v4.1a0.9,0.9 0 0 1 -0.9,0.9h-1'
+     'a0.9,0.9 0 0 1 -0.9,-0.9v-4.1a0.9,0.9 0 0 1 0.9,-0.9z'
+     'M4.3,18h4.1a0.9,0.9 0 0 1 0.9,0.9v1.5a0.9,0.9 0 0 1 -0.9,0.9H4.3'
+     'a0.9,0.9 0 0 1 -0.9,-0.9v-1.5a0.9,0.9 0 0 1 0.9,-0.9z'
+     'M11.5,18h8.2a0.9,0.9 0 0 1 0.9,0.9v1.5a0.9,0.9 0 0 1 -0.9,0.9h-8.2'
+     'a0.9,0.9 0 0 1 -0.9,-0.9v-1.5a0.9,0.9 0 0 1 0.9,-0.9z', False),
 ])
 
 # --- Navigation: busola ----------------------------------------------------
 ICONS['ic_menu_navigation'] = (24, 24, [
-    ('M12,1.6A10.4,10.4 0 1 0 12,22.4A10.4,10.4 0 1 0 12,1.6z'
-     'M12,3.4A8.6,8.6 0 1 1 12,20.6A8.6,8.6 0 1 1 12,3.4z', True),
-    ('M14.19,14.19L6,18l3.81,-8.19L18,6z', False),
-    ('M11.4,0.4h1.2v2.2h-1.2z M11.4,21.4h1.2v2.2h-1.2z'
-     'M21.4,11.4h2.2v1.2h-2.2z M0.4,11.4h2.2v1.2H0.4z', False),
+    # Harta pliata in trei panouri. Cutele sunt goluri (evenOdd), nu linii
+    # desenate peste - asa raman curate la orice scara.
+    ('M20.5,3L20.34,3.03L15,5.1L9,3L3.38,4.9C3.16,4.97 3,5.15 3,5.38V20.5'
+     'C3,20.78 3.22,21 3.5,21L3.66,20.97L9,18.9L15,21L20.62,19.1'
+     'C20.84,19.03 21,18.85 21,18.62V3.5C21,3.22 20.78,3 20.5,3Z'
+     'M9.6,5.16L14.4,6.84V18.84L9.6,17.16Z', True),
+    # Traseul si punctul de destinatie.
+    ('M6.3,16.4C6.3,14.2 8.1,13.4 9.6,12.8C11.1,12.2 12.2,11.8 12.2,10.6'
+     'C12.2,9.6 11.4,8.9 10.4,8.7L10.8,7.4C12.5,7.7 13.7,8.9 13.7,10.6'
+     'C13.7,12.8 11.9,13.6 10.4,14.2C8.9,14.8 7.8,15.2 7.8,16.4Z', False),
+    ('M17.2,7.3C16.0,7.3 15.1,8.2 15.1,9.4C15.1,11.0 17.2,13.3 17.2,13.3'
+     'S19.3,11.0 19.3,9.4C19.3,8.2 18.4,7.3 17.2,7.3Z'
+     'M17.2,10.2A0.85,0.85 0 1 1 17.2,8.5A0.85,0.85 0 1 1 17.2,10.2Z', True),
 ])
 
 # --- Media: nota dubla -----------------------------------------------------

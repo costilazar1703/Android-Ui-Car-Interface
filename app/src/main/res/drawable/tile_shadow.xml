@@ -19,6 +19,7 @@
                 android:centerColor="#33FF4A00"
                 android:endColor="@color/transparent"
                 android:type="linear" />
+            <corners android:radius="@dimen/tile_corner" />
         </shape>
     </item>
     <item>
@@ -28,6 +29,7 @@
                 android:startColor="#73000000"
                 android:endColor="@color/transparent"
                 android:type="linear" />
+            <corners android:radius="@dimen/tile_corner" />
         </shape>
     </item>
 </selector>
