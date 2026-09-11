@@ -30,15 +30,22 @@ import ro.e92.launcher.input.RotaryAccelerator
 import ro.e92.launcher.nav.NavLauncher
 import ro.e92.launcher.net.ConnectivityMonitor
 import ro.e92.launcher.ui.screens.AppDrawerScreen
-import ro.e92.launcher.ui.screens.BluetoothScreen
+import ro.e92.launcher.ui.screens.BluetoothMenuScreen
+import ro.e92.launcher.ui.screens.CarInfoMenuScreen
+import ro.e92.launcher.ui.screens.CarPlayMenuScreen
+import ro.e92.launcher.ui.screens.ConnectedDriveMenuScreen
+import ro.e92.launcher.ui.screens.DashboardMenuScreen
 import ro.e92.launcher.ui.screens.DashboardScreen
 import ro.e92.launcher.ui.screens.DiagnosticsScreen
-import ro.e92.launcher.ui.screens.HomeScreen
+import ro.e92.launcher.ui.screens.MediaMenuScreen
 import ro.e92.launcher.ui.screens.MediaScreen
 import ro.e92.launcher.ui.screens.MessagesScreen
-import ro.e92.launcher.ui.screens.NavigationPickerScreen
+import ro.e92.launcher.ui.screens.NavigationMenuScreen
+import ro.e92.launcher.ui.screens.SettingsMenuScreen
 import ro.e92.launcher.ui.screens.SettingsScreen
 import ro.e92.launcher.ui.screens.TelephoneScreen
+import ro.e92.launcher.ui.screens.TileGridScreen
+import ro.e92.launcher.ui.screens.WeatherMenuScreen
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -82,9 +89,10 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             animationsEnabled = { Services.prefs.animationsEnabled }
         ).apply {
             onTitleChanged = { binding.screenTitle.text = it }
+            onBackgroundChanged = ::showBackground
         }
 
-        stack.setRoot(HomeScreen(this))
+        stack.setRoot(TileGridScreen(this))
 
         // BACK de la touch / sistem: aceeași cale ca BACK-ul fizic.
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -195,8 +203,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             // apăsare în mers. Pop-up-ul cu Waze/Chrome e pentru intrarea din meniu,
             // unde ai timp să alegi.
             LauncherAction.NAV -> { NavLauncher.launch(this, Services.prefs); true }
-            LauncherAction.MEDIA -> { openMenu(MainMenuAction.MEDIA); true }
-            LauncherAction.PHONE -> { openMenu(MainMenuAction.TELEPHONE); true }
+            LauncherAction.MEDIA -> { openTile(TileAction.MEDIA); true }
+            LauncherAction.PHONE -> { openTile(TileAction.TELEPHONE); true }
             LauncherAction.APPS -> { pushUnique(AppDrawerScreen::class.java) { AppDrawerScreen(this) }; true }
             LauncherAction.DIAGNOSTICS -> { pushUnique(DiagnosticsScreen::class.java) { DiagnosticsScreen(this) }; true }
 
@@ -215,50 +223,53 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     // ------------------------------------------------- meniul principal (10)
 
-    override fun openMenu(action: MainMenuAction) {
+    override fun openTile(action: TileAction) {
         when (action) {
-            MainMenuAction.MEDIA ->
-                pushUnique(MediaScreen::class.java) { MediaScreen(this) }
+            // Dalele cu alegeri reale deschid un meniu cu rotita (nivel 2).
+            TileAction.NAVIGATION ->
+                pushUnique(NavigationMenuScreen::class.java) { NavigationMenuScreen(this) }
 
-            MainMenuAction.BLUETOOTH ->
-                pushUnique(BluetoothScreen::class.java) { BluetoothScreen(this) }
+            TileAction.MEDIA ->
+                pushUnique(MediaMenuScreen::class.java) { MediaMenuScreen(this) }
 
-            MainMenuAction.TELEPHONE ->
+            TileAction.BLUETOOTH ->
+                pushUnique(BluetoothMenuScreen::class.java) { BluetoothMenuScreen(this) }
+
+            TileAction.CAR_INFO ->
+                pushUnique(CarInfoMenuScreen::class.java) { CarInfoMenuScreen(this) }
+
+            TileAction.DASHBOARD ->
+                pushUnique(DashboardMenuScreen::class.java) { DashboardMenuScreen(this) }
+
+            TileAction.CARPLAY ->
+                pushUnique(CarPlayMenuScreen::class.java) { CarPlayMenuScreen(this) }
+
+            TileAction.CONNECTED_DRIVE ->
+                pushUnique(ConnectedDriveMenuScreen::class.java) { ConnectedDriveMenuScreen(this) }
+
+            TileAction.WEATHER ->
+                pushUnique(WeatherMenuScreen::class.java) { WeatherMenuScreen(this) }
+
+            // Telefonul si Mesajele SUNT deja meniuri (categorii in stanga,
+            // detaliu in dreapta), iar App drawer-ul e o grila - toate trei au
+            // propria forma si n-ar castiga nimic dintr-un meniu cu rotita in
+            // fata lor. Setarile, in schimb, au primit unul: erau singura dala
+            // care se deschidea altfel decat celelalte unsprezece.
+            TileAction.TELEPHONE ->
                 pushUnique(TelephoneScreen::class.java) { TelephoneScreen(this) }
 
-            MainMenuAction.NAVIGATION ->
-                pushUnique(NavigationPickerScreen::class.java) { NavigationPickerScreen(this) }
-
-            MainMenuAction.CARPLAY -> launchAssigned(
-                Services.prefs.carPlayPackage,
-                getString(R.string.menu_carplay)
-            )
-
-            MainMenuAction.CAR_INFO -> launchAssigned(
-                Services.prefs.carInfoPackage,
-                getString(R.string.menu_car_info)
-            )
-
-            // Singurul meniu cu rezervă internă: dacă nu s-a atribuit o aplicație
-            // terță, deschidem cadranele proprii în loc să nu facem nimic.
-            MainMenuAction.DASHBOARD -> {
-                val pkg = Services.prefs.dashboardPackage
-                if (pkg.isEmpty()) {
-                    pushUnique(DashboardScreen::class.java) { DashboardScreen(this) }
-                } else {
-                    launchAssigned(pkg, getString(R.string.menu_dashboard))
-                }
-            }
-
-            MainMenuAction.SETTINGS ->
-                pushUnique(SettingsScreen::class.java) { SettingsScreen(this) }
-
-            MainMenuAction.CONNECTED_DRIVE -> openConnectedDrive()
-
-            MainMenuAction.MESSAGES ->
+            TileAction.MESSAGES ->
                 pushUnique(MessagesScreen::class.java) { MessagesScreen(this) }
+
+            TileAction.SETTINGS ->
+                pushUnique(SettingsMenuScreen::class.java) { SettingsMenuScreen(this) }
+
+            TileAction.APPS ->
+                pushUnique(AppDrawerScreen::class.java) { AppDrawerScreen(this) }
         }
     }
+
+    override fun dispatchConnectedDrive() = openConnectedDrive()
 
     /**
      * Lansează o aplicație terță atribuită din Setări. Cele două moduri de eșec —
@@ -318,8 +329,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     override fun goHome() {
         rotary.reset()
-        if (stack.current is HomeScreen && stack.depth == 1) return
-        stack.setRoot(HomeScreen(this))
+        if (stack.current is TileGridScreen && stack.depth == 1) return
+        stack.setRoot(TileGridScreen(this))
     }
 
     override fun rebuildFocus(keepId: String?) = stack.rebuildFocus(keepId)
@@ -327,6 +338,52 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     private fun <T : Screen> pushUnique(type: Class<T>, factory: () -> T) {
         if (type.isInstance(stack.current)) return
         stack.push(factory())
+    }
+
+    // ---------------------------------------------------------- fundal
+
+    /** Drawable-ul afisat acum; fara el am reporni fade-ul la fiecare push. */
+    private var currentBackground = 0
+
+    /**
+     * Schimba fotografia de fundal cu un fade incrucisat.
+     *
+     * Doua ImageView-uri suprapuse: cel de deasupra primeste imaginea noua si
+     * urca de la alpha 0 la 1, apoi valorile se copiaza in cel de dedesubt si
+     * cel de sus se goleste. Asa nu exista niciun cadru in care ecranul sa fie
+     * negru intre doua fotografii.
+     *
+     * Bitmap-ul nou se pune ÎNAINTE de animatie, nu in timpul ei: decodarea unui
+     * JPEG de 1280x480 dureaza cateva milisecunde si ar manca primele cadre.
+     */
+    private fun showBackground(resId: Int) {
+        if (resId == currentBackground) return
+        currentBackground = resId
+
+        // 0 = ecran fara fotografie. Stingem imaginea si eliberam bitmap-ul:
+        // pe 2 GB nu are rost sa tinem 2,4 MB decodati pentru ceva ce nu se vede.
+        if (resId == 0) {
+            binding.screenBackground.animate().cancel()
+            binding.screenBackground.setImageDrawable(null)
+            return
+        }
+
+        if (!Services.prefs.animationsEnabled) {
+            binding.screenBackground.setImageResource(resId)
+            return
+        }
+
+        binding.screenBackgroundNext.setImageResource(resId)
+        binding.screenBackgroundNext.alpha = 0f
+        binding.screenBackgroundNext.animate()
+            .alpha(1f)
+            .setDuration(BACKGROUND_FADE_MS)
+            .withEndAction {
+                binding.screenBackground.setImageResource(resId)
+                binding.screenBackgroundNext.alpha = 0f
+                binding.screenBackgroundNext.setImageDrawable(null)
+            }
+            .start()
     }
 
     // ------------------------------------------------------------- top bar
@@ -461,5 +518,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     private companion object {
         const val REQ_PERMISSIONS = 1001
         const val IMMERSIVE_REAPPLY_MS = 400L
+        const val BACKGROUND_FADE_MS = 260L
     }
 }

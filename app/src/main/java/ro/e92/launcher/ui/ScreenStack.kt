@@ -29,6 +29,9 @@ class ScreenStack(
 
     var onTitleChanged: ((String) -> Unit)? = null
 
+    /** Anuntat cu drawable-ul cerut de ecranul ajuns deasupra. */
+    var onBackgroundChanged: ((Int) -> Unit)? = null
+
     val current: Screen? get() = stack.lastOrNull()?.screen
     val depth: Int get() = stack.size
 
@@ -62,6 +65,7 @@ class ScreenStack(
         screen.show()
         focus.setTargets(screen.focusTargets())
         onTitleChanged?.invoke(screen.title)
+        onBackgroundChanged?.invoke(screen.backgroundRes)
         animateIn(view)
     }
 
@@ -75,6 +79,7 @@ class ScreenStack(
         top.screen.show()
         focus.setTargets(top.screen.focusTargets(), top.savedFocusId)
         onTitleChanged?.invoke(top.screen.title)
+        onBackgroundChanged?.invoke(top.screen.backgroundRes)
         return true
     }
 
@@ -93,6 +98,7 @@ class ScreenStack(
         top.screen.show()
         focus.setTargets(top.screen.focusTargets(), focus.focusedId)
         onTitleChanged?.invoke(top.screen.title)
+        onBackgroundChanged?.invoke(top.screen.backgroundRes)
     }
 
     fun destroyAll() {

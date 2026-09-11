@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import ro.e92.launcher.R
 import ro.e92.launcher.focus.FocusTarget
 import ro.e92.launcher.input.LauncherAction
 
@@ -26,11 +27,20 @@ interface ScreenHost {
     fun dispatch(action: LauncherAction)
 
     /**
-     * Deschide una dintre cele 10 intrări ale meniului principal.
-     * Trăiește în shell, nu în [ro.e92.launcher.ui.screens.HomeScreen]: aceleași
-     * destinații trebuie atinse și de butoanele hard, fără ca home-ul să fie afișat.
+     * Deschide meniul unei dale din grila principala.
+     *
+     * Traieste in shell, nu in [ro.e92.launcher.ui.screens.TileGridScreen]:
+     * aceleasi destinatii trebuie atinse si de butoanele hard (NAV, TEL, MEDIA),
+     * fara ca grila sa fie afisata.
      */
-    fun openMenu(action: MainMenuAction)
+    fun openTile(action: TileAction)
+
+    /**
+     * ConnectedDrive nu e un ecran, ci o lansare de browser cu o adresa din
+     * Prefs. Sta in shell din acelasi motiv ca [openTile]: are nevoie de
+     * PackageManager si de startActivity, nu de un Screen.
+     */
+    fun dispatchConnectedDrive()
 }
 
 /**
@@ -49,6 +59,16 @@ abstract class Screen(protected val host: ScreenHost) {
 
     /** Afișat în bara de sus. */
     abstract val title: String
+
+    /**
+     * Fotografia din spatele ecranului.
+     *
+     * Nivelul 1 (grila de dale) are masina; tot ce se deschide dintr-o dala are
+     * motorul. Se schimba cu un fade in [HomeActivity], nu prin reincarcarea
+     * unui fundal per layout - altfel bitmap-ul s-ar decoda la fiecare push si
+     * am tine doua copii in memorie cat timp un ecran e acoperit.
+     */
+    open val backgroundRes: Int get() = R.drawable.bg_menu
 
     /**
      * Ecran desenat PESTE cel de dedesubt, care rămâne vizibil (un pop-up).

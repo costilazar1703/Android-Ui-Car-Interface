@@ -23,7 +23,11 @@ import ro.e92.launcher.ui.ScreenHost
  *    apoi butonul fizic. Nu are nevoie de laptop, ceea ce contează pentru că
  *    keycode-urile reale ale controller-ului iDrive se află abia în mașină.
  */
-class SettingsScreen(host: ScreenHost) : SplitScreen(host) {
+class SettingsScreen(
+    host: ScreenHost,
+    /** Categoria pe care se deschide, ceruta de randul din meniul cu rotita. */
+    override val initialNavId: String? = null
+) : SplitScreen(host) {
 
     override val title: String get() = "SETTINGS"
     override val navHeader: String get() = context.getString(R.string.menu_settings)
@@ -96,6 +100,18 @@ class SettingsScreen(host: ScreenHost) : SplitScreen(host) {
             title = context.getString(R.string.set_nav_app),
             current = Services.prefs.navPackage,
             assign = { Services.prefs.navPackage = it }
+        ),
+        appRow(
+            id = "pkg_maps",
+            title = context.getString(R.string.nav_pick_maps),
+            current = Services.prefs.mapsPackage,
+            assign = { Services.prefs.mapsPackage = it }
+        ),
+        appRow(
+            id = "pkg_weather",
+            title = context.getString(R.string.menu_weather),
+            current = Services.prefs.weatherPackage,
+            assign = { Services.prefs.weatherPackage = it }
         ),
         appRow(
             id = "pkg_browser",
@@ -235,7 +251,7 @@ class SettingsScreen(host: ScreenHost) : SplitScreen(host) {
         runCatching { context.startActivity(intent) }
     }
 
-    private companion object {
+    companion object {
         const val NAV_APPS = "nav_apps"
         const val NAV_BUTTONS = "nav_buttons"
         const val NAV_LAUNCHER = "nav_launcher"

@@ -13,6 +13,50 @@
     android:background="@color/bg"
     android:keepScreenOn="true">
 
+    <!-- ============================ FUNDAL ============================== -->
+    <!-- O SINGURA instanta pentru tot launcher-ul, in spatele containerului de
+         ecrane. Alternativa - cate un fundal in layout-ul fiecarui ecran - ar
+         decoda bitmap-ul din nou la fiecare push si ar tine doua copii in
+         memorie cat timp un ecran e acoperit. Asa, imaginea se schimba printr-un
+         fade cand se schimba nivelul, si atat. -->
+    <ImageView
+        android:id="@+id/screenBackground"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        android:src="@drawable/bg_home"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Al doilea ImageView, transparent in mod normal: fade-ul intre doua
+         imagini cere ambele pe ecran simultan. -->
+    <ImageView
+        android:id="@+id/screenBackgroundNext"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:alpha="0"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Banda de sub bara de status: fara ea, ceasul si SSID-ul cad peste luna
+         sau peste farurile masinii si devin ilizibile. -->
+    <View
+        android:id="@+id/topBarScrim"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/scrim_topbar"
+        app:layout_constraintBottom_toBottomOf="@id/gTopBar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/gTopBar"
         android:layout_width="wrap_content"

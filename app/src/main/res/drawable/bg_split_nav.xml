@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Coloana din stânga a ecranelor split: un ton peste fundal, fără contur. -->
+<!--
+  Coloana de categorii a ecranelor split.
+
+  Semi-transparentă, cu gradient orizontal care se stinge spre dreapta: coloana
+  se agață de muchia din stânga și lasă fotografia să se vadă spre interior, la
+  fel ca rândurile din meniurile cu rotiță. Un panou opac aici tăia ecranul în
+  două și strica exact continuitatea pe care o au celelalte ecrane.
+-->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="@color/bg_alt" />
+    <gradient
+        android:angle="0"
+        android:startColor="#D90A0A0A"
+        android:endColor="#730A0A0A"
+        android:type="linear" />
 </shape>

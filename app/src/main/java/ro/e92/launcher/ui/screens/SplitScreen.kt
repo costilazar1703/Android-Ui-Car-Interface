@@ -54,6 +54,15 @@ abstract class SplitScreen(host: ScreenHost) : Screen(host) {
 
     protected abstract fun navEntries(): List<NavEntry>
 
+    /**
+     * Categoria deschisa la intrare. Null = prima din lista.
+     *
+     * Exista pentru ca acelasi ecran de Setari e tinta a trei randuri diferite
+     * din meniul cu rotita, iar fiecare trebuie sa ajunga direct unde promite -
+     * nu in „Assigned apps" de fiecare data, urmat de o cautare.
+     */
+    protected open val initialNavId: String? = null
+
     protected abstract fun detailRows(navId: String): List<DetailRow>
 
     protected open fun detailTitle(navId: String): String = ""
@@ -108,9 +117,10 @@ abstract class SplitScreen(host: ScreenHost) : Screen(host) {
             navRows.add(row.root)
         }
 
-        // Prima categorie e selectată din start: un panou de detaliu gol la
-        // intrarea în ecran ar arăta ca un bug.
-        entries.firstOrNull()?.let { selectNav(it.id) }
+        // O categorie e selectată din start: un panou de detaliu gol la intrarea
+        // în ecran ar arăta ca un bug.
+        val wanted = initialNavId?.takeIf { id -> entries.any { it.id == id } }
+        (wanted ?: entries.firstOrNull()?.id)?.let { selectNav(it) }
     }
 
     /** Schimbă categoria și reîncarcă panoul din dreapta. */

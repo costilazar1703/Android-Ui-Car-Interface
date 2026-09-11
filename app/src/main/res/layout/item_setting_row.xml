@@ -4,8 +4,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/row_height"
-    android:background="@drawable/bg_list_row">
+    android:layout_height="@dimen/detail_row_height"
+    android:layout_marginBottom="@dimen/detail_row_gap"
+    android:background="@drawable/bg_detail_row">
 
     <TextView
         android:id="@+id/rowTitle"
@@ -16,7 +17,7 @@
         android:fontFamily="sans-serif-condensed"
         android:paddingStart="@dimen/row_padding_h"
         android:singleLine="true"
-        android:textColor="@color/list_row_text"
+        android:textColor="@color/detail_row_text"
         android:textSize="17sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/rowValue"
@@ -35,19 +36,12 @@
         android:paddingStart="8dp"
         android:paddingEnd="@dimen/row_padding_h"
         android:singleLine="true"
-        android:textColor="@color/list_row_text_secondary"
+        android:textColor="@color/detail_row_text_secondary"
         android:textSize="15sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:text="auto" />
 
-    <View
-        android:layout_width="0dp"
-        android:layout_height="@dimen/divider_height"
-        android:background="@color/divider"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

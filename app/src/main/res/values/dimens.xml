@@ -10,7 +10,7 @@
     <dimen name="screen_margin">10dp</dimen>
     <dimen name="card_gap">8dp</dimen>
     <dimen name="card_padding">12dp</dimen>
-    <dimen name="card_corner">2dp</dimen>
+    <dimen name="card_corner">6dp</dimen>
     <dimen name="focus_stroke">2dp</dimen>
     <dimen name="idle_stroke">1dp</dimen>
 
@@ -40,7 +40,9 @@
 
     <!-- Ecrane split (Setări, Bluetooth, Telefon) -->
     <dimen name="split_nav_row_height">46dp</dimen>
-    <dimen name="detail_row_height">48dp</dimen>
+    <dimen name="detail_row_height">44dp</dimen>
+    <!-- Randurile sunt placi detasate, nu o lista cu separatoare. -->
+    <dimen name="detail_row_gap">4dp</dimen>
     <!-- Glow-ul cardului focusat. Straturile din <layer-list> sunt inset-ate cu
          acesti pasi: cu cat pasul e mai mare, cu atat halo-ul pare mai difuz.
          2dp/4dp sunt calibrate pentru 1280x480 la ~160dpi. -->
@@ -51,4 +53,15 @@
     <!-- Pop-up-uri desenate peste ecranul curent (nu AlertDialog). -->
     <dimen name="overlay_panel_width">420dp</dimen>
     <dimen name="overlay_padding">14dp</dimen>
+    <!-- Dalele ID6. Inset-urile sunt identice pe ambele stari ale selectorului,
+         ca dala sa nu-si schimbe geometria cand primeste focus. -->
+    <!-- Rotunjire discreta: destul cat sa nu mai fie un dreptunghi taiat,
+         prea putin cat sa devina un buton de telefon. -->
+    <dimen name="tile_corner">7dp</dimen>
+    <dimen name="tile_glow_step">3dp</dimen>
+    <dimen name="tile_body_inset">6dp</dimen>
+    <!-- Golul dintre rama exterioara si cea interioara. -->
+    <dimen name="tile_frame_inset">9dp</dimen>
+    <dimen name="tile_gap">4dp</dimen>
+    <dimen name="tile_grid_margin_v">8dp</dimen>
 </resources>

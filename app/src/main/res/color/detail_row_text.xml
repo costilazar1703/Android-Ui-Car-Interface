@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Randul de detaliu ramane inchis cand e selectat (se aprinde doar conturul si
+     bara din stanga), deci textul e deschis in ambele stari. Selectorul e separat
+     de list_row_text tocmai pentru ca acela imbraca randuri cu umplere portocalie
+     plina, unde textul trebuie sa fie inchis. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_activated="true" android:color="@color/text_primary" />
+    <item android:color="@color/text_primary" />
+</selector>

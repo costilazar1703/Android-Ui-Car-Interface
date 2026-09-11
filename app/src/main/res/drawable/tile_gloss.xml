@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reflexia de pe jumătatea de sus a dalei. Alb cu alfa foarte mică: sub 8%
+     citește ca sticlă, peste 12% începe să pară praf pe ecran. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="#14FFFFFF"
+        android:endColor="@color/transparent"
+        android:type="linear" />
+    <corners android:radius="@dimen/tile_corner" />
+</shape>
