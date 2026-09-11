@@ -37,6 +37,7 @@ import ro.e92.launcher.ui.screens.ConnectedDriveMenuScreen
 import ro.e92.launcher.ui.screens.DashboardMenuScreen
 import ro.e92.launcher.ui.screens.DashboardScreen
 import ro.e92.launcher.ui.screens.DiagnosticsScreen
+import ro.e92.launcher.ui.screens.DriveSportScreen
 import ro.e92.launcher.ui.screens.MediaMenuScreen
 import ro.e92.launcher.ui.screens.MediaScreen
 import ro.e92.launcher.ui.screens.MessagesScreen
@@ -105,6 +106,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
         requestRuntimePermissionsIfNeeded()
         observeStatusBar()
+        observeDriveMode()
     }
 
     override fun onStart() {
@@ -402,6 +404,36 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                 }
             }
         }
+    }
+
+    /**
+     * Salutul de mod de condus.
+     *
+     * Se declanseaza pe TRANZITIE, nu pe stare: `false -> true`. Pe stare pura,
+     * fiecare frame CAN care repeta „sport=1" ar redeschide ecranul la
+     * nesfarsit. `null` inseamna „unitatea nu raporteaza asa ceva" si nu conteaza
+     * ca tranzitie - de aceea prima valoare nu declanseaza nimic.
+     *
+     * Traieste in Activity, nu intr-un ecran: modul se poate schimba oricand,
+     * indiferent ce e afisat, iar salutul trebuie sa apara peste orice.
+     */
+    private fun observeDriveMode() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                var previous: Boolean? = null
+                Services.vehicle.state.collect { state ->
+                    val now = state.sportMode
+                    if (now == true && previous == false) showDriveMode()
+                    if (now != null) previous = now
+                }
+            }
+        }
+    }
+
+    /** Nu stivuim doua saluturi daca semnalul palpaie. */
+    fun showDriveMode() {
+        if (stack.current is DriveSportScreen) return
+        stack.push(DriveSportScreen(this))
     }
 
     private fun describeNet(state: ConnectivityMonitor.NetState): String = when (state.status) {

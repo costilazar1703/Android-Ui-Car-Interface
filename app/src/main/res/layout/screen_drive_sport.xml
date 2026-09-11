@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Salutul de mod Sport, desenat PESTE ecranul curent (vezi Screen.isOverlay).
+
+  Nu e un ecran de sine stătător: după ce se stinge, dedesubt trebuie să fie
+  exact ce era înainte — dala sau meniul de la care ai plecat. De aceea nu are
+  fundal opac propriu, ci un voal peste fotografia cu motorul, iar ScreenStack
+  lasă ecranul de dedesubt vizibil.
+
+  Elementele intră decalat, nu deodată: „DRIVE" se așază primul, „SPORT" vine
+  peste el, iar linia se trage la final. Un singur bloc care apare brusc arată a
+  notificare, nu a mașină care confirmă o comandă.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clickable="true"
+    android:focusable="false">
+
+    <!-- Voalul. Mai închis decât cel al meniurilor: aici textul e singurul lucru
+         care contează, iar motorul rămâne doar atmosferă. -->
+    <View
+        android:id="@+id/sportScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/scrim_sport" />
+
+    <LinearLayout
+        android:id="@+id/sportBlock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/sportKicker"
+            style="@style/Text.Label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:letterSpacing="0.5"
+            android:text="@string/drive_mode_kicker"
+            android:textColor="@color/text_secondary"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/sportName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:fontFamily="sans-serif-condensed"
+            android:includeFontPadding="false"
+            android:letterSpacing="0.16"
+            android:textAllCaps="true"
+            android:textColor="@color/text_primary"
+            android:textSize="64sp"
+            android:textStyle="bold"
+            tools:text="Sport" />
+
+        <!-- Linia care se trage sub nume. Lățimea e animată din cod. -->
+        <View
+            android:id="@+id/sportRule"
+            android:layout_width="0dp"
+            android:layout_height="3dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/sport_rule" />
+
+    </LinearLayout>
+
+</FrameLayout>

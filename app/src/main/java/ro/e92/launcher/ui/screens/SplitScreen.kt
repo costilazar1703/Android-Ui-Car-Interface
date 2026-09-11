@@ -77,10 +77,27 @@ abstract class SplitScreen(host: ScreenHost) : Screen(host) {
     private val navRows = ArrayList<View>(4)
     private var entries: List<NavEntry> = emptyList()
 
+    /**
+     * Ecranul se construieste O SINGURA DATA.
+     *
+     * [onShow] se reapeleaza de fiecare data cand ecranul redevine vizibil -
+     * la revenirea din altul, sau dupa ce se stinge un overlay peste el. Fara
+     * garda, buildNav() ar rula din nou si ar readuce categoria la cea initiala:
+     * deschideai „Launcher", trecea un salut de mod de condus peste ecran, si te
+     * trezeai inapoi in „Assigned apps".
+     *
+     * Subclasele isi pornesc in continuare observatorii la fiecare onShow -
+     * garda opreste doar reconstructia, nu si restul.
+     */
+    private var built = false
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup): View =
         ScreenSplitBinding.inflate(inflater, container, false).also { binding = it }.root
 
     override fun onShow() {
+        if (built) return
+        built = true
+
         binding.navHeader.text = navHeader
 
         adapter = DetailAdapter()

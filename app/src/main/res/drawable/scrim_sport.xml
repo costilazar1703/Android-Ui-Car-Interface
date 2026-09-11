@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Voalul salutului de mod. Mai închis decât cel al meniurilor: aici motorul e
+     doar atmosferă, iar textul trebuie să fie singurul lucru care se citește. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="315"
+        android:startColor="#D9050505"
+        android:centerColor="#B3080604"
+        android:endColor="#E6030303"
+        android:type="linear" />
+</shape>

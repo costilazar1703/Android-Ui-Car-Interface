@@ -11,6 +11,13 @@ data class VehicleState(
     val handbrake: Boolean? = null,
     val doorsOpen: Set<Door> = emptySet(),
     val reverseGear: Boolean? = null,
+    /**
+     * Modul de condus sport. `null` = unitatea nu raporteaza asa ceva, ceea ce
+     * e cazul cel mai probabil: butonul Sport de pe E92 circula pe PT-CAN ca
+     * mesaj propriu BMW, nu ca PID OBD2 standard, iar daca MCU-ul unitatii nu-l
+     * retransmite in Android nu avem de unde sa-l stim.
+     */
+    val sportMode: Boolean? = null,
     /** SystemClock.elapsedRealtime() al ultimei actualizări reale. 0 = niciodată. */
     val timestamp: Long = 0L
 ) {

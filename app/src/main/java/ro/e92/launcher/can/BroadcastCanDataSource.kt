@@ -90,6 +90,8 @@ class BroadcastCanDataSource(
             ?.also { known++ } ?: prev.handbrake
         val reverse = config.reverseKeys.firstNotNullOfOrNull { extras.readBool(it) }
             ?.also { known++ } ?: prev.reverseGear
+        val sport = config.sportKeys.firstNotNullOfOrNull { extras.readBool(it) }
+            ?.also { known++ } ?: prev.sportMode
 
         // Ușile: dacă măcar o cheie de ușă e prezentă, frame-ul e autoritar pentru
         // TOATE ușile — altfel o ușă închisă nu s-ar stinge niciodată din UI.
@@ -110,6 +112,7 @@ class BroadcastCanDataSource(
             handbrake = handbrake,
             doorsOpen = if (anyDoorKeyPresent) doors else prev.doorsOpen,
             reverseGear = reverse,
+            sportMode = sport,
             timestamp = SystemClock.elapsedRealtime()
         )
     }
@@ -157,6 +160,7 @@ data class CanBroadcastConfig(
     val rpmKeys: List<String>,
     val handbrakeKeys: List<String>,
     val reverseKeys: List<String>,
+    val sportKeys: List<String>,
     val doorKeys: Map<Door, String>
 ) {
     companion object {
@@ -172,6 +176,10 @@ data class CanBroadcastConfig(
             rpmKeys = listOf("rpm", "engine_rpm", "revs"),
             handbrakeKeys = listOf("handbrake", "parking_brake", "brake"),
             reverseKeys = listOf("reverse", "back_car", "rear_gear"),
+            // Tot presupuneri, ca si restul. Daca unitatea chiar retransmite
+            // butonul Sport, numele cheii se citeste din ecranul de Diagnostic,
+            // care afiseaza acum TOATE extras-urile primite, nu doar cele stiute.
+            sportKeys = listOf("sport", "sport_mode", "drive_mode", "dme_sport", "mode_sport"),
             doorKeys = mapOf(
                 Door.FRONT_LEFT to "door_fl",
                 Door.FRONT_RIGHT to "door_fr",
