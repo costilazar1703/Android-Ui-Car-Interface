@@ -95,6 +95,33 @@ def ring(cx, cy, r_out, r_in):
         cx - r_in, cy, r_in, r_in, cx + r_in, cy, r_in, r_in, cx - r_in, cy)
 
 
+
+def rrect(x, y, w, h, r):
+    """
+    Dreptunghi cu colturi rotunjite, de la coltul stanga-sus, latime w, inaltime h.
+
+    Exista pentru ca varianta scrisa de mana greseste mereu la fel: segmentul
+    orizontal trebuie sa fie w MINUS cele doua raze, nu w. Cu w intreg, fiecare
+    placa iese cu 2r mai lata decat trebuie, iar intr-o grila de 3x3 placile se
+    suprapun si se contopesc in bare - exact ce s-a intamplat prima data.
+    """
+    return ('M%.2f,%.2fh%.2fa%.2f,%.2f 0 0 1 %.2f,%.2fv%.2f'
+            'a%.2f,%.2f 0 0 1 %.2f,%.2fh%.2fa%.2f,%.2f 0 0 1 %.2f,%.2f'
+            'v%.2fa%.2f,%.2f 0 0 1 %.2f,%.2fZ') % (
+        x + r, y, w - 2 * r, r, r, r, r, h - 2 * r,
+        r, r, -r, r, -(w - 2 * r), r, r, -r, -r,
+        -(h - 2 * r), r, r, r, -r)
+
+
+def grid(cols, rows, x0, y0, cell, gap, r):
+    """Grila de placi rotunjite, fara suprapuneri prin constructie."""
+    out = ''
+    for row in range(rows):
+        for col in range(cols):
+            out += rrect(x0 + col * (cell + gap), y0 + row * (cell + gap), cell, cell, r)
+    return out
+
+
 # ---------------------------------------------------------------- iconitele
 # name -> (viewport_w, viewport_h, [(pathData, evenOdd), ...])
 ICONS = {}
@@ -122,16 +149,12 @@ ICONS['ic_menu_carplay'] = (24, 24, [
 
 # --- Bluetooth: runa cu fateta ---------------------------------------------
 ICONS['ic_menu_bluetooth'] = (24, 24, [
-    # Runa, mutata spre stanga ca sa faca loc undelor.
-    ('M10.3,1.6L15.6,6.9L11.3,11.2L15.6,15.5L10.3,20.8H9.1V13.4L5.1,17.4'
-     'L3.8,16.1L8.8,11.1L3.8,6.1L5.1,4.8L9.1,8.8V1.6z'
-     'M11,4.6V8.6L13,6.6z'
-     'M11,13.8V17.8L13,15.8z', True),
-    # Doua unde: arata ca modulul EMITE, nu ca sta doar acolo.
-    ('M17.1,8.1a1,1 0 0 1 1.4,0 5.6,5.6 0 0 1 0,7.9 1,1 0 1 1 -1.4,-1.4'
-     '3.6,3.6 0 0 0 0,-5.1 1,1 0 0 1 0,-1.4z', False),
-    ('M19.7,5.5a1,1 0 0 1 1.4,0 9.3,9.3 0 0 1 0,13.1 1,1 0 1 1 -1.4,-1.4'
-     '7.3,7.3 0 0 0 0,-10.3 1,1 0 0 1 0,-1.4z', False),
+    # Runa singura, centrata. Undele de emisie s-au dovedit zgomot: la 85 px
+    # se lipeau de runa si citeau ca o pata, nu ca un semnal.
+    ('M12.4,1.4L18,7L13.4,11.6L18,16.2L12.4,21.8H11.1V14L6.9,18.2'
+     'L5.5,16.8L10.8,11.5L5.5,6.2L6.9,4.8L11.1,9V1.4z'
+     'M13,4.6V9L15.2,6.8z'
+     'M13,14V18.4L15.2,16.2z', True),
 ])
 
 # --- Settings: roata dintata cu inel interior si bolt ----------------------
@@ -158,39 +181,24 @@ ICONS['ic_menu_dashboard'] = (24, 24, [
 
 # --- Applications: grila 3x3 -----------------------------------------------
 ICONS['ic_menu_apps'] = (24, 24, [
-    # Noua placi cu colturi rotunjite. Una e mai lata, ca un widget: grila
-    # perfect uniforma citea a tabel, nu a ecran de aplicatii.
-    ('M4.3,3.6h4.1a0.9,0.9 0 0 1 0.9,0.9v4.1a0.9,0.9 0 0 1 -0.9,0.9H4.3'
-     'a0.9,0.9 0 0 1 -0.9,-0.9V4.5a0.9,0.9 0 0 1 0.9,-0.9z'
-     'M10.6,3.6h9.1a0.9,0.9 0 0 1 0.9,0.9v4.1a0.9,0.9 0 0 1 -0.9,0.9h-9.1'
-     'a0.9,0.9 0 0 1 -0.9,-0.9V4.5a0.9,0.9 0 0 1 0.9,-0.9z'
-     'M4.3,10.8h4.1a0.9,0.9 0 0 1 0.9,0.9v4.1a0.9,0.9 0 0 1 -0.9,0.9H4.3'
-     'a0.9,0.9 0 0 1 -0.9,-0.9v-4.1a0.9,0.9 0 0 1 0.9,-0.9z'
-     'M11.5,10.8h4.1a0.9,0.9 0 0 1 0.9,0.9v4.1a0.9,0.9 0 0 1 -0.9,0.9h-4.1'
-     'a0.9,0.9 0 0 1 -0.9,-0.9v-4.1a0.9,0.9 0 0 1 0.9,-0.9z'
-     'M18.7,10.8h1a0.9,0.9 0 0 1 0.9,0.9v4.1a0.9,0.9 0 0 1 -0.9,0.9h-1'
-     'a0.9,0.9 0 0 1 -0.9,-0.9v-4.1a0.9,0.9 0 0 1 0.9,-0.9z'
-     'M4.3,18h4.1a0.9,0.9 0 0 1 0.9,0.9v1.5a0.9,0.9 0 0 1 -0.9,0.9H4.3'
-     'a0.9,0.9 0 0 1 -0.9,-0.9v-1.5a0.9,0.9 0 0 1 0.9,-0.9z'
-     'M11.5,18h8.2a0.9,0.9 0 0 1 0.9,0.9v1.5a0.9,0.9 0 0 1 -0.9,0.9h-8.2'
-     'a0.9,0.9 0 0 1 -0.9,-0.9v-1.5a0.9,0.9 0 0 1 0.9,-0.9z', False),
+    # Noua placi EGALE, generate - vezi rrect() pentru ce se strica cand sunt
+    # scrise de mana. Placi de latimi diferite aratau a widget-uri, iar colturi
+    # taiate aratau a tabel; asta e intre ele.
+    (grid(3, 3, 3.4, 3.4, 5.2, 1.3, 1.1), False),
 ])
 
 # --- Navigation: busola ----------------------------------------------------
 ICONS['ic_menu_navigation'] = (24, 24, [
-    # Harta pliata in trei panouri. Cutele sunt goluri (evenOdd), nu linii
-    # desenate peste - asa raman curate la orice scara.
+    # Harta pliata in trei panouri; cutele sunt goluri, nu linii desenate peste.
     ('M20.5,3L20.34,3.03L15,5.1L9,3L3.38,4.9C3.16,4.97 3,5.15 3,5.38V20.5'
      'C3,20.78 3.22,21 3.5,21L3.66,20.97L9,18.9L15,21L20.62,19.1'
      'C20.84,19.03 21,18.85 21,18.62V3.5C21,3.22 20.78,3 20.5,3Z'
      'M9.6,5.16L14.4,6.84V18.84L9.6,17.16Z', True),
-    # Traseul si punctul de destinatie.
-    ('M6.3,16.4C6.3,14.2 8.1,13.4 9.6,12.8C11.1,12.2 12.2,11.8 12.2,10.6'
-     'C12.2,9.6 11.4,8.9 10.4,8.7L10.8,7.4C12.5,7.7 13.7,8.9 13.7,10.6'
-     'C13.7,12.8 11.9,13.6 10.4,14.2C8.9,14.8 7.8,15.2 7.8,16.4Z', False),
-    ('M17.2,7.3C16.0,7.3 15.1,8.2 15.1,9.4C15.1,11.0 17.2,13.3 17.2,13.3'
-     'S19.3,11.0 19.3,9.4C19.3,8.2 18.4,7.3 17.2,7.3Z'
-     'M17.2,10.2A0.85,0.85 0 1 1 17.2,8.5A0.85,0.85 0 1 1 17.2,10.2Z', True),
+    # Un singur pin, asezat peste cuta din mijloc. Traseul in S care era aici
+    # inainte se aglomera cu cutele si nu se mai citea nimic la scara mica.
+    ('M12,6.1C10.1,6.1 8.6,7.6 8.6,9.5C8.6,12.1 12,15.9 12,15.9'
+     'S15.4,12.1 15.4,9.5C15.4,7.6 13.9,6.1 12,6.1Z'
+     'M12,10.9A1.35,1.35 0 1 1 12,8.2A1.35,1.35 0 1 1 12,10.9Z', True),
 ])
 
 # --- Media: nota dubla -----------------------------------------------------
