@@ -124,9 +124,13 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
         stack.onActivityStart()
 
-        if (Services.net.state.value.status != ConnectivityMonitor.Status.ONLINE) {
-            Services.net.startAutoConnect(lifecycleScope)
-        }
+        // NU pornim conectarea automata la Wi-Fi. Pe unitatea asta Wi-Fi-ul e
+        // legat de adaptorul OBD, care nu da internet - deci tableta nu e
+        // niciodata „online", iar conectarea automata rula la fiecare intoarcere
+        // in meniu, apeland enableNetwork(..., disableOthers = true) pe prima
+        // retea salvata. Asta putea dezactiva exact reteaua OBD si lasa
+        // aplicatia de Car Info fara date. Android se reconecteaza oricum singur
+        // la retelele salvate; un launcher n-are ce cauta in controlul Wi-Fi-ului.
     }
 
     override fun onStop() {
@@ -445,8 +449,10 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     private fun describeNet(state: ConnectivityMonitor.NetState): String = when (state.status) {
         ConnectivityMonitor.Status.ONLINE ->
             state.ssid ?: getString(R.string.net_online)
+        // Cu adaptorul OBD pe Wi-Fi, starea asta e cea NORMALA, nu o eroare:
+        // aratam numele retelei, nu un avertisment care sta pe ecran permanent.
         ConnectivityMonitor.Status.CONNECTED_NO_INTERNET ->
-            getString(R.string.net_no_internet)
+            state.ssid ?: getString(R.string.net_no_internet)
         ConnectivityMonitor.Status.CONNECTING -> getString(R.string.net_connecting)
         ConnectivityMonitor.Status.WIFI_OFF -> getString(R.string.net_wifi_off)
         ConnectivityMonitor.Status.DISCONNECTED -> getString(R.string.net_offline)

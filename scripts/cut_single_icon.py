@@ -14,7 +14,7 @@ import sys
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from cut_icon_sheet import extract, OUT, SIZE, PAD
+from cut_icon_sheet import extract, square, OUT, SIZE
 
 
 def main():
@@ -24,17 +24,10 @@ def main():
     box = cut.getbbox()
     if box is None:
         raise SystemExit('nimic de decupat - poza e goala dupa scoaterea fundalului')
-    cut = cut.crop(box)
-
     # Patrat cu aer egal, exact ca la plansa: iconitele trebuie sa aiba aceeasi
     # greutate vizuala in rand, iar aia vine din cat spatiu liber au in jur, nu
     # doar din cat de mare e desenul.
-    side = max(cut.size)
-    canvas_side = int(side * (1 + 2 * PAD))
-    canvas = Image.new('RGBA', (canvas_side, canvas_side), (0, 0, 0, 0))
-    canvas.paste(cut, ((canvas_side - cut.size[0]) // 2,
-                       (canvas_side - cut.size[1]) // 2))
-    canvas = canvas.resize((SIZE, SIZE), Image.LANCZOS)
+    canvas = square(cut.crop(box))
 
     path = os.path.join(OUT, name + '.png')
     canvas.save(path, optimize=True)
