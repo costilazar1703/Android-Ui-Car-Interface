@@ -27,7 +27,7 @@
         android:layout_height="wrap_content"
         android:duplicateParentState="true"
         android:ellipsize="end"
-        android:fontFamily="sans-serif-condensed"
+        android:fontFamily="@font/inter_medium"
         android:gravity="center"
         android:includeFontPadding="false"
         android:singleLine="true"

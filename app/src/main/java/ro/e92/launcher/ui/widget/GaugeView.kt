@@ -1,12 +1,12 @@
 package ro.e92.launcher.ui.widget
 
+import ro.e92.launcher.R
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
-import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.View
 import kotlin.math.abs
@@ -81,17 +81,17 @@ class GaugeView @JvmOverloads constructor(
     private val valuePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textAlign = Paint.Align.CENTER
-        typeface = Typeface.create("sans-serif-condensed", Typeface.NORMAL)
+        typeface = context.resources.getFont(R.font.inter_display_light)
     }
     private val unitPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF8A8A8A.toInt()
         textAlign = Paint.Align.CENTER
-        typeface = Typeface.create("sans-serif-condensed", Typeface.NORMAL)
+        typeface = context.resources.getFont(R.font.inter_medium)
     }
     private val captionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF8A8A8A.toInt()
         textAlign = Paint.Align.CENTER
-        typeface = Typeface.create("sans-serif-condensed", Typeface.NORMAL)
+        typeface = context.resources.getFont(R.font.inter_medium)
     }
 
     private val oval = RectF()

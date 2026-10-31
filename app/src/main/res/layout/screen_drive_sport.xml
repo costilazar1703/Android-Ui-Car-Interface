@@ -49,13 +49,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:fontFamily="sans-serif-condensed"
+            android:fontFamily="@font/inter_semibold"
             android:includeFontPadding="false"
             android:letterSpacing="0.16"
             android:textAllCaps="true"
             android:textColor="@color/text_primary"
             android:textSize="64sp"
-            android:textStyle="bold"
             tools:text="Sport" />
 
         <!-- Linia care se trage sub nume. Lățimea e animată din cod. -->
