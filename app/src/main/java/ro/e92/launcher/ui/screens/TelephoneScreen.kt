@@ -15,6 +15,8 @@ import ro.e92.launcher.ui.ScreenHost
  * afișeze liste goale care par defecte.
  */
 class TelephoneScreen(host: ScreenHost) : SplitScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_phone
+
 
     override val title: String get() = "TELEPHONE"
     override val navHeader: String get() = context.getString(R.string.menu_telephone)

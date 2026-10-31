@@ -14,6 +14,8 @@ import ro.e92.launcher.ui.ScreenHost
  * mesaje a sistemului, în loc să afișeze un inbox fals.
  */
 class MessagesScreen(host: ScreenHost) : SplitScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_phone
+
 
     override val title: String get() = "MESSAGES"
     override val navHeader: String get() = context.getString(R.string.menu_messages)

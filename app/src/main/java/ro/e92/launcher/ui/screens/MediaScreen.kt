@@ -27,6 +27,8 @@ import ro.e92.launcher.ui.ScreenHost
  * (vezi Open Question 9: dacă sursa e exclusiv Bluetooth, nici nu e nevoie de el).
  */
 class MediaScreen(host: ScreenHost) : Screen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_media
+
 
     override val title: String get() = "MEDIA"
 

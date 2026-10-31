@@ -11,7 +11,7 @@ import android.content.SharedPreferences
 class Prefs(context: Context) {
 
     private val sp: SharedPreferences =
-        context.getSharedPreferences("e92_launcher", Context.MODE_PRIVATE)
+        context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
 
     /** Aplicația lansată de butonul hard NAV și de meniul Navigation. */
     var navPackage: String
@@ -91,7 +91,28 @@ class Prefs(context: Context) {
 
     fun clearKeymap() = sp.edit().remove(KEY_KEYMAP).apply()
 
+    // ------------------------------------------------------------------------
+    // Backup: SettingsBackup lucreaza pe toate cheile, nu pe proprietatile de
+    // mai sus, ca o cheie noua adaugata maine sa intre in backup fara sa-l
+    // modifice cineva.
+    // ------------------------------------------------------------------------
+
+    fun snapshot(): Map<String, *> = sp.all.filterKeys { it !in VOLATILE_KEYS }
+
+    fun registerListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) =
+        sp.registerOnSharedPreferenceChangeListener(listener)
+
     companion object {
+        /** Numele fisierului, folosit si de restaurarea care ruleaza inainte de Services. */
+        const val FILE_NAME = "e92_launcher"
+
+        /**
+         * Chei care se schimba la fiecare apasare si nu spun nimic despre cum ai
+         * configurat aplicatia. Fara exceptia asta, deschiderea oricarei dale ar
+         * rescrie backup-ul pe disc.
+         */
+        val VOLATILE_KEYS = setOf("last_menu_page")
+
         const val CAN_AUTO = "auto"
         const val CAN_MOCK = "mock"
         const val CAN_BROADCAST = "broadcast"

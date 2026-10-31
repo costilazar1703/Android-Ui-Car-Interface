@@ -20,7 +20,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import ro.e92.launcher.R
+import ro.e92.launcher.core.CrashGuard
 import ro.e92.launcher.core.Services
+import ro.e92.launcher.core.SettingsBackup
 import ro.e92.launcher.databinding.ActivityHomeBinding
 import ro.e92.launcher.focus.FocusDirection
 import ro.e92.launcher.focus.FocusEngine
@@ -62,6 +64,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     private lateinit var stack: ScreenStack
 
     private val focus = FocusEngine()
+    private val backgrounds by lazy { BackgroundCache(resources) }
     private val rotary = RotaryAccelerator()
 
     private val clockFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -363,25 +366,28 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         currentBackground = resId
 
         // 0 = ecran fara fotografie. Stingem imaginea si eliberam bitmap-ul:
-        // pe 2 GB nu are rost sa tinem 2,4 MB decodati pentru ceva ce nu se vede.
+        // pe 2 GB nu are rost sa tinem memorie pentru ceva ce nu se vede.
         if (resId == 0) {
             binding.screenBackground.animate().cancel()
             binding.screenBackground.setImageDrawable(null)
             return
         }
 
+        // Un singur Bitmap pentru ambele ImageView-uri - vezi BackgroundCache.
+        val bitmap = backgrounds.get(resId) ?: return
+
         if (!Services.prefs.animationsEnabled) {
-            binding.screenBackground.setImageResource(resId)
+            binding.screenBackground.setImageBitmap(bitmap)
             return
         }
 
-        binding.screenBackgroundNext.setImageResource(resId)
+        binding.screenBackgroundNext.setImageBitmap(bitmap)
         binding.screenBackgroundNext.alpha = 0f
         binding.screenBackgroundNext.animate()
             .alpha(1f)
             .setDuration(BACKGROUND_FADE_MS)
             .withEndAction {
-                binding.screenBackground.setImageResource(resId)
+                binding.screenBackground.setImageBitmap(bitmap)
                 binding.screenBackgroundNext.alpha = 0f
                 binding.screenBackgroundNext.setImageDrawable(null)
             }
@@ -529,6 +535,12 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             needed.add(Manifest.permission.ACCESS_FINE_LOCATION)
             needed.add(Manifest.permission.ACCESS_COARSE_LOCATION)
         }
+        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            // Backup-ul si jurnalele - vezi Storage.
+            needed.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        }
         if (needed.isNotEmpty()) {
             requestPermissions(needed.toTypedArray(), REQ_PERMISSIONS)
         }
@@ -541,6 +553,15 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQ_PERMISSIONS) {
+            // La o instalare pe curat, permisiunea de stocare vine abia acum -
+            // prima incercare de restaurare, din Application, n-avea cum sa vada
+            // backup-ul din /sdcard. Daca il gaseste acum, repornim ca setarile
+            // restaurate sa fie citite de la zero de toate componentele.
+            if (SettingsBackup.restoreIfFreshInstall(this)) {
+                Toast.makeText(this, R.string.backup_restored, Toast.LENGTH_LONG).show()
+                window.decorView.postDelayed({ CrashGuard.restart(this) }, 1200)
+                return
+            }
             // Sursele se re-evaluează: GPS-ul devine utilizabil abia acum.
             Services.rebuildCanSources()
             Services.net.refresh()

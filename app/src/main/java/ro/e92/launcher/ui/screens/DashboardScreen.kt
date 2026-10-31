@@ -16,6 +16,8 @@ import ro.e92.launcher.ui.ScreenHost
  * exact ca la ceasurile unei mașini. Se iese cu BACK sau MENU.
  */
 class DashboardScreen(host: ScreenHost) : Screen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_car
+
 
     override val title: String get() = "DASHBOARD"
 

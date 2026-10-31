@@ -32,6 +32,8 @@ import ro.e92.launcher.ui.ScreenHost
 // ============================================================== NAVIGATION ===
 
 class NavigationMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_nav
+
 
     override val menuTitle: String get() = context.getString(R.string.menu_navigation)
 
@@ -63,6 +65,8 @@ class NavigationMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 // =================================================================== MEDIA ===
 
 class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_media
+
 
     override val menuTitle: String get() = context.getString(R.string.menu_media)
 
@@ -105,6 +109,8 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
  * Bluetooth și starea accesului la notificări.
  */
 class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_phone
+
 
     override val menuTitle: String get() = context.getString(R.string.menu_bluetooth)
 
@@ -134,6 +140,8 @@ class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 // ================================================================ CAR INFO ===
 
 class CarInfoMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_car
+
 
     override val menuTitle: String get() = context.getString(R.string.menu_car_info)
 
@@ -166,6 +174,8 @@ class CarInfoMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 // =============================================================== DASHBOARD ===
 
 class DashboardMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_car
+
 
     override val menuTitle: String get() = context.getString(R.string.menu_dashboard)
 
@@ -193,6 +203,8 @@ class DashboardMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 // ================================================================= CARPLAY ===
 
 class CarPlayMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_phone
+
 
     override val menuTitle: String get() = context.getString(R.string.menu_carplay)
 
@@ -220,6 +232,8 @@ class CarPlayMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 // ========================================================= CONNECTEDDRIVE ===
 
 class ConnectedDriveMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_sky
+
 
     override val menuTitle: String get() = context.getString(R.string.menu_connecteddrive)
 
@@ -248,6 +262,8 @@ class ConnectedDriveMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
  * aplicația de pe tabletă o face mai bine. Meniul doar o lansează și o atribuie.
  */
 class WeatherMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_sky
+
 
     override val menuTitle: String get() = context.getString(R.string.menu_weather)
 
@@ -282,6 +298,8 @@ class WeatherMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
  * deschis DIRECT pe secțiunea ei.
  */
 class SettingsMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_tech
+
 
     override val menuTitle: String get() = context.getString(R.string.menu_settings)
 

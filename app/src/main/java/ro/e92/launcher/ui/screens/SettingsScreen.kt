@@ -4,7 +4,10 @@ import android.content.Intent
 import android.provider.Settings
 import ro.e92.launcher.R
 import ro.e92.launcher.core.Prefs
+import ro.e92.launcher.core.CrashGuard
 import ro.e92.launcher.core.Services
+import ro.e92.launcher.core.SettingsBackup
+import ro.e92.launcher.core.Storage
 import ro.e92.launcher.input.LauncherAction
 import ro.e92.launcher.ui.ScreenHost
 
@@ -28,6 +31,8 @@ class SettingsScreen(
     /** Categoria pe care se deschide, ceruta de randul din meniul cu rotita. */
     override val initialNavId: String? = null
 ) : SplitScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_tech
+
 
     override val title: String get() = "SETTINGS"
     override val navHeader: String get() = context.getString(R.string.menu_settings)
@@ -216,8 +221,49 @@ class SettingsScreen(
             id = "sport_preview",
             title = context.getString(R.string.diag_sport_test),
             onActivate = { host.push(DriveSportScreen(host)) }
+        ),
+        // ---- backup si jurnale ----
+        DetailRow(
+            id = "backup_now",
+            title = context.getString(R.string.backup_now),
+            value = backupStatus(),
+            onActivate = {
+                val ok = SettingsBackup.backupNow(context, Services.prefs)
+                toast(if (ok) R.string.backup_done else R.string.backup_failed)
+                reloadDetail("backup_now")
+            }
+        ),
+        DetailRow(
+            id = "backup_restore",
+            title = context.getString(R.string.backup_restore),
+            onActivate = {
+                if (SettingsBackup.restoreNow(context)) {
+                    toast(R.string.backup_restored)
+                    // Componentele citesc setarile o singura data, la pornire.
+                    root?.postDelayed({ CrashGuard.restart(context) }, 1200)
+                } else {
+                    toast(R.string.backup_missing)
+                }
+            }
+        ),
+        DetailRow(
+            id = "last_crash",
+            title = context.getString(R.string.crash_last),
+            value = CrashGuard.lastSummary(context).ifEmpty { context.getString(R.string.crash_none) }
         )
     )
+
+    /** Unde e backup-ul si de cand - util de citit inainte sa reinstalezi ceva. */
+    private fun backupStatus(): String {
+        val file = SettingsBackup.lastBackup(context) ?: return context.getString(R.string.backup_never)
+        val age = java.text.SimpleDateFormat("dd.MM HH:mm", java.util.Locale.getDefault())
+            .format(java.util.Date(file.lastModified()))
+        val where = if (Storage.isShared(context)) "/sdcard/E92Launcher" else context.getString(R.string.backup_private)
+        return "$age · $where"
+    }
+
+    private fun toast(res: Int) =
+        android.widget.Toast.makeText(context, res, android.widget.Toast.LENGTH_SHORT).show()
 
     // ------------------------------------------------------------------- sistem
 

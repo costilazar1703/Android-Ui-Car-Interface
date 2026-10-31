@@ -22,6 +22,8 @@ import ro.e92.launcher.ui.ScreenHost
  * gestionează el legătura.
  */
 class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_phone
+
 
     override val title: String get() = "BLUETOOTH"
     override val navHeader: String get() = context.getString(R.string.menu_bluetooth)

@@ -10,6 +10,9 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- Backup-ul setarilor si jurnalele de erori stau in /sdcard/E92Launcher,
+         ca sa supravietuiasca dezinstalarii (folderul privat al aplicatiei nu). -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <!-- Normal permission pe API 27: doar citirea listei de aparate imperecheate. -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <!-- Necesară doar dacă unitatea permite install ca system app; ignorată altfel. -->

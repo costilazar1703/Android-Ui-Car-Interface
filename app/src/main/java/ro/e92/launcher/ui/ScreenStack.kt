@@ -65,7 +65,10 @@ class ScreenStack(
         screen.show()
         focus.setTargets(screen.focusTargets())
         onTitleChanged?.invoke(screen.title)
-        onBackgroundChanged?.invoke(screen.backgroundRes)
+        // Un overlay (salutul Drive Sport) se deseneaza PESTE ecranul curent si
+        // il lasa vizibil - deci nu are voie sa-i schimbe fundalul. La pop, cel
+        // de dedesubt si-l reafirma oricum.
+        if (!screen.isOverlay) onBackgroundChanged?.invoke(screen.backgroundRes)
         animateIn(view)
     }
 

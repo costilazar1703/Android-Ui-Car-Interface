@@ -1,5 +1,6 @@
 package ro.e92.launcher.ui.screens
 
+import ro.e92.launcher.R
 import android.content.Intent
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -25,6 +26,8 @@ class AppDrawerScreen(
     host: ScreenHost,
     private val onPick: ((AppEntry) -> Unit)? = null
 ) : Screen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_tech
+
 
     override val title: String get() = if (onPick != null) "SELECT APP" else "APPS"
 

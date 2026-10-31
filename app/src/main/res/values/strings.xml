@@ -146,4 +146,15 @@
     <string name="drive_mode_sport">Sport</string>
     <string name="drive_mode_comfort">Comfort</string>
     <string name="diag_sport_test">Test Drive Sport animation</string>
+    <!-- Backup setari si jurnale de erori -->
+    <string name="backup_now">Back up settings now</string>
+    <string name="backup_restore">Restore settings from backup</string>
+    <string name="backup_done">Settings backed up</string>
+    <string name="backup_failed">Backup failed</string>
+    <string name="backup_restored">Settings restored, restarting…</string>
+    <string name="backup_missing">No backup found</string>
+    <string name="backup_never">never</string>
+    <string name="backup_private">app folder (lost on uninstall)</string>
+    <string name="crash_last">Last error</string>
+    <string name="crash_none">none</string>
 </resources>
