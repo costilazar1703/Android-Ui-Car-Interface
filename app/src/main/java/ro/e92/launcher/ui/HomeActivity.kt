@@ -32,6 +32,7 @@ import ro.e92.launcher.input.RotaryAccelerator
 import ro.e92.launcher.nav.NavLauncher
 import ro.e92.launcher.net.ConnectivityMonitor
 import ro.e92.launcher.ui.screens.AppDrawerScreen
+import ro.e92.launcher.ui.widget.BootIntroView
 import ro.e92.launcher.ui.screens.BluetoothMenuScreen
 import ro.e92.launcher.ui.screens.CarInfoMenuScreen
 import ro.e92.launcher.ui.screens.CarPlayMenuScreen
@@ -107,6 +108,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             }
         })
 
+        maybePlayIntro(savedInstanceState)
+
         requestRuntimePermissionsIfNeeded()
         observeStatusBar()
         observeDriveMode()
@@ -168,6 +171,10 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     // ------------------------------------------------------------------ input
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        // Cat ruleaza animatia de pornire, orice tasta doar o sare - nu ajunge si
+        // la meniul din spate, altfel prima rotire ar muta focusul „pe nevazute".
+        intro?.let { it.skip(); return true }
+
         // Trebuie citit ÎNAINTE de resolve(): resolve consumă tasta și golește
         // modul "învață". Fără asta, legarea tastei BACK ar închide launcher-ul
         // în același gest.
@@ -445,6 +452,61 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             .start()
     }
 
+    // ------------------------------------------------------------ pornire
+
+    private var intro: BootIntroView? = null
+
+    /**
+     * Animatia de pornire, doar la pornirea LA RECE a procesului - adica la
+     * contact. Nu la fiecare HOME, nu la recrearea Activity-ului (rotire,
+     * schimbare de configuratie) si nu cand animatiile sunt oprite din Setari.
+     *
+     * Meniul se construieste normal DEDESUBT cat ruleaza animatia, deci la final
+     * nu mai e nimic de asteptat: stingerea animatiei il dezvaluie gata facut.
+     */
+    private fun maybePlayIntro(savedInstanceState: Bundle?) {
+        if (introPlayedThisProcess || savedInstanceState != null) return
+        introPlayedThisProcess = true
+        if (!Services.prefs.animationsEnabled) return
+
+        // Animatia se termina exact pe pozitia fundalului principal - aceeasi
+        // pagina pe care se va deschide meniul (ultima folosita).
+        val pages = ro.e92.launcher.ui.TileCatalog.pageCount
+        val fraction = if (pages <= 1) 0f else
+            Services.prefs.lastMenuPage.coerceIn(0, pages - 1) / (pages - 1f)
+        val w = resources.displayMetrics.widthPixels
+
+        val view = BootIntroView(
+            this,
+            photo = backgrounds.get(R.drawable.bg_home),
+            endScale = 1f + PARALLAX_SHIFT,
+            endTranslationX = -fraction * PARALLAX_SHIFT * w,
+            greetingName = Services.prefs.greetingName
+        )
+        view.onFinished = {
+            binding.rootLayout.removeView(view)
+            intro = null
+        }
+        binding.rootLayout.addView(
+            view,
+            androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
+                androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.MATCH_PARENT,
+                androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+        intro = view
+
+        // Pornire la primul moment LIBER al firului principal, nu acum. Imediat
+        // dupa primul cadru urmeaza blocajul de pornire (servicii, construirea
+        // meniului) si animatorul, care merge dupa ceas, sarea peste ~670 ms -
+        // linia de lumina nu se vedea niciodata. Pana atunci ecranul ramane
+        // negru, ca momentul de dinainte de contact.
+        android.os.Looper.myQueue().addIdleHandler {
+            view.start()
+            false
+        }
+    }
+
     // ------------------------------------------------------------- top bar
 
     private fun observeStatusBar() {
@@ -622,6 +684,9 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     }
 
     private companion object {
+        /** Pe proces, nu pe Activity: Activity-ul se poate recrea, procesul nu. */
+        var introPlayedThisProcess = false
+
         const val REQ_PERMISSIONS = 1001
         const val IMMERSIVE_REAPPLY_MS = 400L
 

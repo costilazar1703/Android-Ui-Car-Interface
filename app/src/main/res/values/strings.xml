@@ -5,7 +5,7 @@
     <!-- ==================== Meniul principal (10 intrări) ==================== -->
     <string name="menu_media">Media / Radio</string>
     <string name="menu_bluetooth">Bluetooth</string>
-    <string name="menu_telephone">Telephone</string>
+    <string name="menu_telephone">Phone</string>
     <string name="menu_navigation">Navigation</string>
     <string name="menu_carplay">Apple CarPlay</string>
     <string name="menu_car_info">Car Info</string>
@@ -157,4 +157,12 @@
     <string name="backup_private">app folder (lost on uninstall)</string>
     <string name="crash_last">Last error</string>
     <string name="crash_none">none</string>
+    <!-- Animatia de pornire. Numele se schimba de aici, fara cod. -->
+    <string name="intro_kicker">BMW iDRIVE</string>
+    <string name="intro_greeting">Welcome back, Mr.</string>
+    <string name="intro_greeting_no_name">Welcome back</string>
+    <string name="set_greeting_name">Greeting name</string>
+    <string name="set_greeting_hint">Shown at start-up as „Welcome back, Mr. …"</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
 </resources>

@@ -54,7 +54,7 @@
                 <shape android:shape="rectangle">
                     <solid android:color="@color/transparent" />
                     <stroke
-                        android:width="@dimen/focus_stroke"
+                        android:width="@dimen/tile_stroke_outer_focus"
                         android:color="@color/glow_core" />
                     <corners android:radius="@dimen/tile_corner" />
                 </shape>
@@ -75,7 +75,7 @@
                         android:endColor="@color/tile_focus_bottom"
                         android:type="linear" />
                     <stroke
-                        android:width="@dimen/idle_stroke"
+                        android:width="@dimen/tile_stroke_inner"
                         android:color="@color/tile_focus_inner_stroke" />
                     <corners android:radius="@dimen/tile_corner" />
                 </shape>
@@ -96,7 +96,7 @@
                 <shape android:shape="rectangle">
                     <solid android:color="@color/transparent" />
                     <stroke
-                        android:width="@dimen/idle_stroke"
+                        android:width="@dimen/tile_stroke_outer"
                         android:color="@color/tile_idle_stroke" />
                     <corners android:radius="@dimen/tile_corner" />
                 </shape>
@@ -114,7 +114,7 @@
                         android:endColor="@color/tile_idle_bottom"
                         android:type="linear" />
                     <stroke
-                        android:width="@dimen/idle_stroke"
+                        android:width="@dimen/tile_stroke_inner"
                         android:color="@color/tile_idle_inner_stroke" />
                     <corners android:radius="@dimen/tile_corner" />
                 </shape>

@@ -337,7 +337,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
 
         /** Proportii fata de latimea dalei, ca sa nu depinda de densitate. */
         const val LABEL_HEIGHT_RATIO = 0.20f
-        const val LABEL_TEXT_RATIO = 0.125f
+        const val LABEL_TEXT_RATIO = 0.11f
         const val ICON_RATIO = 0.44f
         const val SHADOW_HEIGHT_RATIO = 0.16f
     }

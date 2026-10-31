@@ -62,6 +62,12 @@
     <dimen name="tile_body_inset">6dp</dimen>
     <!-- Golul dintre rama exterioara si cea interioara. -->
     <dimen name="tile_frame_inset">9dp</dimen>
+    <!-- Contururile ramei duble a dalelor. Separate de focus_stroke/idle_stroke,
+         care sunt comune cu randurile din meniuri si Setari: ingrosarea ramei
+         dalelor nu trebuie sa ingroase si listele. -->
+    <dimen name="tile_stroke_outer">2dp</dimen>
+    <dimen name="tile_stroke_outer_focus">3dp</dimen>
+    <dimen name="tile_stroke_inner">1.5dp</dimen>
     <dimen name="tile_gap">4dp</dimen>
     <dimen name="tile_grid_margin_v">8dp</dimen>
 </resources>

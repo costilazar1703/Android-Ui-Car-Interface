@@ -218,6 +218,16 @@ class SettingsScreen(
         // sa se poata verifica in masina ca animatia merge, separat de intrebarea
         // daca unitatea raporteaza sau nu butonul Sport.
         DetailRow(
+            id = "greeting_name",
+            title = context.getString(R.string.set_greeting_name),
+            value = Services.prefs.greetingName.ifBlank { "—" },
+            onActivate = { editGreetingName() },
+            onOption = {
+                Services.prefs.greetingName = ""
+                reloadDetail("greeting_name")
+            }
+        ),
+        DetailRow(
             id = "sport_preview",
             title = context.getString(R.string.diag_sport_test),
             onActivate = { host.push(DriveSportScreen(host)) }
@@ -260,6 +270,48 @@ class SettingsScreen(
             .format(java.util.Date(file.lastModified()))
         val where = if (Storage.isShared(context)) "/sdcard/E92Launcher" else context.getString(R.string.backup_private)
         return "$age · $where"
+    }
+
+    /**
+     * Singurul dialog de text din aplicatie, si e intentionat un AlertDialog:
+     * un nume se scrie cu tastatura de pe ecran, adica prin touch - rotita nu
+     * poate tasta oricum, deci faptul ca dialogul isi ia singur tastele nu
+     * strica nimic din navigarea cu rotita.
+     */
+    private fun editGreetingName() {
+        val input = android.widget.EditText(context).apply {
+            setText(Services.prefs.greetingName)
+            setSelection(text.length)
+            setSingleLine()
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
+            typeface = context.resources.getFont(R.font.inter_regular)
+        }
+        val pad = (20 * context.resources.displayMetrics.density).toInt()
+        val frame = android.widget.FrameLayout(context).apply {
+            setPadding(pad, pad / 2, pad, 0)
+            addView(input)
+        }
+        val save = {
+            Services.prefs.greetingName = input.text.toString()
+            reloadDetail("greeting_name")
+        }
+        val dialog = android.app.AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog_Alert)
+            .setTitle(R.string.set_greeting_name)
+            .setMessage(R.string.set_greeting_hint)
+            .setView(frame)
+            .setPositiveButton(R.string.save) { _, _ -> save() }
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+        // Enter-ul tastaturii salveaza: e butonul apasat instinctiv, iar fara
+        // asta doar inchidea tastatura si numele nu se schimba.
+        input.imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+        input.setOnEditorActionListener { _, _, _ ->
+            save()
+            dialog.dismiss()
+            true
+        }
+        dialog.show()
     }
 
     private fun toast(res: Int) =
