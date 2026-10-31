@@ -294,6 +294,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         dotViews.forEachIndexed { i, dot -> dot.isActivated = i == page }
 
         val targetX = -(pageWidth.toFloat() * page)
+        host.setHomeParallax(pageFraction(), Services.prefs.animationsEnabled)
         if (Services.prefs.animationsEnabled) {
             binding.tileStrip.animate()
                 .translationX(targetX)
@@ -303,6 +304,9 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
             binding.tileStrip.translationX = targetX
         }
     }
+
+    private fun pageFraction(): Float =
+        if (TileCatalog.pageCount <= 1) 0f else currentPage / (TileCatalog.pageCount - 1f)
 
     // -------------------------------------------------------------- acțiuni
 

@@ -365,6 +365,50 @@ class HomeActivity : ComponentActivity(), ScreenHost {
      * Bitmap-ul nou se pune ÎNAINTE de animatie, nu in timpul ei: decodarea unui
      * JPEG de 1280x480 dureaza cateva milisecunde si ar manca primele cadre.
      */
+    /**
+     * Parallax-ul fotografiei principale, ca fractiune 0..1 din drumul total.
+     *
+     * Dalele se muta cu o pagina intreaga (~1280 px), fotografia cu doar
+     * [PARALLAX_SHIFT] din latime. Diferenta de viteza da senzatia de adancime:
+     * dalele par mai aproape decat orasul din spatele lor.
+     *
+     * Fotografia e marita usor ca sa aiba de unde sa se miste - altfel deplasarea
+     * ar descoperi o banda neagra pe dreapta. Pivotul e pe muchia din stanga,
+     * deci toata marirea ramane disponibila pentru miscare.
+     */
+    private var homeParallax = 0f
+
+    override fun setHomeParallax(fraction: Float, animate: Boolean) {
+        homeParallax = fraction.coerceIn(0f, 1f)
+        if (currentBackground == R.drawable.bg_home) {
+            placeBackground(binding.screenBackground, R.drawable.bg_home, animate)
+        }
+    }
+
+    /**
+     * Pune transformarea potrivita fotografiei [resId] pe un singur view.
+     *
+     * Pe view, nu pe amandoua: in timpul fade-ului, view-ul de dedesubt inca
+     * arata fotografia veche. Daca primea si el transformarea noua, masina ar fi
+     * sarit brusc la marimea normala chiar sub ochii tai.
+     */
+    private fun placeBackground(v: android.view.View, resId: Int, animate: Boolean) {
+        val home = resId == R.drawable.bg_home
+        val w = v.width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
+        val scale = if (home) 1f + PARALLAX_SHIFT else 1f
+        val tx = if (home) -homeParallax * PARALLAX_SHIFT * w else 0f
+        v.pivotX = 0f
+        v.pivotY = (v.height.takeIf { it > 0 } ?: resources.displayMetrics.heightPixels) / 2f
+        v.scaleX = scale
+        v.scaleY = scale
+        if (animate) {
+            v.animate().translationX(tx).setDuration(PARALLAX_ANIM_MS).start()
+        } else {
+            v.animate().cancel()
+            v.translationX = tx
+        }
+    }
+
     private fun showBackground(resId: Int) {
         if (resId == currentBackground) return
         currentBackground = resId
@@ -382,16 +426,19 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
         if (!Services.prefs.animationsEnabled) {
             binding.screenBackground.setImageBitmap(bitmap)
+            placeBackground(binding.screenBackground, resId, animate = false)
             return
         }
 
         binding.screenBackgroundNext.setImageBitmap(bitmap)
+        placeBackground(binding.screenBackgroundNext, resId, animate = false)
         binding.screenBackgroundNext.alpha = 0f
         binding.screenBackgroundNext.animate()
             .alpha(1f)
             .setDuration(BACKGROUND_FADE_MS)
             .withEndAction {
                 binding.screenBackground.setImageBitmap(bitmap)
+                placeBackground(binding.screenBackground, resId, animate = false)
                 binding.screenBackgroundNext.alpha = 0f
                 binding.screenBackgroundNext.setImageDrawable(null)
             }
@@ -577,6 +624,11 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     private companion object {
         const val REQ_PERMISSIONS = 1001
         const val IMMERSIVE_REAPPLY_MS = 400L
+
+        /** Cat se misca fotografia principala intre prima si ultima pagina. */
+        const val PARALLAX_SHIFT = 0.035f
+        /** Aceeasi durata ca alunecarea paginii, ca sa se miste impreuna. */
+        const val PARALLAX_ANIM_MS = 200L
         const val BACKGROUND_FADE_MS = 260L
     }
 }

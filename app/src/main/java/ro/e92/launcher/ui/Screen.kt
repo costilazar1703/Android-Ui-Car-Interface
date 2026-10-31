@@ -41,6 +41,13 @@ interface ScreenHost {
      * PackageManager si de startActivity, nu de un Screen.
      */
     fun dispatchConnectedDrive()
+
+    /**
+     * Parallax pe fotografia ecranului principal: 0 = prima pagina, 1 = ultima.
+     * Se aplica doar cat timp fundalul principal e cel afisat - fotografiile
+     * meniurilor stau pe loc.
+     */
+    fun setHomeParallax(fraction: Float, animate: Boolean)
 }
 
 /**
