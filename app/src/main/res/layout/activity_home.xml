@@ -64,57 +64,136 @@
         android:orientation="horizontal"
         app:layout_constraintGuide_percent="0.115" />
 
+    <!--
+      Bara de sus, in stilul lock-screen-ului iOS:
+
+        [ 14:32 | Sun, 1 Nov ]                 [♪ piesa] [ᛒ] [wifi OBD]
+                | MENU       ]
+
+      Ceasul e mare si subtire (Inter Light, varianta de afisaj); data si numele
+      ecranului stau stivuite langa el, mici. In dreapta, iconite vectoriale care
+      se aprind cand sunt conectate si se estompeaza cand nu - starea se citeste
+      dintr-o privire, fara text de citit in mers.
+    -->
     <TextView
         android:id="@+id/clock"
-        style="@style/Text.Title"
-        android:layout_width="@dimen/clock_width"
+        android:layout_width="wrap_content"
         android:layout_height="0dp"
         android:layout_marginStart="@dimen/screen_margin"
+        android:fontFamily="@font/inter_display_light"
+        android:fontFeatureSettings="tnum"
         android:gravity="center_vertical"
-        android:textSize="20sp"
+        android:includeFontPadding="false"
+        android:singleLine="true"
+        android:textColor="@color/text_primary"
+        android:textSize="@dimen/topbar_clock_size"
         app:layout_constraintBottom_toTopOf="@id/gTopBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:text="14:32" />
 
-    <TextView
-        android:id="@+id/screenTitle"
-        style="@style/Text.Label"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginStart="16dp"
-        android:gravity="center_vertical"
-        android:textColor="@color/text_primary"
-        android:textSize="13sp"
-        app:layout_constraintBottom_toTopOf="@id/gTopBar"
-        app:layout_constraintEnd_toStartOf="@id/statusMedia"
-        app:layout_constraintStart_toEndOf="@id/clock"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:text="HOME" />
-
-    <TextView
-        android:id="@+id/statusMedia"
-        style="@style/Text.Body"
-        android:layout_width="@dimen/status_field_width"
-        android:layout_height="0dp"
-        android:gravity="center_vertical|end"
-        app:layout_constraintBottom_toTopOf="@id/gTopBar"
-        app:layout_constraintEnd_toStartOf="@id/statusNet"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:text="Spotify" />
-
-    <TextView
-        android:id="@+id/statusNet"
-        style="@style/Text.Body"
-        android:layout_width="@dimen/status_field_width"
+    <View
+        android:id="@+id/clockRule"
+        android:layout_width="@dimen/divider_height"
         android:layout_height="0dp"
         android:layout_marginStart="12dp"
+        android:layout_marginTop="14dp"
+        android:layout_marginBottom="14dp"
+        android:background="@color/split_divider"
+        app:layout_constraintBottom_toTopOf="@id/gTopBar"
+        app:layout_constraintStart_toEndOf="@id/clock"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/titleBlock"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="12dp"
+        android:gravity="center_vertical"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toTopOf="@id/gTopBar"
+        app:layout_constraintEnd_toStartOf="@id/statusIcons"
+        app:layout_constraintStart_toEndOf="@id/clockRule"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/dateText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter_medium"
+            android:includeFontPadding="false"
+            android:singleLine="true"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            tools:text="Sun, 1 Nov" />
+
+        <TextView
+            android:id="@+id/screenTitle"
+            style="@style/Text.Label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:textColor="@color/accent_focus"
+            android:textSize="12sp"
+            tools:text="MENU" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/statusIcons"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
         android:layout_marginEnd="@dimen/screen_margin"
         android:gravity="center_vertical|end"
+        android:orientation="horizontal"
         app:layout_constraintBottom_toTopOf="@id/gTopBar"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:text="iPhone · online" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/icMedia"
+            android:layout_width="@dimen/topbar_icon"
+            android:layout_height="@dimen/topbar_icon"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_status_music"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/statusMedia"
+            style="@style/Text.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:maxWidth="@dimen/status_field_width"
+            android:textColor="@color/text_primary"
+            android:textSize="13sp"
+            tools:text="Spotify" />
+
+        <ImageView
+            android:id="@+id/icBt"
+            android:layout_width="@dimen/topbar_icon"
+            android:layout_height="@dimen/topbar_icon"
+            android:layout_marginStart="18dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_status_bt" />
+
+        <ImageView
+            android:id="@+id/icWifi"
+            android:layout_width="@dimen/topbar_icon"
+            android:layout_height="@dimen/topbar_icon"
+            android:layout_marginStart="16dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_status_wifi" />
+
+        <TextView
+            android:id="@+id/statusNet"
+            style="@style/Text.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:maxWidth="@dimen/status_field_width"
+            android:textSize="13sp"
+            tools:text="WiFi_OBDII" />
+    </LinearLayout>
 
     <View
         android:id="@+id/topDivider"

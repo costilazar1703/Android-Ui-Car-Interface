@@ -17,6 +17,7 @@ import ro.e92.launcher.ui.Screen
 import ro.e92.launcher.ui.ScreenHost
 import ro.e92.launcher.ui.Tile
 import ro.e92.launcher.ui.TileCatalog
+import ro.e92.launcher.ui.widget.PageIndicatorView
 import kotlin.math.abs
 
 /**
@@ -48,7 +49,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     private lateinit var binding: ScreenTileGridBinding
 
     private val tileViews = ArrayList<View>(TileCatalog.items.size)
-    private val dotViews = ArrayList<View>(TileCatalog.pageCount)
+    private var indicator: PageIndicatorView? = null
 
     private var currentPage = 0
     private var pageWidth = 0
@@ -222,17 +223,8 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
 
     private fun buildDots() {
         binding.tilePageDots.removeAllViews()
-        dotViews.clear()
-        val size = context.resources.getDimensionPixelSize(R.dimen.page_dot_size)
-        for (page in 0 until TileCatalog.pageCount) {
-            val dot = View(context).apply {
-                setBackgroundResource(R.drawable.bg_page_dot)
-                isActivated = page == currentPage
-            }
-            val lp = LinearLayout.LayoutParams(size, size)
-            if (page > 0) lp.marginStart = size
-            binding.tilePageDots.addView(dot, lp)
-            dotViews.add(dot)
+        indicator = PageIndicatorView(context, TileCatalog.pageCount).also {
+            binding.tilePageDots.addView(it)
         }
     }
 
@@ -264,6 +256,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     // ---------------------------------------------------------------- focus
 
     private fun onTileFocus(index: Int, focused: Boolean) {
+        if (focused) indicator?.setPosition(index, TileCatalog.PAGE_SIZE)
         val view = tileViews.getOrNull(index) ?: return
 
         // Dala focusată iese în față. Scara de bază vine din arc, deci o
@@ -291,7 +284,6 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     private fun goToPage(page: Int) {
         if (page == currentPage || page !in 0 until TileCatalog.pageCount) return
         currentPage = page
-        dotViews.forEachIndexed { i, dot -> dot.isActivated = i == page }
 
         val targetX = -(pageWidth.toFloat() * page)
         host.setHomeParallax(pageFraction(), Services.prefs.animationsEnabled)

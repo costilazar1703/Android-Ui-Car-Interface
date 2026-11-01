@@ -20,7 +20,6 @@
     <dimen name="divider_height">1dp</dimen>
 
     <dimen name="topbar_height">54dp</dimen>
-    <dimen name="clock_width">76dp</dimen>
     <!-- Lățime fixă pe orice se updatează des: fără WRAP_CONTENT, fără relayout. -->
     <dimen name="status_field_width">150dp</dimen>
 
@@ -70,4 +69,7 @@
     <dimen name="tile_stroke_inner">1.5dp</dimen>
     <dimen name="tile_gap">4dp</dimen>
     <dimen name="tile_grid_margin_v">8dp</dimen>
+    <!-- Bara de sus -->
+    <dimen name="topbar_clock_size">32sp</dimen>
+    <dimen name="topbar_icon">17dp</dimen>
 </resources>

@@ -69,6 +69,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     private val rotary = RotaryAccelerator()
 
     private val clockFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    private val dateFormat = SimpleDateFormat("EEE, d MMM", Locale.getDefault())
     private val clockDate = Date()
 
     private val timeTickReceiver = object : BroadcastReceiver() {
@@ -123,6 +124,11 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         Services.apps.startWatching()
 
         registerReceiver(timeTickReceiver, IntentFilter(Intent.ACTION_TIME_TICK))
+        registerReceiver(btReceiver, IntentFilter().apply {
+            addAction(android.bluetooth.BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
+            addAction(android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED)
+        })
+        updateBluetooth()
         updateClock()
 
         stack.onActivityStart()
@@ -138,6 +144,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     override fun onStop() {
         runCatching { unregisterReceiver(timeTickReceiver) }
+        runCatching { unregisterReceiver(btReceiver) }
         stack.onActivityStop()
         Services.apps.stopWatching()
         Services.net.stop()
@@ -513,12 +520,19 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    Services.net.state.collect { binding.statusNet.text = describeNet(it) }
+                    Services.net.state.collect { net ->
+                        val connected = net.status == ConnectivityMonitor.Status.ONLINE ||
+                            net.status == ConnectivityMonitor.Status.CONNECTED_NO_INTERNET
+                        binding.icWifi.alpha = if (connected) ICON_ON else ICON_OFF
+                        binding.statusNet.text = describeNet(net)
+                        binding.statusNet.alpha = if (connected) 1f else ICON_OFF
+                    }
                 }
                 launch {
                     Services.media.snapshot.collect { media ->
-                        binding.statusMedia.text =
-                            if (media.hasSession) media.title.orEmpty() else ""
+                        val title = if (media.hasSession) media.title.orEmpty() else ""
+                        binding.statusMedia.text = title
+                        binding.icMedia.visibility = if (title.isEmpty()) View.GONE else View.VISIBLE
                     }
                 }
             }
@@ -570,6 +584,37 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     private fun updateClock() {
         clockDate.time = System.currentTimeMillis()
         binding.clock.text = clockFormat.format(clockDate)
+        binding.dateText.text = dateFormat.format(clockDate)
+    }
+
+    // --------------------------------------------------------- bluetooth
+
+    /**
+     * Iconita Bluetooth din bara de sus: aprinsa cand un telefon e conectat pe
+     * audio (A2DP) sau pe apeluri (HFP).
+     *
+     * Se citeste din adaptorul Android. Daca modulul BC6 al unitatii e legat
+     * direct de MCU si nu trece prin Android, iconita ramane estompata chiar cu
+     * telefonul conectat - asta e o limita a hardware-ului, nu un bug, si se
+     * vede imediat in masina.
+     */
+    private val btReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) = updateBluetooth()
+    }
+
+    private fun updateBluetooth() {
+        val adapter = runCatching {
+            (getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager)?.adapter
+        }.getOrNull()
+        val connected = runCatching {
+            adapter != null && adapter.isEnabled && (
+                adapter.getProfileConnectionState(android.bluetooth.BluetoothProfile.A2DP) ==
+                    android.bluetooth.BluetoothProfile.STATE_CONNECTED ||
+                    adapter.getProfileConnectionState(android.bluetooth.BluetoothProfile.HEADSET) ==
+                    android.bluetooth.BluetoothProfile.STATE_CONNECTED
+                )
+        }.getOrDefault(false)
+        binding.icBt.alpha = if (connected) ICON_ON else ICON_OFF
     }
 
     // ------------------------------------------------------------- helpers
@@ -689,6 +734,10 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
         const val REQ_PERMISSIONS = 1001
         const val IMMERSIVE_REAPPLY_MS = 400L
+
+        /** Iconitele de stare: aprinse cand e conectat, estompate cand nu. */
+        const val ICON_ON = 1f
+        const val ICON_OFF = 0.3f
 
         /** Cat se misca fotografia principala intre prima si ultima pagina. */
         const val PARALLAX_SHIFT = 0.035f
