@@ -160,6 +160,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                 tileBinding.tileLabel.setTextSize(TypedValue.COMPLEX_UNIT_PX, labelTextPx)
                 tileBinding.tileBody.layoutParams.height = bodySize
                 tileBinding.tileShadow.layoutParams.height = shadowHeight
+                tileBinding.tileShadow.setSource(tile.icon, iconSize, bodySize)
                 tileBinding.tileIcon.layoutParams.also {
                     // Plafonat la corpul dalei minus rama: o iconita cu
                     // iconScale mare ar iesi altfel din patrat si ar fi taiata.
@@ -397,6 +398,6 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         const val LABEL_HEIGHT_RATIO = 0.20f
         const val LABEL_TEXT_RATIO = 0.11f
         const val ICON_RATIO = 0.44f
-        const val SHADOW_HEIGHT_RATIO = 0.16f
+        const val SHADOW_HEIGHT_RATIO = 0.40f
     }
 }

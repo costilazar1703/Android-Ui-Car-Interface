@@ -63,15 +63,13 @@
 
     </FrameLayout>
 
-    <!-- Umbra / lumina scursă sub dală. Înălțimea se pune din cod, proporțional
-         cu latura pătratului. -->
-    <View
+    <!-- Reflexia „in apa" de sub dala, plus lumina portocalie scursa sub cea
+         selectata. Desenate amandoua de TileReflectionView; inaltimea se pune
+         din cod, proportional cu latura patratului. -->
+    <ro.e92.launcher.ui.widget.TileReflectionView
         android:id="@+id/tileShadow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/tile_frame_inset"
-        android:layout_marginEnd="@dimen/tile_frame_inset"
-        android:background="@drawable/tile_shadow"
         android:duplicateParentState="true" />
 
 </LinearLayout>
