@@ -51,6 +51,14 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     private val tileViews = ArrayList<View>(TileCatalog.items.size)
     private var indicator: PageIndicatorView? = null
 
+    /**
+     * Geometria semicercului, pe pozitie in pagina (0..5): marimea fiecarei dale
+     * si cat trebuie mutata pe orizontala ca spatiile dintre ele sa ramana egale.
+     * Calculate o singura data, la constructie.
+     */
+    private var arcScale = FloatArray(TileCatalog.PAGE_SIZE) { 1f }
+    private var arcShift = FloatArray(TileCatalog.PAGE_SIZE)
+
     private var currentPage = 0
     private var pageWidth = 0
     private var built = false
@@ -116,6 +124,8 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         val iconSize = (bodySize * ICON_RATIO).toInt()
         val iconMargin = context.resources.getDimensionPixelSize(R.dimen.tile_body_inset) * 3
         val labelTextPx = bodySize * LABEL_TEXT_RATIO
+
+        computeArc(tileWidth, gap)
 
         binding.tileStrip.removeAllViews()
         tileViews.clear()
@@ -196,8 +206,8 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
 
     /**
      * Arcul: dala din stânga e rotită spre interior, cea din dreapta la fel în
-     * oglindă, iar cele din mijloc aproape deloc. Dalele mai depărtate de centru
-     * primesc și o scădere de scară, ca să pară că se duc în adâncime.
+     * oglindă, iar cele din mijloc aproape deloc. Mărimea și poziția vin din
+     * [computeArc]: mijlocul e cel mai departe, deci cel mai mic.
      */
     private fun applyPerspective(view: View, positionInPage: Int, tileWidth: Int) {
         val offset = depthOffset(positionInPage)            // -1 .. +1
@@ -214,11 +224,61 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         view.rotationY = -offset * MAX_TILT_DEG
 
         // Pivot central (implicit): dalele se rotesc fiecare în jurul axei
-        // proprii, ca niște panouri pe un perete curbat. Un pivot pe muchie le-ar
-        // face să se depărteze una de alta pe măsură ce se rotesc.
-        val shrink = 1f - abs(offset) * DEPTH_SHRINK
-        view.scaleX = shrink
-        view.scaleY = shrink
+        // proprii, ca niște panouri pe un perete curbat.
+        view.scaleX = arcScale[positionInPage]
+        view.scaleY = arcScale[positionInPage]
+        view.translationX = arcShift[positionInPage]
+    }
+
+    /**
+     * Semicercul: dalele din MIJLOC sunt cele mai departe, deci cele mai mici;
+     * cele de la margini vin spre tine, deci sunt cele mai mari.
+     *
+     * Asa trebuie sa fie pentru ca dalele sunt rotite in arc concav (muchia din
+     * afara vine in fata). Inainte marimea mergea invers - mijlocul cel mai mare
+     * - iar rotatia spunea una si marimea alta.
+     *
+     * Profilul e patratic (1 - o²), nu liniar: pe un cerc adevarat adancimea se
+     * schimba lin spre centru, nu in trepte egale.
+     *
+     * Micsorarea singura ar fi largit golurile din mijloc - fiecare dala se
+     * strange in jurul propriului centru. Asa ca pozitiile se reimpart: latimile
+     * vizibile se insireaza cu ACELASI spatiu intre ele, iar randul umple in
+     * continuare toata latimea paginii (de aceea dalele de la margini cresc
+     * putin peste marimea de dinainte).
+     */
+    private fun computeArc(tileWidth: Int, gap: Int) {
+        val n = TileCatalog.PAGE_SIZE
+        val rel = FloatArray(n) { i ->
+            val o = depthOffset(i)
+            1f - (1f - o * o) * ARC_DEPTH
+        }
+        // O dala rotita cu θ apare pe ecran mai ingusta, cam cu cos θ. Fara
+        // corectia asta golurile ieseau inegale: ~24 px langa dalele de la
+        // margine (cele mai rotite) si ~17 px spre mijloc.
+        val squash = FloatArray(n) { i ->
+            kotlin.math.cos(Math.toRadians((abs(depthOffset(i)) * MAX_TILT_DEG).toDouble())).toFloat()
+        }
+        var projectedSum = 0f
+        for (i in 0 until n) projectedSum += rel[i] * squash[i]
+
+        // Loc pe margini pentru marirea de la focus: dala de la margine e deja
+        // cea mai mare, iar cu inca FOCUS_SCALE iesea din ecran si era taiata.
+        // Rezervam jumatatea de crestere (creste in jurul centrului) plus putin aer.
+        val fullBase = n * tileWidth / projectedSum
+        val edgeProjected = fullBase * rel[0] * squash[0]
+        val pad = edgeProjected * (FOCUS_SCALE - 1f) / 2f + EDGE_AIR_DP * context.resources.displayMetrics.density
+        val base = (n * tileWidth - 2 * pad) / projectedSum   // latimea nerotita a unei dale de margine
+
+        var cursor = pad
+        for (i in 0 until n) {
+            val projected = base * rel[i] * squash[i]
+            val wantedCenter = cursor + i * gap + projected / 2f
+            val layoutCenter = i * (tileWidth + gap) + tileWidth / 2f
+            arcScale[i] = base * rel[i] / tileWidth
+            arcShift[i] = wantedCenter - layoutCenter
+            cursor += projected
+        }
     }
 
     private fun buildDots() {
@@ -262,7 +322,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         // Dala focusată iese în față. Scara de bază vine din arc, deci o
         // înmulțim, nu o suprascriem — altfel dalele de la margini ar sări la
         // dimensiunea celor din centru când le focusezi.
-        val base = 1f - abs(depthOffset(index % TileCatalog.PAGE_SIZE)) * DEPTH_SHRINK
+        val base = arcScale[index % TileCatalog.PAGE_SIZE]
         val target = if (focused) base * FOCUS_SCALE else base
 
         if (Services.prefs.animationsEnabled) {
@@ -315,8 +375,14 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         /** Unghiul dalelor de la marginea paginii. Peste ~26° textul se încețoșează. */
         const val MAX_TILT_DEG = 22f
 
-        /** Cât se micșorează dala de la margine față de cea din centru. */
-        const val DEPTH_SHRINK = 0.06f
+        /**
+         * Cat de adanc e semicercul: dala din mijloc iese cu atat mai mica decat
+         * cele de la margini (inainte de reimpartirea pe latime).
+         */
+        const val ARC_DEPTH = 0.15f
+
+        /** Aer intre dala de la margine (marita la focus) si marginea ecranului. */
+        const val EDGE_AIR_DP = 6f
 
         /** Cât iese în față dala focusată. */
         const val FOCUS_SCALE = 1.07f
