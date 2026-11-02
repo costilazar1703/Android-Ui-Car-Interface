@@ -140,7 +140,7 @@ class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 // ================================================================ CAR INFO ===
 
 class CarInfoMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
-    override val backgroundRes: Int get() = R.drawable.bg_menu_car
+    override val backgroundRes: Int get() = R.drawable.bg_menu
 
 
     override val menuTitle: String get() = context.getString(R.string.menu_car_info)
@@ -174,7 +174,7 @@ class CarInfoMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 // =============================================================== DASHBOARD ===
 
 class DashboardMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
-    override val backgroundRes: Int get() = R.drawable.bg_menu_car
+    override val backgroundRes: Int get() = R.drawable.bg_menu
 
 
     override val menuTitle: String get() = context.getString(R.string.menu_dashboard)

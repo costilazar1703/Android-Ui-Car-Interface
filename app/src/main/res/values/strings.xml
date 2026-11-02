@@ -3,7 +3,7 @@
     <string name="app_name">E92</string>
 
     <!-- ==================== Meniul principal (10 intrări) ==================== -->
-    <string name="menu_media">Media / Radio</string>
+    <string name="menu_media">Media</string>
     <string name="menu_bluetooth">Bluetooth</string>
     <string name="menu_telephone">Phone</string>
     <string name="menu_navigation">Navigation</string>
@@ -163,7 +163,7 @@
     <!-- Animatia de pornire. Numele se schimba de aici, fara cod. -->
     <string name="intro_kicker">BMW iDRIVE</string>
     <string name="intro_greeting">Welcome back, Mr.</string>
-    <string name="intro_greeting_no_name">Welcome back</string>
+    <string name="intro_greeting_no_name">Welcome back!</string>
     <string name="set_greeting_name">Greeting name</string>
     <string name="set_greeting_hint">Shown at start-up as „Welcome back, Mr. …"</string>
     <string name="save">Save</string>

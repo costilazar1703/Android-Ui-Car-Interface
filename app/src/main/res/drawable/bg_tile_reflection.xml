@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Rama dalei, varianta pentru reflexie (TileReflectionView). Aceeași geometrie
-  și aceleași culori ca bg_tile, dar contururile au cam jumătate din grosime:
-  în oglindă rama trebuie să se citească ca o sclipire pe apă, nu ca a doua
-  dală desenată sub prima.
+  ca bg_tile, dar cu UN singur contur, subțire: conturul interior e transparent.
+  Rama dublă, chiar și la jumătate de grosime, se citea în oglindă ca o bandă
+  groasă; în apă trebuie să rămână doar o sclipire, nu a doua dală.
 -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -61,7 +61,7 @@
                         android:type="linear" />
                     <stroke
                         android:width="@dimen/tile_reflection_stroke_inner"
-                        android:color="@color/tile_focus_inner_stroke" />
+                        android:color="@color/transparent" />
                     <corners android:radius="@dimen/tile_corner" />
                 </shape>
             </item>
@@ -100,7 +100,7 @@
                         android:type="linear" />
                     <stroke
                         android:width="@dimen/tile_reflection_stroke_inner"
-                        android:color="@color/tile_idle_inner_stroke" />
+                        android:color="@color/transparent" />
                     <corners android:radius="@dimen/tile_corner" />
                 </shape>
             </item>

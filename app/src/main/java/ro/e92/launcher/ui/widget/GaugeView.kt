@@ -278,10 +278,10 @@ class GaugeView @JvmOverloads constructor(
             textAlign = Paint.Align.CENTER
             typeface = context.resources.getFont(R.font.inter_semibold)
             textSize = max(size * 0.045f, minTextPx)
-            letterSpacing = 0.3f
+            letterSpacing = 0.2f
             color = CAPTION
         }
-        c.drawText(caption, centerX, centerY - dial * 0.30f, captionPaint)
+        c.drawText(caption, centerX, centerY - dial * 0.38f, captionPaint)
         return out
     }
 
@@ -391,7 +391,7 @@ class GaugeView @JvmOverloads constructor(
         /** 150° … 390°: deschidere jos. Bordul E9x are arce mai lungi — vezi DashboardScreen. */
         const val DEFAULT_START_ANGLE = 150f
         const val DEFAULT_SWEEP_ANGLE = 240f
-        const val DEFAULT_LABEL_SIZE = 0.058f
+        const val DEFAULT_LABEL_SIZE = 0.050f
 
         /** Inelul portocaliu din `gauge_face` e la ~0.83 din rază; interiorul începe sub el. */
         const val DIAL_RATIO = 0.80f

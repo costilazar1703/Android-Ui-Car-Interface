@@ -44,7 +44,7 @@ class DashboardScreen(host: ScreenHost) : Screen(host) {
             labelStep = 20f,
             startAngle = 128f,
             sweepAngle = 276f,
-            labelSizeRatio = 0.047f
+            labelSizeRatio = 0.040f
         )
         // Turometrul diesel: 0–5, zona roșie scurtă imediat după 5 (până la 5.5),
         // gradații mici la fiecare 500.

@@ -90,7 +90,7 @@ class BootIntroView(
     // capatul resurselor (chiar si scrise  ), iar textul iesea „back,Mr.".
     private val greeting =
         if (greetingName.isBlank()) context.getString(R.string.intro_greeting_no_name)
-        else context.getString(R.string.intro_greeting) + " " + greetingName.trim()
+        else context.getString(R.string.intro_greeting) + " " + greetingName.trim() + "!"
 
     // Gradienți unitari, poziționați la fiecare cadru prin matrice.
     private val unitLine = LinearGradient(

@@ -28,7 +28,7 @@ import java.io.File
  * cu extras necunoscute, plus datele de care depinde layout-ul (densitate!).
  */
 class DiagnosticsScreen(host: ScreenHost) : Screen(host) {
-    override val backgroundRes: Int get() = R.drawable.bg_menu_car
+    override val backgroundRes: Int get() = R.drawable.bg_menu
 
 
     override val title: String get() = "DIAGNOSTICS"
