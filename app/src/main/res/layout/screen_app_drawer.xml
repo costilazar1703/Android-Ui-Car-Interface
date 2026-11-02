@@ -8,7 +8,8 @@
     android:paddingStart="@dimen/screen_margin"
     android:paddingTop="6dp"
     android:paddingEnd="@dimen/screen_margin"
-    android:paddingBottom="6dp">
+    android:paddingBottom="6dp"
+    android:background="@drawable/scrim_apps">
 
     <!-- Grid orizontal paginat: 2 rânduri, derulare pe orizontală.
          Pe 1280x480 e singura formă care nu irosește lățimea. -->

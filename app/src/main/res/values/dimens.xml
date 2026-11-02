@@ -25,7 +25,7 @@
 
     <dimen name="gauge_size_card">120dp</dimen>
     <dimen name="gauge_size_full">300dp</dimen>
-    <dimen name="app_icon_size">56dp</dimen>
+    <dimen name="app_icon_size">50dp</dimen>
     <dimen name="app_cell_width">108dp</dimen>
     <dimen name="cover_size">150dp</dimen>
     <dimen name="cover_corner">14dp</dimen>

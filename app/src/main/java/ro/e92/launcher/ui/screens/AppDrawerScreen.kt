@@ -98,6 +98,7 @@ class AppDrawerScreen(
 
     private companion object {
         /** Două rânduri: pe 480 px pe verticală, trei ar face iconițele ilizibile. */
-        const val ROWS = 2
+        // Trei rânduri: celule aproape pătrate, ca dalele, nu fâșii înalte.
+        const val ROWS = 3
     }
 }
