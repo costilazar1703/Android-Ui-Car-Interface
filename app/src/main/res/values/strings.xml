@@ -204,6 +204,8 @@
     <string name="intro_kicker">BMW iDRIVE</string>
     <string name="intro_greeting">Welcome back, Mr.</string>
     <string name="intro_greeting_no_name">Welcome back!</string>
+    <string name="goodbye">Goodbye, Mr.</string>
+    <string name="goodbye_no_name">Goodbye.</string>
     <string name="set_greeting_name">Greeting name</string>
     <string name="set_greeting_hint">Shown at start-up as „Welcome back, Mr. …"</string>
     <string name="save">Save</string>

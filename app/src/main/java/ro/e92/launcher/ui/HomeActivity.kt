@@ -207,6 +207,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     /** Unele rotițe trimit derulare, nu taste: și aceea sare salutul. */
     override fun dispatchGenericMotionEvent(ev: android.view.MotionEvent): Boolean {
         lastInteractionAt = SystemClock.elapsedRealtime()
+        goodbye?.let { it.dismiss(); return true }
         intro?.let { it.skip(); return true }
         return super.dispatchGenericMotionEvent(ev)
     }
@@ -214,6 +215,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         // Cat ruleaza animatia de pornire, orice tasta doar o sare - nu ajunge si
         // la meniul din spate, altfel prima rotire ar muta focusul „pe nevazute".
+        goodbye?.let { it.dismiss(); return true }
         intro?.let { it.skip(); return true }
 
         // Trebuie citit ÎNAINTE de resolve(): resolve consumă tasta și golește
@@ -659,6 +661,67 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     private val carStatus by lazy { CarStatus(binding.statusCar, binding.alertBanner) }
 
+    // ------------------------------------------------------------- rămas-bun
+    //
+    // Unitatea își pierde curentul când scoți cartela, deci evenimentul KSW de
+    // „contact oprit" poate să nu mai apuce să vină. Momentul sigur e oprirea
+    // motorului: turațiile cad la zero (sau nu mai vin deloc) cu mașina pe loc,
+    // după ce motorul a mers un timp. De acolo până la scosul cartelei ecranul
+    // arată rămas-bunul și rezumatul drumului.
+
+    private var engineRunningSince = 0L
+    private var engineStoppedAt = 0L
+    private var goodbye: ro.e92.launcher.ui.widget.GoodbyeView? = null
+
+    private fun watchEngine(state: ro.e92.launcher.can.VehicleState) {
+        val now = SystemClock.elapsedRealtime()
+        val rpm = state.rpm ?: 0
+        if (rpm >= ENGINE_RUNNING_RPM) {
+            // Doar la PORNIREA motorului: rămas-bunul pleacă când repornești,
+            // nu la fiecare eșantion cu motorul mergând.
+            if (engineRunningSince == 0L) {
+                engineRunningSince = now
+                goodbye?.dismiss()
+            }
+            engineStoppedAt = 0L
+            return
+        }
+        val ranLongEnough = engineRunningSince != 0L && now - engineRunningSince > ENGINE_MIN_RUN_MS
+        if (!ranLongEnough || (state.speedKmh ?: 0) > 0) return
+        if (engineStoppedAt == 0L) engineStoppedAt = now
+        if (now - engineStoppedAt >= ENGINE_OFF_CONFIRM_MS) {
+            engineRunningSince = 0L
+            engineStoppedAt = 0L
+            showGoodbye()
+        }
+    }
+
+    private fun showGoodbye() {
+        if (goodbye != null || Services.vehicle.state.value.reverseGear == true) return
+        if (!Services.prefs.animationsEnabled && intro != null) return
+        intro?.skip()
+        val view = ro.e92.launcher.ui.widget.GoodbyeView(
+            this,
+            photo = backgrounds.get(R.drawable.bg_home),
+            greetingName = Services.prefs.greetingName,
+            trip = Services.trip.drive.value
+        )
+        view.onDismiss = {
+            binding.rootLayout.removeView(view)
+            goodbye = null
+        }
+        binding.rootLayout.addView(
+            view,
+            androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
+                androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.MATCH_PARENT,
+                androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+        goodbye = view
+        view.show()
+        if (!resumedNow) bringToFront(0)
+    }
+
     private fun observeStatusBar() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -672,7 +735,13 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                     }
                 }
                 launch {
-                    Services.vehicle.state.collect { carStatus.render(it) }
+                    Services.vehicle.state.collect {
+                        carStatus.render(it)
+                        watchEngine(it)
+                    }
+                }
+                launch {
+                    Services.trip.ignitionOff.collect { off -> if (off) showGoodbye() }
                 }
                 launch {
                     Services.media.snapshot.collect { media ->
@@ -896,6 +965,12 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
         /** Sub atât, o stingere a ecranului nu e un contact nou. */
         const val WAKE_GREETING_AFTER_MS = 60_000L
+
+        /** Motorul pornit: peste ralanti-ul de demaror. */
+        const val ENGINE_RUNNING_RPM = 400
+        /** Rămas-bun doar după un drum, nu după o pornire de câteva secunde. */
+        const val ENGINE_MIN_RUN_MS = 60_000L
+        const val ENGINE_OFF_CONFIRM_MS = 2_000L
 
         /** Cât după contact ne apărăm de ecranul pornit singur de vendor. */
         const val START_GUARD_MS = 25_000L

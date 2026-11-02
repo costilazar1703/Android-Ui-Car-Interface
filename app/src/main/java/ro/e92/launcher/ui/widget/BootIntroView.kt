@@ -427,7 +427,7 @@ class BootIntroView(
         private const val HOLD_AT = 3700f
 
         /** Cât stă salutul pe ecran fără nicio apăsare, de la pornire până dispare. */
-        private const val MAX_SHOWN_MS = 10_000L
+        private const val MAX_SHOWN_MS = 15_000L
         private const val SKIP_FADE_MS = 180L
         private const val START_ZOOM = 1.14f
 
