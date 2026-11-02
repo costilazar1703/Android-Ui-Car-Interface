@@ -404,7 +404,7 @@ class GaugeView @JvmOverloads constructor(
         const val LABEL_RADIUS = 0.63f
         const val NEEDLE_LENGTH = 0.90f
 
-        val NEEDLE = 0xFFFF6B00.toInt()
+        val NEEDLE = 0xFFEE4A0A.toInt()
         val REDLINE = 0xFFE01010.toInt()
         val TICK_MAJOR = 0xFFF2F2F2.toInt()
         val TICK_MINOR = 0xB3D0D0D0.toInt()

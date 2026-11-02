@@ -74,12 +74,19 @@ object Services {
         Prefs.CAN_MOCK -> listOf(MockCanDataSource(scope))
         Prefs.CAN_BROADCAST -> listOf(broadcastCan)
         Prefs.CAN_GPS -> listOf(GpsSpeedDataSource(appContext))
-        else -> listOf(
+        else -> listOfNotNull(
             broadcastCan,
             GpsSpeedDataSource(appContext),
-            MockCanDataSource(scope)
+            // Doar pe emulator. Pe unitate mock-ul era „live" lângă datele reale
+            // și umplea golurile cu valori inventate (1047 rpm cu motorul oprit,
+            // frână de mână trasă din senin).
+            MockCanDataSource(scope).takeIf { isEmulator() }
         )
     }
+
+    private fun isEmulator(): Boolean =
+        android.os.Build.HARDWARE.let { it == "ranchu" || it == "goldfish" } ||
+            android.os.Build.FINGERPRINT.startsWith("generic")
 
     /** Reconstruiește lanțul de surse după ce s-a schimbat modul din Setări. */
     fun rebuildCanSources() {

@@ -149,6 +149,19 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
+        <!-- Temperatura exterioară și autonomia, din CAN-ul unității KSW. -->
+        <TextView
+            android:id="@+id/statusCar"
+            style="@style/Text.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="18dp"
+            android:textColor="@color/text_primary"
+            android:textSize="13sp"
+            android:visibility="gone"
+            tools:text="12.5°   ·   420 km"
+            tools:visibility="visible" />
+
         <ImageView
             android:id="@+id/icMedia"
             android:layout_width="@dimen/topbar_icon"
@@ -212,5 +225,27 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/topDivider" />
+
+    <!-- Peste ecrane, sub bara de sus: avertismentele mașinii. -->
+    <TextView
+        android:id="@+id/alertBanner"
+        style="@style/Text.Body"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_alert_banner"
+        android:elevation="8dp"
+        android:paddingStart="22dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="22dp"
+        android:paddingBottom="10dp"
+        android:textColor="@color/text_primary"
+        android:textSize="15sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/topDivider"
+        tools:text="Handbrake is on"
+        tools:visibility="visible" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -67,6 +67,9 @@ class VehicleRepository(
         var sport: Boolean? = null
         var boost: Float? = null
         var oilTemp: Int? = null
+        var fuel: Int? = null
+        var range: Int? = null
+        var outside: Float? = null
         var doors: Set<Door> = emptySet()
         var doorsSet = false
         var newest = 0L
@@ -74,15 +77,26 @@ class VehicleRepository(
 
         for (i in states.indices) {
             val s = states[i]
-            if (!s.hasData || now - s.timestamp > CanDataSource.STALE_AFTER_MS) continue
+            if (!s.hasData) continue
+
+            // Stările vin pe KSW doar la schimbare (marșarierul e chiar o pereche
+            // de evenimente început/sfârșit), iar combustibilul, autonomia și
+            // temperatura se schimbă lent. Pe ele nu le expiră tăcerea: rămân
+            // valabile până vine valoarea următoare. Altfel „marșarier" s-ar fi
+            // stins singur după două secunde, cu treapta încă băgată.
+            if (handbrake == null) handbrake = s.handbrake
+            if (reverse == null) reverse = s.reverseGear
+            if (fuel == null) fuel = s.fuel
+            if (range == null) range = s.rangeKm
+            if (outside == null) outside = s.outsideTempC
+
+            if (now - s.timestamp > CanDataSource.STALE_AFTER_MS) continue
 
             if (speed == null && s.speedKmh != null) {
                 speed = s.speedKmh
                 speedFrom = sources[i].id
             }
             if (rpm == null) rpm = s.rpm
-            if (handbrake == null) handbrake = s.handbrake
-            if (reverse == null) reverse = s.reverseGear
             if (sport == null) sport = s.sportMode
             if (boost == null) boost = s.boostBar
             if (oilTemp == null) oilTemp = s.oilTempC
@@ -104,6 +118,9 @@ class VehicleRepository(
             sportMode = sport,
             boostBar = boost,
             oilTempC = oilTemp,
+            fuel = fuel,
+            rangeKm = range,
+            outsideTempC = outside,
             timestamp = newest
         )
     }

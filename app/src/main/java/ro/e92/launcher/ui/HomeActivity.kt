@@ -530,6 +530,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                     if (SystemClock.elapsedRealtime() - off < WAKE_GREETING_AFTER_MS) return
                     goHome()
                     startGuard()
+                    carStatus.newDrive()
                     if (resumedNow) {
                         if (intro == null) playIntro()
                     } else {
@@ -655,6 +656,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     // ------------------------------------------------------------- top bar
 
+    private val carStatus by lazy { CarStatus(binding.statusCar, binding.alertBanner) }
+
     private fun observeStatusBar() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -666,6 +669,9 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                         binding.statusNet.text = describeNet(net)
                         binding.statusNet.alpha = if (connected) 1f else ICON_OFF
                     }
+                }
+                launch {
+                    Services.vehicle.state.collect { carStatus.render(it) }
                 }
                 launch {
                     Services.media.snapshot.collect { media ->

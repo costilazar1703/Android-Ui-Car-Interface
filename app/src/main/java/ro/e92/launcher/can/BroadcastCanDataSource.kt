@@ -110,6 +110,12 @@ class BroadcastCanDataSource(
             ?.also { known++ } ?: prev.boostBar
         val oilTemp = config.oilTempKeys.firstNotNullOfOrNull { extras.readInt(it) }
             ?.also { known++ } ?: prev.oilTempC
+        val fuel = config.fuelKeys.firstNotNullOfOrNull { extras.readInt(it) }
+            ?.also { known++ } ?: prev.fuel
+        val range = config.rangeKeys.firstNotNullOfOrNull { extras.readInt(it) }
+            ?.also { known++ } ?: prev.rangeKm
+        val outside = config.outsideTempKeys.firstNotNullOfOrNull { extras.readFloat(it) }
+            ?.also { known++ } ?: prev.outsideTempC
 
         // Ușile: dacă măcar o cheie de ușă e prezentă, frame-ul e autoritar pentru
         // TOATE ușile — altfel o ușă închisă nu s-ar stinge niciodată din UI.
@@ -133,6 +139,9 @@ class BroadcastCanDataSource(
             sportMode = sport,
             boostBar = boost?.coerceIn(-1f, 6f),
             oilTempC = oilTemp?.coerceIn(-40, 200),
+            fuel = fuel?.takeIf { it in 0..FUEL_MAX },
+            rangeKm = range?.takeIf { it in 0..RANGE_MAX },
+            outsideTempC = outside?.takeIf { it in -40f..60f },
             timestamp = SystemClock.elapsedRealtime()
         )
     }
@@ -143,7 +152,7 @@ class BroadcastCanDataSource(
         is Byte -> v.toInt() and 0xFF
         is Float -> v.toInt()
         is Double -> v.toInt()
-        is String -> v.trim().toIntOrNull()
+        is String -> leadingNumber(v)?.toInt()
         else -> null
     }
 
@@ -151,8 +160,19 @@ class BroadcastCanDataSource(
         is Float -> v
         is Double -> v.toFloat()
         is Int -> v.toFloat()
-        is String -> v.trim().toFloatOrNull()
+        is String -> leadingNumber(v)
         else -> null
+    }
+
+    /**
+     * KSW trimite unele valori ca text gata formatat: autonomia „420km",
+     * temperatura „12.5℃" (EventService.ksw_0x00_0xA1_0x19_refreshData).
+     * În Fahrenheit sau mile nu le convertim - le ignorăm, mașina e pe metric.
+     */
+    private fun leadingNumber(s: String): Float? {
+        val t = s.trim()
+        if (t.endsWith("F") || t.endsWith("mile")) return null
+        return NUMBER.find(t)?.value?.toFloatOrNull()
     }
 
     private fun android.os.Bundle.readBool(key: String): Boolean? = when (val v = get(key)) {
@@ -175,6 +195,10 @@ class BroadcastCanDataSource(
 
     private companion object {
         const val TAG = "BroadcastCan"
+        val NUMBER = Regex("""^-?\d+(\.\d+)?""")
+        /** Rezervorul E92 are 63 l; peste asta valoarea nu e în litri. */
+        const val FUEL_MAX = 80
+        const val RANGE_MAX = 2000
     }
 }
 
@@ -191,6 +215,9 @@ data class CanBroadcastConfig(
     val sportKeys: List<String>,
     val boostKeys: List<String>,
     val oilTempKeys: List<String>,
+    val fuelKeys: List<String> = emptyList(),
+    val rangeKeys: List<String> = emptyList(),
+    val outsideTempKeys: List<String> = emptyList(),
     val doorKeys: Map<Door, String>,
     val reverseStartActions: List<String> = emptyList(),
     val reverseEndActions: List<String> = emptyList()
@@ -226,6 +253,10 @@ data class CanBroadcastConfig(
             sportKeys = listOf("sport", "sport_mode", "drive_mode", "dme_sport", "mode_sport"),
             boostKeys = listOf("boost", "boost_bar", "boost_pressure", "turbo_boost"),
             oilTempKeys = listOf("oil_temp", "oil_temperature", "engine_oil_temp"),
+            // Pachetul KSW cu ZXW_SENDBROADCAST8902MOD_EXTRA = 25.
+            fuelKeys = listOf("${KSW_8902}_youLiang"),
+            rangeKeys = listOf("${KSW_8902}_xushilicheng"),
+            outsideTempKeys = listOf("${KSW_8902}_huanjinwendu"),
             doorKeys = mapOf(
                 Door.FRONT_LEFT to "door_fl",
                 Door.FRONT_RIGHT to "door_fr",

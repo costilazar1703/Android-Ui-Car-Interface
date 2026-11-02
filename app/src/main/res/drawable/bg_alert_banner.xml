@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Avertismentele de sub bara de sus (rezervă, polei, frână de mână).
+     Aceeași sticlă întunecată ca rândurile, cu marginea în portocaliul de bord. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="0"
+        android:endColor="@color/row_idle_start"
+        android:startColor="@color/row_focus_start" />
+    <stroke
+        android:width="1dp"
+        android:color="@color/accent_focus" />
+    <corners android:radius="@dimen/card_corner" />
+</shape>

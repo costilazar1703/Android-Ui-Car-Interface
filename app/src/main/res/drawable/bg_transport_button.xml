@@ -5,7 +5,7 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_activated="true">
         <shape android:shape="oval">
-            <solid android:color="#59FF6B00" />
+            <solid android:color="#59EE4A0A" />
             <stroke android:width="2dp" android:color="@color/accent_focus" />
         </shape>
     </item>

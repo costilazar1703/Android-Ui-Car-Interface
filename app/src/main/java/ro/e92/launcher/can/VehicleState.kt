@@ -22,6 +22,12 @@ data class VehicleState(
     val boostBar: Float? = null,
     /** Temperatura uleiului de motor, °C. */
     val oilTempC: Int? = null,
+    /** Combustibil rămas, cum îl raportează unitatea (pe KSW: litri). */
+    val fuel: Int? = null,
+    /** Autonomia estimată de mașină, km. */
+    val rangeKm: Int? = null,
+    /** Temperatura exterioară, °C. */
+    val outsideTempC: Float? = null,
     /** SystemClock.elapsedRealtime() al ultimei actualizări reale. 0 = niciodată. */
     val timestamp: Long = 0L
 ) {
