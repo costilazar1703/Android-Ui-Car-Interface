@@ -111,6 +111,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         })
 
         maybePlayIntro(savedInstanceState)
+        observeCalls()
         if (savedInstanceState == null) startGuard()
         registerReceiver(wakeReceiver, IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
@@ -215,6 +216,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         // Cat ruleaza animatia de pornire, orice tasta doar o sare - nu ajunge si
         // la meniul din spate, altfel prima rotire ar muta focusul „pe nevazute".
+        callView?.let { return handleCallKey(it, keyCode) }
         goodbye?.let { it.dismiss(); return true }
         intro?.let { it.skip(); return true }
 
@@ -660,6 +662,73 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     // ------------------------------------------------------------- top bar
 
     private val carStatus by lazy { CarStatus(binding.statusCar, binding.alertBanner) }
+
+    // ---------------------------------------------------------------- apeluri
+    //
+    // Colectat cât trăiește Activity-ul, nu doar cât e în față: un apel care
+    // vine cât ești în Waze trebuie să ne aducă înapoi, peste ecranul de apel
+    // al vendorului.
+
+    private var callView: ro.e92.launcher.ui.widget.CallView? = null
+
+    private fun observeCalls() {
+        lifecycleScope.launch {
+            Services.kswBt.state.collect { st ->
+                if (st.call == ro.e92.launcher.core.KswBluetooth.Call.NONE) {
+                    callView?.let { v ->
+                        callView = null
+                        v.hide { binding.rootLayout.removeView(v) }
+                    }
+                    return@collect
+                }
+                val view = callView ?: createCallView()
+                view.update(st)
+                if (!resumedNow) bringToFront(0)
+            }
+        }
+    }
+
+    private fun createCallView(): ro.e92.launcher.ui.widget.CallView {
+        intro?.skip()
+        goodbye?.dismiss()
+        val view = ro.e92.launcher.ui.widget.CallView(this)
+        view.onButton = { b ->
+            when (b) {
+                ro.e92.launcher.ui.widget.CallView.Button.ANSWER -> Services.kswBt.answer()
+                ro.e92.launcher.ui.widget.CallView.Button.DECLINE,
+                ro.e92.launcher.ui.widget.CallView.Button.HANG_UP -> Services.kswBt.hangUp()
+                ro.e92.launcher.ui.widget.CallView.Button.TO_PHONE -> Services.kswBt.transferToPhone()
+            }
+        }
+        binding.rootLayout.addView(
+            view,
+            androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
+                androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.MATCH_PARENT,
+                androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+        view.elevation = 20f
+        view.show()
+        callView = view
+        return view
+    }
+
+    /** Rotița alege butonul, apăsarea îl activează, TEL răspunde sau închide. */
+    private fun handleCallKey(view: ro.e92.launcher.ui.widget.CallView, keyCode: Int): Boolean {
+        when (Services.keys.resolve(keyCode)) {
+            LauncherAction.ROTARY_CW, LauncherAction.TILT_RIGHT -> view.move(+1)
+            LauncherAction.ROTARY_CCW, LauncherAction.TILT_LEFT -> view.move(-1)
+            LauncherAction.SELECT -> view.activate()
+            LauncherAction.PHONE ->
+                if (Services.kswBt.state.value.call == ro.e92.launcher.core.KswBluetooth.Call.INCOMING) {
+                    Services.kswBt.answer()
+                } else {
+                    Services.kswBt.hangUp()
+                }
+            else -> Unit
+        }
+        return true
+    }
 
     // ------------------------------------------------------------- rămas-bun
     //

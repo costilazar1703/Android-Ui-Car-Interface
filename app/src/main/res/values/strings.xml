@@ -205,6 +205,14 @@
     <string name="intro_greeting">Welcome back, Mr.</string>
     <string name="intro_greeting_no_name">Welcome back!</string>
     <string name="goodbye">Goodbye, Mr.</string>
+    <string name="call_incoming">Incoming call</string>
+    <string name="call_outgoing">Calling</string>
+    <string name="call_active">In call · %1$s</string>
+    <string name="call_unknown">Unknown number</string>
+    <string name="call_answer">Answer</string>
+    <string name="call_decline">Decline</string>
+    <string name="call_hang_up">Hang up</string>
+    <string name="call_to_phone">Use phone</string>
     <string name="goodbye_no_name">Goodbye.</string>
     <string name="set_greeting_name">Greeting name</string>
     <string name="set_greeting_hint">Shown at start-up as „Welcome back, Mr. …"</string>

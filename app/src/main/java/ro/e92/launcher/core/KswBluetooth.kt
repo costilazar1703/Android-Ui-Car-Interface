@@ -34,6 +34,8 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
 
     enum class Link { UNAVAILABLE, IDLE, CONNECTING, CONNECTED, IN_CALL }
 
+    enum class Call { NONE, INCOMING, OUTGOING, ACTIVE }
+
     data class State(
         val link: Link = Link.UNAVAILABLE,
         /** Unitatea e în modul de împerechere: telefonul o vede și se poate lega. */
@@ -43,7 +45,14 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         val audioStreaming: Boolean = false,
         val phoneName: String = "",
         val unitName: String = "",
-        val pin: String = ""
+        val pin: String = "",
+        val call: Call = Call.NONE,
+        /** Numărul celui care sună / e sunat; gol cât nu l-a trimis modulul. */
+        val callNumber: String = "",
+        /** Numele din agenda telefonului, când modulul îl are. */
+        val callName: String = "",
+        /** SystemClock.elapsedRealtime() la care a început convorbirea; 0 = nu vorbim. */
+        val callStartedAt: Long = 0L
     )
 
     private val _state = MutableStateFlow(State())
@@ -57,7 +66,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         get() = runCatching { context.packageManager.getPackageInfo(PACKAGE, 0); true }.getOrDefault(false)
 
     fun start() {
-        if (started || !isInstalled) return
+        if (started) return
         started = true
         context.registerReceiver(receiver, IntentFilter().apply {
             addAction(EVT_HSHF_STATUS)
@@ -65,8 +74,10 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
             addAction(EVT_PAIR_STATUS)
             addAction(EVT_DEVICE_NAME)
             addAction(EVT_DEVICE_PINCODE)
+            addAction(EVT_CONTACT_NUM)
+            addAction(EVT_CONTACT_ADDRESS)
         })
-        bind()
+        if (isInstalled) bind()
     }
 
     private fun bind() {
@@ -120,6 +131,20 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     /** Șterge toate telefoanele memorate; modulul intră apoi singur în modul vizibil. */
     fun forgetAll() = command { call(Tx.DEL_ALL_PAIRED) }
 
+    // -------------------------------------------------------------- apeluri
+
+    fun answer() = command { call(Tx.ACCEPT_CALL) }
+
+    /** Respinge un apel care sună sau închide unul în curs - pe KSW e aceeași comandă. */
+    fun hangUp() = command { call(Tx.END_CALL) }
+
+    /** Convorbirea trece pe telefon (difuzorul mașinii tace). */
+    fun transferToPhone() = command { call(Tx.TRANSFER_TO_PHONE) }
+
+    fun redial() = command { call(Tx.DIAL_LAST) }
+
+    fun dial(number: String) = command { call(Tx.DIAL_NUMBER) { it.writeString(number) } }
+
     fun playPause() = command { call(Tx.PLAY_PAUSE) }
     fun next() = command { call(Tx.NEXT) }
     fun previous() = command { call(Tx.PREV) }
@@ -158,10 +183,24 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
             val text = intent.getStringExtra(EXTRA_STR)
             val s = _state.value
             _state.value = when (intent.action) {
-                EVT_HSHF_STATUS -> s.copy(
-                    link = linkOf(value),
-                    phoneName = if (linkOf(value) >= Link.CONNECTED) s.phoneName else ""
-                )
+                EVT_HSHF_STATUS -> {
+                    val call = callOf(value)
+                    s.copy(
+                        link = linkOf(value),
+                        phoneName = if (linkOf(value) >= Link.CONNECTED) s.phoneName else "",
+                        call = call,
+                        callNumber = if (call == Call.NONE) "" else s.callNumber,
+                        callName = if (call == Call.NONE) "" else s.callName,
+                        callStartedAt = when {
+                            call != Call.ACTIVE -> 0L
+                            s.callStartedAt != 0L -> s.callStartedAt
+                            else -> android.os.SystemClock.elapsedRealtime()
+                        }
+                    )
+                }
+                EVT_CONTACT_NUM -> s.copy(callNumber = text ?: s.callNumber)
+                // „Address" e, în ciuda numelui, numele din agendă al apelantului.
+                EVT_CONTACT_ADDRESS -> s.copy(callName = text?.takeIf { it.isNotBlank() } ?: s.callName)
                 EVT_AV_STATUS -> s.copy(audioStreaming = value == AV_STREAMING)
                 EVT_PAIR_STATUS -> s.copy(
                     visible = value == PAIR_IN_PROGRESS,
@@ -173,7 +212,32 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
             }
             // Numele telefonului nu vine pe broadcast: îl cerem la conectare.
             if (intent.action == EVT_HSHF_STATUS && linkOf(value) == Link.CONNECTED) refresh()
+            // Numărul și numele apelantului le cerem și direct, dacă broadcast-ul întârzie.
+            if (intent.action == EVT_HSHF_STATUS && callOf(value) != Call.NONE) refreshCaller()
         }
+    }
+
+    private fun refreshCaller() {
+        scope.launch {
+            val number = callString(Tx.GET_CONTACT_NUM).orEmpty().takeIf { it.any(Char::isDigit) }
+            val name = callString(Tx.GET_CONTACT_NAME).orEmpty().takeIf { it.isNotBlank() && it.none(::isPlaceholderChar) }
+            val s = _state.value
+            if (s.call == Call.NONE) return@launch
+            _state.value = s.copy(
+                callNumber = number ?: s.callNumber,
+                callName = name ?: s.callName
+            )
+        }
+    }
+
+    /** Valorile implicite ale vendorului („未知号码") sunt în chineză: nu le afișăm. */
+    private fun isPlaceholderChar(c: Char) = c.code in 0x4E00..0x9FFF
+
+    private fun callOf(hshf: Int): Call = when (hshf) {
+        5 -> Call.INCOMING
+        4 -> Call.OUTGOING
+        6 -> Call.ACTIVE
+        else -> Call.NONE
     }
 
     private fun linkOf(hshf: Int): Link = when (hshf) {
@@ -219,6 +283,12 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         const val CANCEL_PAIR = 2
         const val CONNECT = 3
         const val DISCONNECT = 4
+        const val DIAL_NUMBER = 8
+        const val DIAL_LAST = 10
+        /** cancelDail: pe KSW respinge sau închide (rejectCall e gol la ei). */
+        const val END_CALL = 11
+        const val ACCEPT_CALL = 12
+        const val TRANSFER_TO_PHONE = 15
         const val GET_DEVICE_NAME = 6
         const val DEL_ALL_PAIRED = 7
         const val PLAY_PAUSE = 25
@@ -231,6 +301,8 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         const val GET_A2DP_STATE = 36
         const val GET_PINCODE = 37
         const val GET_CONNECT_PHONE_NAME = 50
+        const val GET_CONTACT_NAME = 41
+        const val GET_CONTACT_NUM = 42
     }
 
     companion object {
@@ -243,6 +315,8 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         private const val EVT_PAIR_STATUS = "com.szchoiceway.btsuite.HBCP_EVT_PAIR_STATUS"
         private const val EVT_DEVICE_NAME = "com.szchoiceway.btsuite.HBCP_EVT_DEVICE_NAME"
         private const val EVT_DEVICE_PINCODE = "com.szchoiceway.btsuite.HBCP_EVT_DEVICE_PINCODE"
+        private const val EVT_CONTACT_NUM = "com.szchoiceway.btsuite.HBCP_EVT_CONTACT_NUM"
+        private const val EVT_CONTACT_ADDRESS = "com.szchoiceway.btsuite.HBCP_EVT_CONTACT_ADDRESS"
         private const val EXTRA_INT = "com.szchoiceway.btsuite.DATA_INT"
         private const val EXTRA_STR = "com.szchoiceway.btsuite.DATA_STR"
 
