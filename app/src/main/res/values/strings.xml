@@ -88,6 +88,8 @@
     <string name="unit_kmh">km/h</string>
     <string name="unit_rpm">x1000 rpm</string>
     <string name="unit_bar">bar</string>
+    <string name="unit_litre">litres</string>
+    <string name="unit_km">km</string>
     <string name="unit_celsius">°C</string>
 
     <string name="media_no_session">No active source</string>
