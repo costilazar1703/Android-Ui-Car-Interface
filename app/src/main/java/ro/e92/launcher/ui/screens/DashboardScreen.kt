@@ -32,24 +32,33 @@ class DashboardScreen(host: ScreenHost) : Screen(host) {
         binding.gaugeRow.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob ->
             if (r - l != or - ol || b - t != ob - ot) sizeGauges(r - l, b - t)
         }
+        // Scalele copiate după bordul E92 320d: kilometrajul pe un arc lung,
+        // 0 jos-stânga (~7 și un sfert) până la 260 jos-dreapta (~4 și jumătate),
+        // cifre din 20 în 20. Unghiurile sunt în grade Canvas, 0° = ora 3.
         binding.gaugeSpeed.configure(
             caption = "SPEED",
             unit = context.getString(R.string.unit_kmh),
             maxValue = 260f,
             majorTickStep = 20f,
             minorPerMajor = 2,
-            labelStep = 40f
+            labelStep = 20f,
+            startAngle = 128f,
+            sweepAngle = 276f,
+            labelSizeRatio = 0.047f
         )
+        // Turometrul diesel: 0–5, zona roșie scurtă imediat după 5 (până la 5.5),
+        // gradații mici la fiecare 500.
         binding.gaugeRpm.configure(
             caption = "RPM",
             unit = context.getString(R.string.unit_rpm),
-            // Scala bordului de 320d (diesel): 0–6, zona roșie de la 5000.
-            maxValue = 6000f,
+            maxValue = 5500f,
             majorTickStep = 1000f,
-            minorPerMajor = 4,
+            minorPerMajor = 2,
             redlineFrom = 5000f,
             displayDivisor = 1000f,
-            decimals = 1
+            decimals = 1,
+            startAngle = 142f,
+            sweepAngle = 257f
         )
         binding.gaugeBoost.configure(
             caption = "BOOST",

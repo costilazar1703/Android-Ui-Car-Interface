@@ -427,6 +427,13 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         binding.miniCover.clipToOutline = true
         binding.miniPlay.setOnClickListener { Services.media.playPause() }
         binding.miniPlayer.setOnClickListener { host.push(MediaScreen(host)) }
+        // setOnClickListener le face focusabile pentru Android, iar focusul
+        // nativ primește DPAD_CENTER înaintea FocusEngine: SELECT pe orice dală
+        // deschidea Media. Rămân doar de atins.
+        for (v in listOf(binding.miniPlayer, binding.miniPlay)) {
+            v.isFocusable = false
+            v.defaultFocusHighlightEnabled = false
+        }
     }
 
     private fun renderMedia() {

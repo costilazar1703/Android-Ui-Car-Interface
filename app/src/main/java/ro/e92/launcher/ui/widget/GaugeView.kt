@@ -45,6 +45,10 @@ class GaugeView @JvmOverloads constructor(
 
     // ------------------------------------------------------------------ config
     private var minValue = 0f
+    /** Unghiul lui [minValue] și cât acoperă scala, în grade Canvas (0° = ora 3). */
+    private var startAngle = DEFAULT_START_ANGLE
+    private var sweepAngle = DEFAULT_SWEEP_ANGLE
+    private var labelSizeRatio = DEFAULT_LABEL_SIZE
     private var maxValue = 260f
     private var majorTickStep = 20f
     private var minorPerMajor = 2
@@ -120,6 +124,9 @@ class GaugeView @JvmOverloads constructor(
         minValue: Float = 0f,
         minorPerMajor: Int = 2,
         labelStep: Float = majorTickStep,
+        startAngle: Float = DEFAULT_START_ANGLE,
+        sweepAngle: Float = DEFAULT_SWEEP_ANGLE,
+        labelSizeRatio: Float = DEFAULT_LABEL_SIZE,
         redlineFrom: Float = Float.MAX_VALUE,
         displayDivisor: Float = 1f,
         decimals: Int = 0
@@ -131,6 +138,9 @@ class GaugeView @JvmOverloads constructor(
         this.majorTickStep = majorTickStep
         this.minorPerMajor = minorPerMajor.coerceAtLeast(1)
         this.labelStep = labelStep
+        this.startAngle = startAngle
+        this.sweepAngle = sweepAngle
+        this.labelSizeRatio = labelSizeRatio
         this.redlineFrom = redlineFrom
         this.displayDivisor = displayDivisor
         this.decimals = decimals
@@ -211,7 +221,7 @@ class GaugeView @JvmOverloads constructor(
             }
             val oval = RectF(centerX - r, centerY - r, centerX + r, centerY + r)
             val from = (redlineFrom - minValue) / (maxValue - minValue)
-            c.drawArc(oval, START_ANGLE + SWEEP_ANGLE * from, SWEEP_ANGLE * (1f - from), false, band)
+            c.drawArc(oval, startAngle + sweepAngle * from, sweepAngle * (1f - from), false, band)
         }
 
         val major = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -245,7 +255,7 @@ class GaugeView @JvmOverloads constructor(
         val labels = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             textAlign = Paint.Align.CENTER
             typeface = context.resources.getFont(R.font.inter_medium)
-            textSize = max(size * 0.058f, minTextPx)
+            textSize = max(size * labelSizeRatio, minTextPx)
             fontFeatureSettings = "tnum"
         }
         // Centrul optic al cifrei, nu baseline-ul: cifrele stau pe cerc.
@@ -287,7 +297,7 @@ class GaugeView @JvmOverloads constructor(
     }
 
     private fun angleOf(value: Float): Float = Math.toRadians(
-        (START_ANGLE + SWEEP_ANGLE * (value - minValue) / (maxValue - minValue)).toDouble()
+        (startAngle + sweepAngle * (value - minValue) / (maxValue - minValue)).toDouble()
     ).toFloat()
 
     /** „1" pentru valori întregi, „0.5" pentru restul — scala de turbo are jumătăți. */
@@ -321,7 +331,7 @@ class GaugeView @JvmOverloads constructor(
         canvas.drawText(unit, centerX, unitBaseline, unitPaint)
 
         val save = canvas.save()
-        canvas.rotate(START_ANGLE + SWEEP_ANGLE * drawnFraction, centerX, centerY)
+        canvas.rotate(startAngle + sweepAngle * drawnFraction, centerX, centerY)
         canvas.drawPath(needlePath, needleGlowPaint)
         canvas.drawPath(needlePath, needlePaint)
         canvas.restoreToCount(save)
@@ -378,9 +388,10 @@ class GaugeView @JvmOverloads constructor(
     }
 
     private companion object {
-        /** 150° … 390°: deschidere jos, ca la ceasurile BMW. */
-        const val START_ANGLE = 150f
-        const val SWEEP_ANGLE = 240f
+        /** 150° … 390°: deschidere jos. Bordul E9x are arce mai lungi — vezi DashboardScreen. */
+        const val DEFAULT_START_ANGLE = 150f
+        const val DEFAULT_SWEEP_ANGLE = 240f
+        const val DEFAULT_LABEL_SIZE = 0.058f
 
         /** Inelul portocaliu din `gauge_face` e la ~0.83 din rază; interiorul începe sub el. */
         const val DIAL_RATIO = 0.80f
