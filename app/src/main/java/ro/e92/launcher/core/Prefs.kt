@@ -77,6 +77,11 @@ class Prefs(context: Context) {
         get() = sp.getString(KEY_GREETING_NAME, DEFAULT_GREETING_NAME) ?: DEFAULT_GREETING_NAME
         set(value) = sp.edit().putString(KEY_GREETING_NAME, value.trim()).apply()
 
+    /** Numele sub care telefonul vede unitatea pe Bluetooth. */
+    var btUnitName: String
+        get() = sp.getString(KEY_BT_NAME, DEFAULT_BT_NAME) ?: DEFAULT_BT_NAME
+        set(value) = sp.edit().putString(KEY_BT_NAME, value.trim()).apply()
+
     /** "auto" | "mock" | "broadcast" | "gps" */
     var canMode: String
         get() = sp.getString(KEY_CAN_MODE, CAN_AUTO) ?: CAN_AUTO
@@ -128,12 +133,14 @@ class Prefs(context: Context) {
 
         const val DEFAULT_NAV_PKG = "com.waze"
         const val DEFAULT_GREETING_NAME = "Lazar"
+        const val DEFAULT_BT_NAME = "Lazar's BMW"
         const val DEFAULT_BROWSER_PKG = "com.android.chrome"
         const val DEFAULT_MAPS_PKG = "com.google.android.apps.maps"
         const val DEFAULT_CD_URL = "https://www.bmw-connecteddrive.com"
 
         private const val KEY_NAV_PKG = "nav_package"
         private const val KEY_GREETING_NAME = "greeting_name"
+        private const val KEY_BT_NAME = "bt_unit_name"
         private const val KEY_CARPLAY_PKG = "carplay_package"
         private const val KEY_DASHBOARD_PKG = "dashboard_package"
         private const val KEY_CARINFO_PKG = "carinfo_package"

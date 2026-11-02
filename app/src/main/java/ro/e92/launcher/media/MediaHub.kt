@@ -12,6 +12,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -87,6 +88,7 @@ class MediaHub(private val context: Context) {
     }
 
     fun start() {
+        observeKsw()
         if (started) return
         val mgr = manager ?: return
         try {
@@ -140,6 +142,7 @@ class MediaHub(private val context: Context) {
     }
 
     fun playPause() {
+        if (controller == null && kswActive()) return ro.e92.launcher.core.Services.kswBt.playPause()
         val c = controller ?: return
         if (c.playbackState?.state == PlaybackState.STATE_PLAYING) {
             c.transportControls.pause()
@@ -148,9 +151,58 @@ class MediaHub(private val context: Context) {
         }
     }
 
-    fun next() = controller?.transportControls?.skipToNext() ?: Unit
+    fun next() {
+        if (controller == null && kswActive()) return ro.e92.launcher.core.Services.kswBt.next()
+        controller?.transportControls?.skipToNext()
+    }
 
-    fun previous() = controller?.transportControls?.skipToPrevious() ?: Unit
+    fun previous() {
+        if (controller == null && kswActive()) return ro.e92.launcher.core.Services.kswBt.previous()
+        controller?.transportControls?.skipToPrevious()
+    }
+
+    // ------------------------------------------------------------------ KSW
+    //
+    // Muzica de pe telefon prin modulul KSW nu e o MediaSession Android: n-o
+    // vede nimic din ce ascultă sesiunile. Când nu cântă altceva, o publicăm
+    // noi ca sursă, cu titlul de la modul și coperta căutată după titlu - așa
+    // dala Media, mini-player-ul și ecranul Media o arată ca pe oricare alta.
+
+    private var kswObserved = false
+
+    private fun observeKsw() {
+        if (kswObserved) return
+        kswObserved = true
+        val ksw = ro.e92.launcher.core.Services.kswBt
+        ro.e92.launcher.core.Services.scope.launch {
+            ksw.state.collect { handler.post { if (controller == null) publish() } }
+        }
+    }
+
+    private fun kswActive(): Boolean {
+        val st = ro.e92.launcher.core.Services.kswBt.state.value
+        return st.link >= ro.e92.launcher.core.KswBluetooth.Link.CONNECTED &&
+            (st.songTitle.isNotBlank() || st.audioStreaming)
+    }
+
+    private fun kswSnapshot(): Snapshot {
+        if (!kswActive()) return Snapshot()
+        val st = ro.e92.launcher.core.Services.kswBt.state.value
+        val title = st.songTitle.takeIf { it.isNotBlank() }
+        val art = title?.let { ArtworkLookup.cached(it) }
+        if (title != null && art == null) {
+            ro.e92.launcher.core.Services.scope.launch {
+                if (ArtworkLookup.find(title) != null) handler.post { if (controller == null) publish() }
+            }
+        }
+        return Snapshot(
+            packageName = ro.e92.launcher.core.KswBluetooth.PACKAGE,
+            title = title,
+            artist = title?.let { ArtworkLookup.artist(it) } ?: st.phoneName.takeIf { it.isNotBlank() },
+            artwork = art,
+            isPlaying = st.audioStreaming
+        )
+    }
 
     private fun detachController() {
         controller?.unregisterCallback(controllerCallback)
@@ -160,7 +212,7 @@ class MediaHub(private val context: Context) {
     private fun publish() {
         val c = controller
         if (c == null) {
-            _snapshot.value = Snapshot()
+            _snapshot.value = kswSnapshot()
             return
         }
         val md = c.metadata
