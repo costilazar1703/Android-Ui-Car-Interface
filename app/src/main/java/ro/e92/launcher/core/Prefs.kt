@@ -77,6 +77,11 @@ class Prefs(context: Context) {
         get() = sp.getString(KEY_GREETING_NAME, DEFAULT_GREETING_NAME) ?: DEFAULT_GREETING_NAME
         set(value) = sp.edit().putString(KEY_GREETING_NAME, value.trim()).apply()
 
+    /** De unde ia butonul „Check for update" APK-ul: laptopul, pe hotspot. */
+    var updateUrl: String
+        get() = sp.getString(KEY_UPDATE_URL, DEFAULT_UPDATE_URL) ?: DEFAULT_UPDATE_URL
+        set(value) = sp.edit().putString(KEY_UPDATE_URL, value.trim()).apply()
+
     /** Numele sub care telefonul vede unitatea pe Bluetooth. */
     var btUnitName: String
         get() = sp.getString(KEY_BT_NAME, DEFAULT_BT_NAME) ?: DEFAULT_BT_NAME
@@ -134,6 +139,8 @@ class Prefs(context: Context) {
         const val DEFAULT_NAV_PKG = "com.waze"
         const val DEFAULT_GREETING_NAME = "Lazar"
         const val DEFAULT_BT_NAME = "Lazar's BMW"
+        /** Laptopul pe hotspot-ul iPhone (rețeaua 172.20.10.0/28) - vezi scripts/e92.ps1. */
+        const val DEFAULT_UPDATE_URL = "http://172.20.10.8:8000/e92.apk"
         const val DEFAULT_BROWSER_PKG = "com.android.chrome"
         const val DEFAULT_MAPS_PKG = "com.google.android.apps.maps"
         const val DEFAULT_CD_URL = "https://www.bmw-connecteddrive.com"
@@ -141,6 +148,7 @@ class Prefs(context: Context) {
         private const val KEY_NAV_PKG = "nav_package"
         private const val KEY_GREETING_NAME = "greeting_name"
         private const val KEY_BT_NAME = "bt_unit_name"
+        private const val KEY_UPDATE_URL = "update_url"
         private const val KEY_CARPLAY_PKG = "carplay_package"
         private const val KEY_DASHBOARD_PKG = "dashboard_package"
         private const val KEY_CARINFO_PKG = "carinfo_package"

@@ -3,9 +3,11 @@ package ro.e92.launcher.ui.screens
 import ro.e92.launcher.core.AppLaunch
 import android.content.Intent
 import android.provider.Settings
+import kotlinx.coroutines.launch
 import ro.e92.launcher.R
 import ro.e92.launcher.core.Prefs
 import ro.e92.launcher.core.CrashGuard
+import ro.e92.launcher.core.SelfUpdate
 import ro.e92.launcher.core.Services
 import ro.e92.launcher.core.SettingsBackup
 import ro.e92.launcher.core.Storage
@@ -344,8 +346,35 @@ class SettingsScreen(
                 else R.string.not_granted
             ),
             onActivate = { openSystem(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) }
+        ),
+        DetailRow(
+            id = "sys_update",
+            title = context.getString(R.string.set_update),
+            value = updateStatus ?: context.getString(R.string.set_update_hint),
+            onActivate = { checkForUpdate() }
         )
     )
+
+    /** Ultimul rezultat al verificării, afișat pe rând până la următoarea. */
+    private var updateStatus: String? = null
+
+    private fun checkForUpdate() {
+        updateStatus = context.getString(R.string.update_checking)
+        reloadDetail("sys_update")
+        screenScope.launch {
+            val result = SelfUpdate.check(context, Services.prefs.updateUrl)
+            updateStatus = context.getString(
+                when (result) {
+                    SelfUpdate.Result.INSTALLING -> R.string.update_installing
+                    SelfUpdate.Result.UP_TO_DATE -> R.string.update_up_to_date
+                    SelfUpdate.Result.NEEDS_PERMISSION -> R.string.update_permission
+                    SelfUpdate.Result.NO_SERVER -> R.string.update_no_server
+                    SelfUpdate.Result.FAILED -> R.string.update_failed
+                }
+            )
+            reloadDetail("sys_update")
+        }
+    }
 
     private fun nextCanMode(current: String): String = when (current) {
         Prefs.CAN_AUTO -> Prefs.CAN_BROADCAST

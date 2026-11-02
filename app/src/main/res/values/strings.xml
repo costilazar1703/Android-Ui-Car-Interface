@@ -205,6 +205,14 @@
     <string name="intro_greeting">Welcome back, Mr.</string>
     <string name="intro_greeting_no_name">Welcome back!</string>
     <string name="goodbye">Goodbye, Mr.</string>
+    <string name="set_update">Check for update</string>
+    <string name="set_update_hint">From the laptop on the hotspot</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_installing">New version – tap Install</string>
+    <string name="update_up_to_date">Up to date</string>
+    <string name="update_permission">Allow this source, then check again</string>
+    <string name="update_no_server">Laptop not found on the hotspot</string>
+    <string name="update_failed">Could not open the installer</string>
     <string name="call_incoming">Incoming call</string>
     <string name="call_outgoing">Calling</string>
     <string name="call_active">In call · %1$s</string>

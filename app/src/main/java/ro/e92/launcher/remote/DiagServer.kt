@@ -13,10 +13,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.util.Log
-import androidx.core.content.FileProvider
 import ro.e92.launcher.core.CrashGuard
+import ro.e92.launcher.core.SelfUpdate
 import ro.e92.launcher.input.KeyEventLog
 import ro.e92.launcher.ui.HomeActivity
 import ro.e92.launcher.ui.screens.DiagnosticsReport
@@ -368,31 +367,24 @@ object DiagServer {
      * Android cere și permisiunea „Install unknown apps" pentru launcher.
      */
     private fun install(req: Request): String {
-        val dir = File(app.externalCacheDir ?: app.cacheDir, "updates").also { it.mkdirs() }
-        val apk = File(dir, "update.apk")
+        val apk = File(SelfUpdate.updatesDir(app), "update.apk")
         apk.outputStream().use { copy(req.body, it, req.contentLength) }
         if (apk.length() != req.contentLength) return "primit ${apk.length()} din ${req.contentLength} octeți - reîncearcă\n"
 
-        if (!app.packageManager.canRequestPackageInstalls()) {
-            main.post {
-                app.startActivity(
-                    Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${app.packageName}"))
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                )
-            }
-            return "APK salvat (${apk.length()} octeți), dar launcher-ul n-are voie să instaleze.\n" +
-                "Pe unitate s-a deschis setarea: activează „Allow from this source”, apoi trimite din nou.\n"
-        }
-
-        val uri = FileProvider.getUriForFile(app, "${app.packageName}.files", apk)
+        var result = SelfUpdate.Result.FAILED
+        val done = CountDownLatch(1)
         main.post {
-            app.startActivity(
-                Intent(Intent.ACTION_VIEW)
-                    .setDataAndType(uri, "application/vnd.android.package-archive")
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
+            result = SelfUpdate.install(app, apk)
+            done.countDown()
         }
-        return "APK primit (${apk.length()} octeți). Apasă „Install” pe ecranul unității.\n"
+        done.await(5, TimeUnit.SECONDS)
+        return when (result) {
+            SelfUpdate.Result.NEEDS_PERMISSION ->
+                "APK salvat (${apk.length()} octeți), dar launcher-ul n-are voie să instaleze.\n" +
+                    "Pe unitate s-a deschis setarea: activează „Allow from this source”, apoi trimite din nou.\n"
+            SelfUpdate.Result.INSTALLING -> "APK primit (${apk.length()} octeți). Apasă „Install” pe ecranul unității.\n"
+            else -> "APK primit, dar instalatorul nu s-a putut deschide.\n"
+        }
     }
 
     private val HELP = """
