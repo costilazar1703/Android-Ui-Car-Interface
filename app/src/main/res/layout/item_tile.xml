@@ -61,6 +61,31 @@
             android:scaleType="fitCenter"
             tools:src="@drawable/ic_menu_navigation" />
 
+        <!-- Dala „vie": ce cântă, telefonul conectat, următoarea manevră.
+             Ascunsă cât n-are ce spune; mărimea și marginile vin din cod. -->
+        <TextView
+            android:id="@+id/tileLive"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:duplicateParentState="true"
+            android:ellipsize="end"
+            android:fontFamily="@font/inter_medium"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:singleLine="true"
+            android:textColor="@color/tile_live_text"
+            android:visibility="gone"
+            tools:text="Midnight City"
+            tools:visibility="visible" />
+
+        <ro.e92.launcher.ui.widget.EqualizerView
+            android:id="@+id/tileEq"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_gravity="top|end"
+            android:visibility="gone" />
+
     </FrameLayout>
 
     <!-- Reflexia „in apa" de sub dala, plus lumina portocalie scursa sub cea

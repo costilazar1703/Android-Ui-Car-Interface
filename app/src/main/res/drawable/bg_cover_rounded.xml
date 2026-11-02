@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fundalul copertei. Colțurile lui decupează și imaginea (clipToOutline,
+     setat din cod), deci orice copertă primește aceeași rotunjire. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#0E0E0E" />
+    <corners android:radius="@dimen/cover_corner" />
+</shape>

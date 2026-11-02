@@ -38,6 +38,8 @@ class MockCanDataSource(private val scope: CoroutineScope) : CanDataSource {
     private var speed = 0f          // km/h
     private var targetSpeed = 0f
     private var gear = 1
+    private var prevSpeed = 0f
+    private var oilTemp = 62f
 
     override fun start() {
         if (job?.isActive == true) return
@@ -52,6 +54,8 @@ class MockCanDataSource(private val scope: CoroutineScope) : CanDataSource {
                     handbrake = speed < 1f && tick % 400 < 60,
                     doorsOpen = if (speed < 1f && tick % 900 < 40) setOf(Door.FRONT_LEFT) else emptySet(),
                     reverseGear = false,
+                    boostBar = computeBoost(),
+                    oilTempC = oilTemp.roundToInt(),
                     timestamp = SystemClock.elapsedRealtime()
                 )
                 delay(TICK_MS)
@@ -92,6 +96,15 @@ class MockCanDataSource(private val scope: CoroutineScope) : CanDataSource {
         }
     }
 
+    /** Turbo doar cât accelerezi; la croazieră abia o zecime de bar. */
+    private fun computeBoost(): Float {
+        val accel = (speed - prevSpeed).coerceAtLeast(0f)
+        prevSpeed = speed
+        // Uleiul se încălzește încet spre ~100 °C, ca la un diesel în mers.
+        oilTemp += (100f - oilTemp) * 0.0004f
+        return (0.1f + accel * 1.4f).coerceAtMost(1.6f)
+    }
+
     private fun computeRpm(): Int {
         if (speed < 1f) return 780 + Random.nextInt(-30, 30) // ralanti
         val ratio = when (gear) {
@@ -102,7 +115,7 @@ class MockCanDataSource(private val scope: CoroutineScope) : CanDataSource {
             5 -> 30f
             else -> 25f
         }
-        return (speed * ratio).roundToInt().coerceIn(700, 7000)
+        return (speed * ratio).roundToInt().coerceIn(700, 5000) // 320d: limitatorul e la ~5000
     }
 
     private companion object {

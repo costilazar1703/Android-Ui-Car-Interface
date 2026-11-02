@@ -63,4 +63,74 @@
         app:layout_constraintStart_toStartOf="parent"
         tools:ignore="UselessLeaf" />
 
+    <!-- Mini-player: apare doar cât există o sursă media. Atingerea pe text
+         deschide ecranul Media, pe buton face play/pauză. Din rotiță nu e
+         focusabil — butoanele de volan comandă oricum muzica de oriunde. -->
+    <LinearLayout
+        android:id="@+id/miniPlayer"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/mini_player_height"
+        android:layout_marginEnd="@dimen/screen_margin"
+        android:background="@drawable/bg_mini_player"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="3dp"
+        tools:visibility="visible">
+
+        <ImageView
+            android:id="@+id/miniCover"
+            android:layout_width="@dimen/mini_player_cover"
+            android:layout_height="@dimen/mini_player_cover"
+            android:background="@drawable/bg_mini_cover"
+            android:contentDescription="@null"
+            android:scaleType="centerCrop"
+            android:src="@drawable/media_cover_default" />
+
+        <ro.e92.launcher.ui.widget.EqualizerView
+            android:id="@+id/miniEq"
+            android:layout_width="11dp"
+            android:layout_height="11dp"
+            android:layout_marginStart="9dp" />
+
+        <TextView
+            android:id="@+id/miniTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:ellipsize="end"
+            android:fontFamily="@font/inter_medium"
+            android:maxWidth="@dimen/mini_player_text_max"
+            android:singleLine="true"
+            android:textColor="@color/text_primary"
+            android:textSize="13sp"
+            tools:text="Midnight City" />
+
+        <TextView
+            android:id="@+id/miniArtist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:ellipsize="end"
+            android:fontFamily="@font/inter_regular"
+            android:maxWidth="@dimen/mini_player_artist_max"
+            android:singleLine="true"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            tools:text="M83" />
+
+        <ImageView
+            android:id="@+id/miniPlay"
+            android:layout_width="@dimen/mini_player_cover"
+            android:layout_height="@dimen/mini_player_cover"
+            android:layout_marginStart="8dp"
+            android:contentDescription="@null"
+            android:padding="6dp"
+            android:src="@drawable/ic_transport_play" />
+    </LinearLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -7,8 +7,11 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.Gravity
+import android.widget.FrameLayout
 import android.widget.LinearLayout
+import kotlinx.coroutines.launch
 import ro.e92.launcher.R
+import ro.e92.launcher.core.BluetoothPresence
 import ro.e92.launcher.core.Services
 import ro.e92.launcher.databinding.ItemTileBinding
 import ro.e92.launcher.databinding.ScreenTileGridBinding
@@ -17,6 +20,7 @@ import ro.e92.launcher.ui.Screen
 import ro.e92.launcher.ui.ScreenHost
 import ro.e92.launcher.ui.Tile
 import ro.e92.launcher.ui.TileCatalog
+import ro.e92.launcher.nav.NavNotificationRelay
 import ro.e92.launcher.ui.widget.PageIndicatorView
 import kotlin.math.abs
 
@@ -49,6 +53,10 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     private lateinit var binding: ScreenTileGridBinding
 
     private val tileViews = ArrayList<View>(TileCatalog.items.size)
+    /** Dalele care pot afișa ceva viu, după id: media, bt, nav. */
+    private val tileBindings = HashMap<String, ItemTileBinding>()
+    /** Cât urcă iconița când sub ea apare textul viu. */
+    private var liveIconShift = 0f
     private var indicator: PageIndicatorView? = null
 
     /**
@@ -71,6 +79,12 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     override fun onShow() {
         buildDots()
         setupSwipe()
+        setupMiniPlayer()
+
+        BluetoothPresence.start(context)
+        screenScope.launch { Services.media.snapshot.collect { renderMedia() } }
+        screenScope.launch { BluetoothPresence.deviceName.collect { renderLive() } }
+        screenScope.launch { NavNotificationRelay.guidance.collect { renderLive() } }
 
         // Lățimea unei pagini se știe abia după măsurare.
         binding.tileViewport.post {
@@ -127,6 +141,12 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
 
         computeArc(tileWidth, gap)
 
+        val liveTextPx = bodySize * LIVE_TEXT_RATIO
+        val liveInset = (bodySize * LIVE_INSET_RATIO).toInt()
+        val eqSize = (bodySize * EQ_RATIO).toInt()
+        liveIconShift = bodySize * LIVE_ICON_SHIFT_RATIO
+        tileBindings.clear()
+
         binding.tileStrip.removeAllViews()
         tileViews.clear()
 
@@ -161,6 +181,17 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                 tileBinding.tileBody.layoutParams.height = bodySize
                 tileBinding.tileShadow.layoutParams.height = shadowHeight
                 tileBinding.tileShadow.setSource(tile.icon, iconSize, bodySize)
+                tileBinding.tileLive.setTextSize(TypedValue.COMPLEX_UNIT_PX, liveTextPx)
+                tileBinding.tileLive.setPadding(liveInset, 0, liveInset, 0)
+                (tileBinding.tileLive.layoutParams as FrameLayout.LayoutParams).bottomMargin =
+                    (bodySize * LIVE_BOTTOM_RATIO).toInt()
+                (tileBinding.tileEq.layoutParams as FrameLayout.LayoutParams).apply {
+                    width = eqSize
+                    height = eqSize
+                    topMargin = liveInset
+                    marginEnd = liveInset
+                }
+                tileBindings[tile.id] = tileBinding
                 tileBinding.tileIcon.layoutParams.also {
                     // Plafonat la corpul dalei minus rama: o iconita cu
                     // iconScale mare ar iesi altfel din patrat si ar fi taiata.
@@ -198,6 +229,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         }
 
         built = true
+        renderMedia()
         host.rebuildFocus(restoreId())
     }
 
@@ -361,6 +393,64 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     private fun pageFraction(): Float =
         if (TileCatalog.pageCount <= 1) 0f else currentPage / (TileCatalog.pageCount - 1f)
 
+    // ------------------------------------------------------------ dale vii
+
+    /**
+     * Media, Bluetooth și Navigație spun ce se întâmplă fără să fie deschise:
+     * piesa care cântă (cu barele animate cât rulează), telefonul conectat,
+     * următoarea manevră. Fără nimic de spus, dala rămâne doar cu iconița.
+     */
+    private fun renderLive() {
+        if (!built) return
+        val media = Services.media.snapshot.value
+        setLive("media", media.title.takeIf { media.hasSession })
+        tileBindings["media"]?.tileEq?.let {
+            it.visibility = if (media.hasSession) View.VISIBLE else View.GONE
+            it.playing = media.isPlaying
+        }
+        setLive("bt", BluetoothPresence.deviceName.value)
+        val nav = NavNotificationRelay.guidance.value
+        setLive("nav", if (nav.isEmpty) null else nav.primary?.takeIf { it.isNotBlank() } ?: nav.secondary)
+    }
+
+    private fun setLive(id: String, text: String?) {
+        val b = tileBindings[id] ?: return
+        val show = !text.isNullOrBlank()
+        b.tileLive.text = text.orEmpty()
+        b.tileLive.visibility = if (show) View.VISIBLE else View.GONE
+        b.tileIcon.translationY = if (show) -liveIconShift else 0f
+    }
+
+    // --------------------------------------------------------- mini-player
+
+    private fun setupMiniPlayer() {
+        binding.miniCover.clipToOutline = true
+        binding.miniPlay.setOnClickListener { Services.media.playPause() }
+        binding.miniPlayer.setOnClickListener { host.push(MediaScreen(host)) }
+    }
+
+    private fun renderMedia() {
+        val media = Services.media.snapshot.value
+        renderLive()
+        val mini = binding.miniPlayer
+        if (!media.hasSession || media.title.isNullOrBlank()) {
+            mini.visibility = View.GONE
+            binding.miniEq.playing = false
+            return
+        }
+        mini.visibility = View.VISIBLE
+        val art = media.artwork
+        if (art != null) binding.miniCover.setImageBitmap(art)
+        else binding.miniCover.setImageResource(R.drawable.media_cover_default)
+        binding.miniTitle.text = media.title
+        binding.miniArtist.text = media.artist.orEmpty()
+        binding.miniArtist.visibility = if (media.artist.isNullOrBlank()) View.GONE else View.VISIBLE
+        binding.miniEq.playing = media.isPlaying
+        binding.miniPlay.setImageResource(
+            if (media.isPlaying) R.drawable.ic_transport_pause else R.drawable.ic_transport_play
+        )
+    }
+
     // -------------------------------------------------------------- acțiuni
 
     private fun activate(tile: Tile) {
@@ -399,5 +489,12 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         const val LABEL_TEXT_RATIO = 0.11f
         const val ICON_RATIO = 0.44f
         const val SHADOW_HEIGHT_RATIO = 0.40f
+
+        /** Textul viu din dală și barele de egalizator, tot față de latura dalei. */
+        const val LIVE_TEXT_RATIO = 0.075f
+        const val LIVE_INSET_RATIO = 0.09f
+        const val LIVE_BOTTOM_RATIO = 0.10f
+        const val LIVE_ICON_SHIFT_RATIO = 0.07f
+        const val EQ_RATIO = 0.12f
     }
 }

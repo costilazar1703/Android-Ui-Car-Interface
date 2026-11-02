@@ -5,7 +5,6 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -19,35 +18,33 @@ import ro.e92.launcher.ui.Screen
 import ro.e92.launcher.ui.ScreenHost
 
 /**
- * Media în stil BMW NBT: coverul și metadata în stânga, lista de surse în dreapta.
+ * Media în stil „Now Playing" din iOS: coperta mare și rotunjită în stânga,
+ * titlul, progresul și transportul lângă ea. Fără copertă de la sursă se arată
+ * `media_cover_default`, nu un pătrat gol.
+ *
+ * **Sursa** (ce aplicație comandăm) e o pastilă mică sub copertă, vizibilă doar
+ * când cântă cel puțin două aplicații; apăsată, trece la următoarea. Cu o singură
+ * sursă n-ai ce alege, deci nu ocupă loc.
  *
  * Nu conține un player propriu. Tot ce cântă pe unitate — A2DP de pe telefon,
  * Spotify, YouTube Music, player-ul OEM — publică un MediaSession, iar noi
- * comandăm sesiunea activă. Player-ul local de pe USB e pasul următor
- * (vezi Open Question 9: dacă sursa e exclusiv Bluetooth, nici nu e nevoie de el).
+ * comandăm sesiunea activă.
  */
 class MediaScreen(host: ScreenHost) : Screen(host) {
     override val backgroundRes: Int get() = R.drawable.bg_menu_media
 
-
     override val title: String get() = "MEDIA"
 
     private lateinit var binding: ScreenMediaBinding
-    private lateinit var adapter: RowAdapter
+    private var sessions: List<MediaHub.SessionInfo> = emptyList()
+    private var focusedId: String? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup) =
         ScreenMediaBinding.inflate(inflater, container, false).also { binding = it }.root
 
     override fun onShow() {
-        binding.lblList.text = context.getString(R.string.media_sources)
-
-        adapter = RowAdapter { row -> Services.media.pinSession(row.id) }
-        binding.listMedia.apply {
-            layoutManager = LinearLayoutManager(context)
-            setHasFixedSize(true)
-            itemAnimator = null
-            adapter = this@MediaScreen.adapter
-        }
+        // Colțurile din bg_cover_rounded decupează și imaginea, când există.
+        binding.imgCover.clipToOutline = true
 
         Services.media.refreshSessions()
 
@@ -55,17 +52,11 @@ class MediaScreen(host: ScreenHost) : Screen(host) {
             Services.media.snapshot.collect { render(it) }
         }
         screenScope.launch {
-            Services.media.sessions.collect { sessions ->
-                adapter.submit(
-                    sessions.map { s ->
-                        Row(
-                            id = s.packageName,
-                            title = s.label,
-                            subtitle = if (s.isPlaying) "playing" else "paused"
-                        )
-                    }
-                )
-                updateEmptyState(sessions.isEmpty())
+            Services.media.sessions.collect { list ->
+                val hadChip = sessions.size >= 2
+                sessions = list
+                renderSource()
+                if (hadChip != list.size >= 2) host.rebuildFocus(focusedId)
             }
         }
         screenScope.launch {
@@ -76,88 +67,118 @@ class MediaScreen(host: ScreenHost) : Screen(host) {
         }
     }
 
-    override fun focusTargets(): List<FocusTarget> = listOf(
-        FocusTarget(
-            id = "prev",
-            view = binding.btnPrev,
-            onActivate = { Services.media.previous() },
-            right = "play"
-        ),
-        FocusTarget(
-            id = "play",
-            view = binding.btnPlay,
-            onActivate = { Services.media.playPause() },
-            left = "prev",
-            right = "next"
-        ),
-        FocusTarget(
-            id = "next",
-            view = binding.btnNext,
-            onActivate = { Services.media.next() },
-            left = "play",
-            right = "list"
-        ),
-        FocusTarget(
-            id = "list",
-            view = binding.listMedia,
-            onActivate = { adapter.activateSelected() },
-            onRotate = { steps ->
-                val moved = adapter.moveSelection(steps)
-                if (moved) binding.listMedia.scrollToPosition(adapter.selectedIndex)
-                moved
-            },
-            left = "next"
+    override fun focusTargets(): List<FocusTarget> {
+        val showSource = sessions.size >= 2
+        val targets = mutableListOf(
+            FocusTarget(
+                id = "prev",
+                view = binding.btnPrev,
+                onActivate = { Services.media.previous() },
+                onFocus = { if (it) focusedId = "prev" },
+                left = if (showSource) "source" else null,
+                right = "play"
+            ),
+            FocusTarget(
+                id = "play",
+                view = binding.btnPlay,
+                onActivate = { Services.media.playPause() },
+                onFocus = { if (it) focusedId = "play" },
+                left = "prev",
+                right = "next"
+            ),
+            FocusTarget(
+                id = "next",
+                view = binding.btnNext,
+                onActivate = { Services.media.next() },
+                onFocus = { if (it) focusedId = "next" },
+                left = "play"
+            )
         )
-    )
+        if (showSource) {
+            targets.add(
+                0,
+                FocusTarget(
+                    id = "source",
+                    view = binding.btnSource,
+                    onActivate = { nextSource() },
+                    onFocus = { if (it) focusedId = "source" },
+                    right = "prev"
+                )
+            )
+        }
+        return targets
+    }
 
     /** Butoanele de volan trebuie să funcționeze și când ecranul Media e deschis. */
     override fun onAction(action: LauncherAction): Boolean = when (action) {
         LauncherAction.MEDIA_NEXT -> { Services.media.next(); true }
         LauncherAction.MEDIA_PREV -> { Services.media.previous(); true }
         LauncherAction.MEDIA_PLAY_PAUSE -> { Services.media.playPause(); true }
-        // Fără notification access lista e goală și nimic nu funcționează;
+        // Fără notification access nu se vede nicio sursă și nimic nu funcționează;
         // OPTION duce direct în ecranul unde se acordă.
         LauncherAction.OPTION -> { openNotificationAccess(); true }
         else -> false
     }
 
+    /** Trece la aplicația următoare din listă și o fixează ca sursă. */
+    private fun nextSource() {
+        if (sessions.size < 2) return
+        val current = Services.media.snapshot.value.packageName
+        val i = sessions.indexOfFirst { it.packageName == current }
+        Services.media.pinSession(sessions[(i + 1) % sessions.size].packageName)
+    }
+
+    private fun renderSource() {
+        if (sessions.size < 2) {
+            binding.btnSource.visibility = View.GONE
+            return
+        }
+        val current = Services.media.snapshot.value.packageName
+        val label = sessions.firstOrNull { it.packageName == current }?.label ?: sessions.first().label
+        binding.btnSource.text = context.getString(R.string.media_source_chip, label)
+        binding.btnSource.visibility = View.VISIBLE
+    }
+
     private fun render(media: MediaHub.Snapshot) {
         binding.txtTitle.text = media.title ?: context.getString(R.string.media_no_session)
-        binding.txtArtist.text = media.artist.orEmpty()
+        binding.txtArtist.text = when {
+            media.hasSession -> media.artist.orEmpty()
+            Services.media.hasNotificationAccess() -> ""
+            else -> context.getString(R.string.media_grant_access)
+        }
         binding.txtAlbum.text = media.album.orEmpty()
-        binding.imgCover.setImageBitmap(media.artwork)
-        binding.btnPlay.text = if (media.isPlaying) "❚❚" else "▶"
+        val art = media.artwork
+        if (art != null) {
+            binding.imgCover.setImageBitmap(art)
+            binding.imgCover.setBackgroundResource(R.drawable.bg_cover_rounded)
+        } else {
+            // Coperta implicită are deja rama și colțurile ei, transparente în
+            // afara ramei. Fără fundal: pătratul închis de dedesubt se vedea la
+            // colțuri.
+            binding.imgCover.setImageResource(R.drawable.media_cover_default)
+            binding.imgCover.background = null
+        }
+        binding.btnPlay.setImageResource(
+            if (media.isPlaying) R.drawable.ic_transport_pause else R.drawable.ic_transport_play
+        )
         renderProgress(media)
+        renderSource()
     }
 
     private fun renderProgress(media: MediaHub.Snapshot) {
         val duration = media.durationMs
         if (duration <= 0) {
             binding.progressTrack.progress = 0
-            binding.txtPosition.text = ""
+            binding.txtElapsed.text = ""
+            binding.txtRemaining.text = ""
             return
         }
         val position = media.positionNow()
         binding.progressTrack.progress =
             ((position.toFloat() / duration) * 1000).toInt().coerceIn(0, 1000)
-        binding.txtPosition.text = "${formatTime(position)} / ${formatTime(duration)}"
-    }
-
-    private fun updateEmptyState(empty: Boolean) {
-        if (!empty) {
-            binding.txtListEmpty.visibility = View.GONE
-            return
-        }
-        binding.txtListEmpty.visibility = View.VISIBLE
-        binding.txtListEmpty.text = if (Services.media.hasNotificationAccess()) {
-            context.getString(R.string.media_no_session)
-        } else {
-            context.getString(R.string.media_grant_access)
-        }
-    }
-
-    override fun onDestroy() {
-        binding.listMedia.adapter = null
+        // Ca în iOS: cât a trecut în stânga, cât mai e în dreapta.
+        binding.txtElapsed.text = formatTime(position)
+        binding.txtRemaining.text = "-" + formatTime((duration - position).coerceAtLeast(0))
     }
 
     private fun formatTime(ms: Long): String {

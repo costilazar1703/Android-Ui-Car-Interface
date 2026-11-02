@@ -19,7 +19,8 @@ import ro.e92.launcher.R
  * Reflexia dalei „în apă": pătratul de deasupra, în oglindă, care se stinge în
  * jos ca pe asfaltul ud din fotografia de fundal.
  *
- * Se desenează cu ACELEAȘI drawable-uri ca dala (rama din `bg_tile` și iconița),
+ * Se desenează cu drawable-urile dalei (rama, în varianta subțire
+ * `bg_tile_reflection`, și iconița),
  * nu dintr-o captură de ecran. Așa reflexia urmează singură starea dalei: când
  * dala se aprinde, se aprinde și reflexia — `duplicateParentState` îi aduce
  * starea `activated`, iar drawable-urile își schimbă singure aspectul.
@@ -39,7 +40,7 @@ class TileReflectionView @JvmOverloads constructor(
     attrs: AttributeSet? = null
 ) : View(context, attrs) {
 
-    private val frame: Drawable = ContextCompat.getDrawable(context, R.drawable.bg_tile)!!.mutate()
+    private val frame: Drawable = ContextCompat.getDrawable(context, R.drawable.bg_tile_reflection)!!.mutate()
     private val spill: Drawable = ContextCompat.getDrawable(context, R.drawable.tile_shadow)!!.mutate()
     private var icon: Drawable? = null
     private var iconSize = 0

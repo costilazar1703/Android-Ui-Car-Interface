@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pastila de sursă din ecranul Media. Focusul (state_activated) o aprinde. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_activated="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#59FF6B00" />
+            <stroke android:width="1.5dp" android:color="@color/accent_focus" />
+            <corners android:radius="100dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#CC121212" />
+            <stroke android:width="1dp" android:color="#33FFFFFF" />
+            <corners android:radius="100dp" />
+        </shape>
+    </item>
+</selector>

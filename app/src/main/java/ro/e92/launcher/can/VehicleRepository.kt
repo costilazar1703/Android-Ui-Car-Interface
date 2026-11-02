@@ -64,6 +64,9 @@ class VehicleRepository(
         var rpm: Int? = null
         var handbrake: Boolean? = null
         var reverse: Boolean? = null
+        var sport: Boolean? = null
+        var boost: Float? = null
+        var oilTemp: Int? = null
         var doors: Set<Door> = emptySet()
         var doorsSet = false
         var newest = 0L
@@ -80,6 +83,9 @@ class VehicleRepository(
             if (rpm == null) rpm = s.rpm
             if (handbrake == null) handbrake = s.handbrake
             if (reverse == null) reverse = s.reverseGear
+            if (sport == null) sport = s.sportMode
+            if (boost == null) boost = s.boostBar
+            if (oilTemp == null) oilTemp = s.oilTempC
             if (!doorsSet && s.doorsOpen.isNotEmpty()) {
                 doors = s.doorsOpen
                 doorsSet = true
@@ -95,6 +101,9 @@ class VehicleRepository(
             handbrake = handbrake,
             doorsOpen = doors,
             reverseGear = reverse,
+            sportMode = sport,
+            boostBar = boost,
+            oilTempC = oilTemp,
             timestamp = newest
         )
     }

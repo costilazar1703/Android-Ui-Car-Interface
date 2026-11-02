@@ -28,6 +28,13 @@
     <dimen name="app_icon_size">56dp</dimen>
     <dimen name="app_cell_width">108dp</dimen>
     <dimen name="cover_size">150dp</dimen>
+    <dimen name="cover_corner">14dp</dimen>
+    <dimen name="transport_small">64dp</dimen>
+    <dimen name="transport_big">84dp</dimen>
+    <dimen name="mini_player_height">34dp</dimen>
+    <dimen name="mini_player_cover">26dp</dimen>
+    <dimen name="mini_player_text_max">220dp</dimen>
+    <dimen name="mini_player_artist_max">140dp</dimen>
 
     <!-- Meniu principal. Înălțimea rândurilor NU e fixată aici: cele 5 rânduri
          împart pe verticală spațiul disponibil cu weight, ca să încapă exact 5
@@ -67,6 +74,10 @@
     <dimen name="tile_stroke_outer">2dp</dimen>
     <dimen name="tile_stroke_outer_focus">3dp</dimen>
     <dimen name="tile_stroke_inner">1.5dp</dimen>
+    <!-- Rama din reflexie: mai subtire decat a dalei, ca sa para luciu, nu dubla. -->
+    <dimen name="tile_reflection_stroke_outer">1dp</dimen>
+    <dimen name="tile_reflection_stroke_outer_focus">1.5dp</dimen>
+    <dimen name="tile_reflection_stroke_inner">0.75dp</dimen>
     <dimen name="tile_gap">4dp</dimen>
     <dimen name="tile_grid_margin_v">8dp</dimen>
     <!-- Bara de sus -->

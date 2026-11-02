@@ -64,10 +64,13 @@
     <string name="rpm">Engine</string>
     <string name="unit_kmh">km/h</string>
     <string name="unit_rpm">x1000 rpm</string>
+    <string name="unit_bar">bar</string>
+    <string name="unit_celsius">°C</string>
 
     <string name="media_no_session">No active source</string>
     <string name="media_grant_access">Notification access required</string>
     <string name="media_sources">Sources</string>
+    <string name="media_source_chip">Source · %1$s</string>
     <string name="media_queue">Queue</string>
 
     <string name="net_online">Online</string>

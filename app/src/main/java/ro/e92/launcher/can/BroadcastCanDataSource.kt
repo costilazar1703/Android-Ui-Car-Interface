@@ -92,6 +92,10 @@ class BroadcastCanDataSource(
             ?.also { known++ } ?: prev.reverseGear
         val sport = config.sportKeys.firstNotNullOfOrNull { extras.readBool(it) }
             ?.also { known++ } ?: prev.sportMode
+        val boost = config.boostKeys.firstNotNullOfOrNull { extras.readFloat(it) }
+            ?.also { known++ } ?: prev.boostBar
+        val oilTemp = config.oilTempKeys.firstNotNullOfOrNull { extras.readInt(it) }
+            ?.also { known++ } ?: prev.oilTempC
 
         // Ușile: dacă măcar o cheie de ușă e prezentă, frame-ul e autoritar pentru
         // TOATE ușile — altfel o ușă închisă nu s-ar stinge niciodată din UI.
@@ -113,6 +117,8 @@ class BroadcastCanDataSource(
             doorsOpen = if (anyDoorKeyPresent) doors else prev.doorsOpen,
             reverseGear = reverse,
             sportMode = sport,
+            boostBar = boost?.coerceIn(-1f, 6f),
+            oilTempC = oilTemp?.coerceIn(-40, 200),
             timestamp = SystemClock.elapsedRealtime()
         )
     }
@@ -124,6 +130,14 @@ class BroadcastCanDataSource(
         is Float -> v.toInt()
         is Double -> v.toInt()
         is String -> v.trim().toIntOrNull()
+        else -> null
+    }
+
+    private fun android.os.Bundle.readFloat(key: String): Float? = when (val v = get(key)) {
+        is Float -> v
+        is Double -> v.toFloat()
+        is Int -> v.toFloat()
+        is String -> v.trim().toFloatOrNull()
         else -> null
     }
 
@@ -161,6 +175,8 @@ data class CanBroadcastConfig(
     val handbrakeKeys: List<String>,
     val reverseKeys: List<String>,
     val sportKeys: List<String>,
+    val boostKeys: List<String>,
+    val oilTempKeys: List<String>,
     val doorKeys: Map<Door, String>
 ) {
     companion object {
@@ -180,6 +196,8 @@ data class CanBroadcastConfig(
             // butonul Sport, numele cheii se citeste din ecranul de Diagnostic,
             // care afiseaza acum TOATE extras-urile primite, nu doar cele stiute.
             sportKeys = listOf("sport", "sport_mode", "drive_mode", "dme_sport", "mode_sport"),
+            boostKeys = listOf("boost", "boost_bar", "boost_pressure", "turbo_boost"),
+            oilTempKeys = listOf("oil_temp", "oil_temperature", "engine_oil_temp"),
             doorKeys = mapOf(
                 Door.FRONT_LEFT to "door_fl",
                 Door.FRONT_RIGHT to "door_fr",

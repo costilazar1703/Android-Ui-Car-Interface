@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Doar în build-ul debug: o sesiune media falsă pentru emulator, unde nu
+     cântă nimic. Release-ul nu conține nici receiver-ul, nici clasa. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <receiver
+            android:name="ro.e92.launcher.debug.FakeMediaReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="ro.e92.launcher.debug.FAKE_MEDIA" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

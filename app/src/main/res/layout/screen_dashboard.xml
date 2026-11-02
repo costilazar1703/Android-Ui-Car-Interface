@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<!--
+  Patru cadrane centrate pe ecran, ca în bord: turbo și ulei, mici, pe margini;
+  viteză și turații, mari, la mijloc. Cele mici stau mai jos, ca ceasurile
+  auxiliare dintr-un bord sport.
+
+  Mărimile se calculează în DashboardScreen.sizeGauges(), nu aici: un lanț
+  ConstraintLayout cu raport 1:1 pe toate patru le micșora pe cele mari la
+  mărimea celor mici.
+
+  Avertizările (frână de mână, uși, marșarier) stau pe un singur rând jos, în
+  V-ul dintre cele două cercuri mari, unde nu acoperă nicio gradație.
+-->
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -10,98 +21,56 @@
     android:paddingEnd="@dimen/screen_margin"
     android:paddingBottom="4dp">
 
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/gInfo"
+    <LinearLayout
+        android:id="@+id/gaugeRow"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <ro.e92.launcher.ui.widget.GaugeView
+            android:id="@+id/gaugeBoost"
+            android:layout_width="0dp"
+            android:layout_height="0dp" />
+
+        <ro.e92.launcher.ui.widget.GaugeView
+            android:id="@+id/gaugeSpeed"
+            android:layout_width="0dp"
+            android:layout_height="0dp" />
+
+        <ro.e92.launcher.ui.widget.GaugeView
+            android:id="@+id/gaugeRpm"
+            android:layout_width="0dp"
+            android:layout_height="0dp" />
+
+        <ro.e92.launcher.ui.widget.GaugeView
+            android:id="@+id/gaugeOil"
+            android:layout_width="0dp"
+            android:layout_height="0dp" />
+    </LinearLayout>
+
+    <!-- Marșarierul e doar afișat; NU declanșează niciun overlay video
+         (camera și senzorii sunt ai unității, non-goal explicit). -->
+    <TextView
+        android:id="@+id/txtWarnings"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.68" />
-
-    <ro.e92.launcher.ui.widget.GaugeView
-        android:id="@+id/gaugeSpeed"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintDimensionRatio="1:1"
-        app:layout_constraintEnd_toStartOf="@id/gaugeRpm"
-        app:layout_constraintHorizontal_chainStyle="spread"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <ro.e92.launcher.ui.widget.GaugeView
-        android:id="@+id/gaugeRpm"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintDimensionRatio="1:1"
-        app:layout_constraintEnd_toStartOf="@id/gInfo"
-        app:layout_constraintStart_toEndOf="@id/gaugeSpeed"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <!-- Indicatori: doar text, fără iconițe încă. Semnalul de marșarier e citit
-         și afișat, dar NU declanșează niciun overlay video (non-goal explicit). -->
-    <TextView
-        android:id="@+id/lblStatus"
-        style="@style/Text.Label"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
-        android:text="@string/tile_dashboard"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="@id/gInfo"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/txtHandbrake"
-        style="@style/Text.Title"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="14dp"
-        android:textColor="@color/accent_red"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="@id/gInfo"
-        app:layout_constraintTop_toBottomOf="@id/lblStatus"
-        tools:text="HANDBRAKE" />
-
-    <TextView
-        android:id="@+id/txtDoors"
-        style="@style/Text.Title"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="6dp"
-        android:maxLines="2"
-        android:singleLine="false"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="6dp"
+        android:fontFamily="@font/inter_semibold"
+        android:letterSpacing="0.12"
         android:textColor="@color/warn_amber"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="@id/gInfo"
-        app:layout_constraintTop_toBottomOf="@id/txtHandbrake"
-        tools:text="Front left open" />
-
-    <TextView
-        android:id="@+id/txtGear"
-        style="@style/Text.Title"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="6dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="@id/gInfo"
-        app:layout_constraintTop_toBottomOf="@id/txtDoors"
-        tools:text="REVERSE" />
+        android:textSize="14sp"
+        tools:text="HANDBRAKE · REVERSE" />
 
     <TextView
         android:id="@+id/txtSource"
         style="@style/Text.Mono"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginBottom="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="@id/gInfo"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="4dp"
+        android:alpha="0.6"
         tools:text="source: mock" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</FrameLayout>

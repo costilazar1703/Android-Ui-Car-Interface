@@ -18,6 +18,10 @@ data class VehicleState(
      * retransmite in Android nu avem de unde sa-l stim.
      */
     val sportMode: Boolean? = null,
+    /** Presiunea turbo, relativă (peste cea atmosferică), în bar. */
+    val boostBar: Float? = null,
+    /** Temperatura uleiului de motor, °C. */
+    val oilTempC: Int? = null,
     /** SystemClock.elapsedRealtime() al ultimei actualizări reale. 0 = niciodată. */
     val timestamp: Long = 0L
 ) {
