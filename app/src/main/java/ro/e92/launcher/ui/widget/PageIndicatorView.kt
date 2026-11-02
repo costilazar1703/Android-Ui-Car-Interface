@@ -12,24 +12,22 @@ import ro.e92.launcher.R
 import ro.e92.launcher.core.Services
 
 /**
- * Indicatorul de pagină al grilei principale: segmente subțiri, ca barele de
- * „stories" din iOS, în loc de puncte.
+ * Indicatorul de pagină al grilei principale: câte un grup pe pagină, fiecare
+ * împărțit în atâtea segmente subțiri câte dale are pagina. Segmentul dalei
+ * focusate e portocaliu, restul sunt piste stinse - se vede dintr-o privire și
+ * pagina, și dala din ea.
  *
- * Progresul curge CONTINUU prin toate dalele, nu doar prin pagina curentă.
- * Poziția e un singur număr — pagină + cât din pagină ai parcurs — iar fiecare
- * segment arată cât din el e acoperit. Rotind de la prima la a șasea dală,
- * primul segment se umple treptat; pe pagina a doua începe al doilea, iar primul
- * rămâne plin. Se vede dintr-o privire unde ești din 12, nu doar pe ce pagină.
- *
- * Valoarea desenată urmărește ținta printr-o animație scurtă: umplerea curge,
- * nu sare de la o dală la alta.
+ * Lumina nu sare de la un segment la altul: poziția desenată e continuă și
+ * fiecare segment se aprinde după cât de aproape e de ea, deci portocaliul
+ * alunecă pe pistă când rotești, inclusiv peste golul dintre pagini.
  */
 class PageIndicatorView(context: Context, private val pageCount: Int) : View(context) {
 
     private val density = resources.displayMetrics.density
-    private val segW = SEGMENT_DP * density
+    private val cellW = CELL_DP * density
+    private val cellGap = CELL_GAP_DP * density
     private val segH = HEIGHT_DP * density
-    private val gap = GAP_DP * density
+    private val pageGap = PAGE_GAP_DP * density
 
     private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x38FFFFFF }
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -37,7 +35,9 @@ class PageIndicatorView(context: Context, private val pageCount: Int) : View(con
     }
     private val rect = RectF()
 
-    /** Poziția desenată: pagină + fracțiunea parcursă din ea, 0..pageCount. */
+    private var perPage = DEFAULT_PER_PAGE
+
+    /** Indexul desenat al dalei, continuu între două dale vecine. */
     private var drawn = 0f
     private var animator: ValueAnimator? = null
 
@@ -46,7 +46,11 @@ class PageIndicatorView(context: Context, private val pageCount: Int) : View(con
      * @param perPage câte dale are o pagină
      */
     fun setPosition(index: Int, perPage: Int) {
-        val target = index / perPage + (index % perPage + 1f) / perPage
+        if (perPage != this.perPage && perPage > 0) {
+            this.perPage = perPage
+            requestLayout()
+        }
+        val target = index.toFloat()
         if (target == drawn) return
         animator?.cancel()
         if (!Services.prefs.animationsEnabled) {
@@ -65,22 +69,27 @@ class PageIndicatorView(context: Context, private val pageCount: Int) : View(con
         }
     }
 
+    private val pageW: Float get() = perPage * cellW + (perPage - 1) * cellGap
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val w = (pageCount * segW + (pageCount - 1) * gap).toInt()
+        val w = (pageCount * pageW + (pageCount - 1) * pageGap).toInt()
         setMeasuredDimension(w, (segH * 4).toInt())
     }
 
     override fun onDraw(canvas: Canvas) {
         val cy = height / 2f
         val r = segH / 2f
-        for (i in 0 until pageCount) {
-            val x = i * (segW + gap)
-            rect.set(x, cy - r, x + segW, cy + r)
-            canvas.drawRoundRect(rect, r, r, track)
-            val f = (drawn - i).coerceIn(0f, 1f)
-            if (f > 0f) {
-                rect.right = x + segW * f
-                canvas.drawRoundRect(rect, r, r, fill)
+        for (page in 0 until pageCount) {
+            val x0 = page * (pageW + pageGap)
+            for (cell in 0 until perPage) {
+                val x = x0 + cell * (cellW + cellGap)
+                rect.set(x, cy - r, x + cellW, cy + r)
+                canvas.drawRoundRect(rect, r, r, track)
+                val glow = 1f - kotlin.math.abs(drawn - (page * perPage + cell))
+                if (glow > 0f) {
+                    fill.alpha = (255 * glow).toInt()
+                    canvas.drawRoundRect(rect, r, r, fill)
+                }
             }
         }
     }
@@ -91,9 +100,11 @@ class PageIndicatorView(context: Context, private val pageCount: Int) : View(con
     }
 
     private companion object {
-        const val SEGMENT_DP = 58f
-        const val HEIGHT_DP = 3.5f
-        const val GAP_DP = 8f
+        const val DEFAULT_PER_PAGE = 6
+        const val CELL_DP = 26f
+        const val CELL_GAP_DP = 4f
+        const val PAGE_GAP_DP = 24f
+        const val HEIGHT_DP = 5f
         const val ANIM_MS = 220L
     }
 }

@@ -6,6 +6,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RadialGradient
@@ -67,6 +69,15 @@ class GaugeView @JvmOverloads constructor(
 
     // ------------------------------------------------------------------ pictură
     private val bitmapPaint = Paint(Paint.FILTER_BITMAP_FLAG)
+
+    /**
+     * Inelul portocaliu e pictat în `gauge_face`, într-un portocaliu mai galben
+     * decât iluminarea bordului E92. Îl rotim spre roșu și îl închidem la
+     * desenare; cromul și negrul nu au nuanță, deci rămân neatinse.
+     */
+    private val facePaint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
+        colorFilter = ColorMatrixColorFilter(hueShift(FACE_HUE_SHIFT_DEG, FACE_ORANGE_DIM))
+    }
     private val needlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
         color = NEEDLE
@@ -205,7 +216,7 @@ class GaugeView @JvmOverloads constructor(
                 (centerX - half).roundToInt(), (centerY - half).roundToInt(),
                 (centerX + half).roundToInt(), (centerY + half).roundToInt()
             )
-            c.drawBitmap(face, null, dst, bitmapPaint)
+            c.drawBitmap(face, null, dst, facePaint)
             face.recycle()
         }
 
@@ -264,10 +275,17 @@ class GaugeView @JvmOverloads constructor(
             var value = minValue
             while (value <= maxValue + 0.01f) {
                 labels.color = if (value >= redlineFrom) REDLINE else LABEL
+                val text = labelText(value / displayDivisor)
                 val a = angleOf(value)
-                val r = dial * LABEL_RADIUS
+                // Aceeași distanță de la MARGINEA cifrei la gradație, oriunde pe
+                // cadran. Cu centrul pe un cerc fix, cifrele late („120", „140")
+                // de sus stăteau vizibil mai jos de liniile lor decât cele din
+                // lateral: acolo contează lățimea, sus doar înălțimea.
+                val halfW = labels.measureText(text) / 2f
+                val extent = abs(cos(a)) * halfW + abs(sin(a)) * halfCap
+                val r = dial * LABEL_EDGE - extent
                 c.drawText(
-                    labelText(value / displayDivisor),
+                    text,
                     centerX + r * cos(a), centerY + r * sin(a) + halfCap, labels
                 )
                 value += labelStep
@@ -388,6 +406,33 @@ class GaugeView @JvmOverloads constructor(
     }
 
     private companion object {
+        /** Cât se rotește nuanța inelului spre roșu și cât se închide. */
+        const val FACE_HUE_SHIFT_DEG = -13f
+        const val FACE_ORANGE_DIM = 0.88f
+
+        /**
+         * Rotație de nuanță care păstrează luminozitatea (matricea standard pe
+         * coeficienții de luminanță), apoi o scădere a părții colorate. Pe gri
+         * (r = g = b) nu schimbă nimic, deci cromul rămâne crom.
+         */
+        fun hueShift(degrees: Float, dim: Float): ColorMatrix {
+            val rad = Math.toRadians(degrees.toDouble())
+            val c = kotlin.math.cos(rad).toFloat()
+            val s = kotlin.math.sin(rad).toFloat()
+            val lr = 0.213f; val lg = 0.715f; val lb = 0.072f
+            val rot = ColorMatrix(floatArrayOf(
+                lr + c * (1 - lr) + s * -lr, lg + c * -lg + s * -lg, lb + c * -lb + s * (1 - lb), 0f, 0f,
+                lr + c * -lr + s * 0.143f, lg + c * (1 - lg) + s * 0.140f, lb + c * -lb + s * -0.283f, 0f, 0f,
+                lr + c * -lr + s * -(1 - lr), lg + c * -lg + s * lg, lb + c * (1 - lb) + s * lb, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f
+            ))
+            // Saturație redusă ușor = portocaliu mai închis, fără să întunece cromul.
+            val sat = ColorMatrix().apply { setSaturation(dim) }
+            rot.postConcat(sat)
+            val darker = ColorMatrix().apply { setScale(dim + (1 - dim) / 2, dim + (1 - dim) / 2, dim + (1 - dim) / 2, 1f) }
+            return rot.apply { postConcat(darker) }
+        }
+
         /** 150° … 390°: deschidere jos. Bordul E9x are arce mai lungi — vezi DashboardScreen. */
         const val DEFAULT_START_ANGLE = 150f
         const val DEFAULT_SWEEP_ANGLE = 240f
@@ -401,10 +446,11 @@ class GaugeView @JvmOverloads constructor(
         const val TICK_OUTER = 0.94f
         const val TICK_MAJOR_INNER = 0.80f
         const val TICK_MINOR_INNER = 0.87f
-        const val LABEL_RADIUS = 0.63f
+        /** Unde se oprește marginea cifrei dinspre gradații: puțin sub capătul lor interior. */
+        const val LABEL_EDGE = 0.72f
         const val NEEDLE_LENGTH = 0.90f
 
-        val NEEDLE = 0xFFEE4A0A.toInt()
+        val NEEDLE = 0xFFD8380A.toInt()
         val REDLINE = 0xFFE01010.toInt()
         val TICK_MAJOR = 0xFFF2F2F2.toInt()
         val TICK_MINOR = 0xB3D0D0D0.toInt()

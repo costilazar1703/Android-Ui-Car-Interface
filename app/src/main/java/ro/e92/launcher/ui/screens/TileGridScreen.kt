@@ -193,7 +193,11 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                     // Plafonat la corpul dalei minus rama: o iconita cu
                     // iconScale mare ar iesi altfel din patrat si ar fi taiata.
                     val scaled = (iconSize * tile.iconScale).toInt()
-                    it.width = minOf(scaled, bodySize - iconMargin)
+                    // O iconită lată (mașina) are voie aproape până la ramă:
+                    // cu marginea întreagă, plafonul o ținea vizibil mai mică
+                    // decât CarPlay și Bluetooth de lângă ea.
+                    val margin = if (tile.iconScale > 1f) iconMargin / 3 else iconMargin
+                    it.width = minOf(scaled, bodySize - margin)
                     it.height = scaled
                 }
 

@@ -42,6 +42,9 @@ object Services {
     lateinit var kswBt: KswBluetooth
         private set
 
+    lateinit var trip: TripComputer
+        private set
+
     /** Ținută separat: ecranul de diagnostic afișează extras-urile brute din ea. */
     lateinit var broadcastCan: BroadcastCanDataSource
         private set
@@ -62,6 +65,7 @@ object Services {
             media = MediaHub(appContext)
             net = ConnectivityMonitor(appContext)
             kswBt = KswBluetooth(appContext, scope)
+            trip = TripComputer(appContext, scope)
             initialized = true
         }
     }

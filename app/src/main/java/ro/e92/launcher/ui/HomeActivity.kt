@@ -128,6 +128,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         Services.media.start()
         Services.net.start()
         Services.kswBt.start()
+        Services.trip.start { Services.vehicle }
         Services.apps.startWatching()
 
         // Nu doar TIME_TICK: ora se poate schimba brusc (sincronizare GPS/rețea,

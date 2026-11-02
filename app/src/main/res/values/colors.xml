@@ -15,10 +15,11 @@
     <color name="text_on_accent">#0A0A0A</color>
 
     <!-- Accente. Portocaliul e al iluminării de bord E92: puțin mai închis
-         și mai spre roșu decât #FF6B00, ca să se potrivească cu ceasurile. -->
+         și mai spre roșu decât #FF6B00, ca să se potrivească cu ceasurile
+         din bordul mașinii (#D8380A). -->
     <color name="accent_red">#E60000</color>
-    <color name="accent_focus">#EE4A0A</color>
-    <color name="accent_focus_dim">#4A1804</color>
+    <color name="accent_focus">#D8380A</color>
+    <color name="accent_focus_dim">#441204</color>
 
     <!-- Stări -->
     <color name="ok_green">#3FA34D</color>
@@ -26,9 +27,9 @@
 
     <!-- Glow-ul selecției din meniul principal. Alfa mică intenționat:
          straturile se suprapun, iar un halo prea opac arată ca un chenar, nu ca lumină. -->
-    <color name="glow_outer">#1FE62E04</color>
-    <color name="glow_mid">#4DE83A06</color>
-    <color name="glow_core">#EE4A0A</color>
+    <color name="glow_outer">#1FCC2204</color>
+    <color name="glow_mid">#4DD22D06</color>
+    <color name="glow_core">#D8380A</color>
 
     <!-- Rotița iDrive din stânga -->
     <color name="wheel_rim_outer">#242424</color>
@@ -49,8 +50,8 @@
     <color name="tile_idle_bottom">#CC050505</color>
     <color name="tile_idle_stroke">#59FFFFFF</color>
 
-    <color name="tile_focus_top">#B34C1704</color>
-    <color name="tile_focus_mid">#BF1E0B05</color>
+    <color name="tile_focus_top">#B3461204</color>
+    <color name="tile_focus_mid">#BF1C0905</color>
     <color name="tile_focus_bottom">#D90A0603</color>
 
     <color name="tile_icon_idle">#C8C8C8</color>
@@ -58,15 +59,15 @@
     <!-- Conturul interior al ramei duble. Cel exterior e portocaliu/alb-stins;
          asta e doar o muchie fina care da senzatia de piesa frezata. -->
     <color name="tile_idle_inner_stroke">#26FFFFFF</color>
-    <color name="tile_focus_inner_stroke">#66FF9F7A</color>
+    <color name="tile_focus_inner_stroke">#66F58C6E</color>
     <!-- Randurile meniurilor de nivel 2. Gradient pe ORIZONTALA, stins spre
          dreapta: randul se agata de muchia din stanga (de unde vine conectorul)
          si lasa fotografia sa se vada spre capatul liber. -->
     <color name="row_idle_start">#B3141414</color>
     <color name="row_idle_end">#59080808</color>
     <color name="row_idle_stroke">#2EFFFFFF</color>
-    <color name="row_focus_start">#D9601E04</color>
-    <color name="row_focus_end">#731E0A03</color>
+    <color name="row_focus_start">#D9581804</color>
+    <color name="row_focus_end">#731C0803</color>
     <!-- Fundalul ecranelor de meniu (fara fotografie). -->
     <color name="bg_menu_center">#12100F</color>
     <color name="bg_menu_edge">#050505</color>

@@ -1,8 +1,5 @@
 package ro.e92.launcher.ui.widget
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
-import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -17,7 +14,6 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.drawable.BitmapDrawable
 import android.view.View
-import android.view.animation.LinearInterpolator
 import androidx.core.content.ContextCompat
 import ro.e92.launcher.R
 
@@ -113,7 +109,7 @@ class BootIntroView(
     private val logoRect = RectF()
 
     private var t = 0f
-    private var animator: ValueAnimator? = null
+    private var animator: Ticker? = null
     private var finishing = false
 
     init {
@@ -137,6 +133,7 @@ class BootIntroView(
         // Intrarea, până la cadrul final al salutului. Acolo se oprește și
         // așteaptă: ieșirea pornește din [releaseHold] sau din [skip].
         animator = segment(0f, HOLD_AT) {
+            startHoldLoop()
             postDelayed(releaseHold, (MAX_SHOWN_MS - (TOTAL_MS - HOLD_AT).toLong() - elapsed()).coerceAtLeast(0L))
         }
     }
@@ -147,30 +144,99 @@ class BootIntroView(
     /** Ieșirea normală, după pauză: aceeași stingere ca înainte de pauză. */
     private val releaseHold = Runnable {
         if (finishing) return@Runnable
+        stopHoldLoop()
         animator = segment(HOLD_AT, TOTAL_MS) { finish() }
     }
 
-    private fun segment(from: Float, to: Float, onEnd: () -> Unit): ValueAnimator =
-        ValueAnimator.ofFloat(from, to).apply {
-            duration = (to - from).toLong()
-            interpolator = LinearInterpolator()
-            addUpdateListener {
-                t = it.animatedValue as Float
-                alpha = 1f - phase(VIEW_FADE_FROM, TOTAL_MS)
-                invalidate()
-            }
-            addListener(object : AnimatorListenerAdapter() {
-                private var cancelled = false
-                override fun onAnimationCancel(animation: Animator) { cancelled = true }
-                override fun onAnimationEnd(animation: Animator) { if (!cancelled) onEnd() }
-            })
-            start()
+    // ------------------------------------------------------------- pauza vie
+    //
+    // Cât stă salutul pe ecran, nu rămâne o poză: reflexul de lumină trece din
+    // nou peste siglă și text la fiecare [SWEEP_PERIOD_MS], iar linia de pe
+    // orizont respiră ușor. Tot pe ceasul nostru, ca restul animației.
+
+    /** Milisecunde de la începutul pauzei; -1 = nu suntem în pauză. */
+    private var holdMs = -1f
+    private var holdStartNs = 0L
+
+    private val holdLoop = object : android.view.Choreographer.FrameCallback {
+        override fun doFrame(frameTimeNanos: Long) {
+            if (holdMs < 0f) return
+            if (holdStartNs == 0L) holdStartNs = frameTimeNanos
+            holdMs = (frameTimeNanos - holdStartNs) / 1_000_000f
+            invalidate()
+            android.view.Choreographer.getInstance().postFrameCallback(this)
         }
+    }
+
+    private fun startHoldLoop() {
+        holdMs = 0f
+        holdStartNs = 0L
+        android.view.Choreographer.getInstance().postFrameCallback(holdLoop)
+    }
+
+    private fun stopHoldLoop() {
+        holdMs = -1f
+        android.view.Choreographer.getInstance().removeFrameCallback(holdLoop)
+    }
+
+    /** Reflexul în pauză: 0..1 cât trece, peste 1 în așteptarea următoarei treceri. */
+    private fun holdSweep(): Float {
+        val since = holdMs - SWEEP_GAP_MS
+        if (since < 0f) return 2f
+        return (since % SWEEP_PERIOD_MS) / SWEEP_MS
+    }
+
+    /**
+     * Un segment al cronologiei, pe ceasul nostru, nu pe ValueAnimator.
+     *
+     * ValueAnimator respectă „Animator duration scale" din setările Android, iar
+     * unitățile chinezești vin des cu el pe 0 (sau oprit din Developer options)
+     * ca să pară mai rapide. Cu scala 0 animatorul sare direct la final: din
+     * salut rămânea doar fotografia. Cadrele de aici merg pe ceasul sistemului,
+     * deci animația are mereu durata ei, oricum ar fi setat telefonul.
+     */
+    private fun segment(from: Float, to: Float, onEnd: () -> Unit): Ticker =
+        Ticker(from, to, onEnd).also { it.start() }
+
+    private inner class Ticker(
+        private val from: Float,
+        private val to: Float,
+        private val onEnd: () -> Unit
+    ) : android.view.Choreographer.FrameCallback {
+        private var startNs = 0L
+        private var running = false
+
+        fun start() {
+            running = true
+            android.view.Choreographer.getInstance().postFrameCallback(this)
+        }
+
+        fun cancel() {
+            running = false
+            android.view.Choreographer.getInstance().removeFrameCallback(this)
+        }
+
+        override fun doFrame(frameTimeNanos: Long) {
+            if (!running) return
+            if (startNs == 0L) startNs = frameTimeNanos
+            val elapsed = (frameTimeNanos - startNs) / 1_000_000f
+            t = (from + elapsed).coerceAtMost(to)
+            alpha = 1f - phase(VIEW_FADE_FROM, TOTAL_MS)
+            invalidate()
+            if (t >= to) {
+                running = false
+                onEnd()
+            } else {
+                android.view.Choreographer.getInstance().postFrameCallback(this)
+            }
+        }
+    }
 
     /** Sare la final, cu o stingere scurtă — nu taie brusc. */
     fun skip() {
         if (finishing) return
         removeCallbacks(releaseHold)
+        stopHoldLoop()
         animator?.cancel()
         finishing = true
         animate().alpha(0f).setDuration(SKIP_FADE_MS).withEndAction { finish() }.start()
@@ -232,7 +298,7 @@ class BootIntroView(
             linePaint.shader = unitLine
             for (i in LINE_WIDTHS.indices) {
                 linePaint.strokeWidth = LINE_WIDTHS[i]
-                linePaint.alpha = (255 * LINE_ALPHAS[i] * lineFade).toInt()
+                linePaint.alpha = (255 * LINE_ALPHAS[i] * lineFade * linePulse()).toInt()
                 canvas.drawLine(w / 2f - half, horizon, w / 2f + half, horizon, linePaint)
             }
         }
@@ -294,7 +360,7 @@ class BootIntroView(
         }
 
         // ---- 5. reflexul, mascat pe sigla si litere ----
-        val sweep = phase(2400f, 3400f)
+        val sweep = if (holdMs >= 0f) holdSweep() else phase(2400f, 3400f)
         if (sweep > 0f && sweep < 1f) {
             val left = lx
             val right = textRect.right
@@ -312,8 +378,16 @@ class BootIntroView(
 
     override fun onDetachedFromWindow() {
         removeCallbacks(releaseHold)
+        stopHoldLoop()
         animator?.cancel()
         super.onDetachedFromWindow()
+    }
+
+    /** Linia de pe orizont respiră în pauză, în ritmul reflexului. */
+    private fun linePulse(): Float {
+        if (holdMs < 0f) return 1f
+        val wave = kotlin.math.cos(2.0 * Math.PI * holdMs / SWEEP_PERIOD_MS).toFloat()
+        return 1f - PULSE_DEPTH * (1f - wave) / 2f
     }
 
     /** Dreptunghiul în care centerCrop ar desena bitmap-ul — ca ImageView-ul de fundal. */
@@ -342,6 +416,12 @@ class BootIntroView(
 
         private const val TOTAL_MS = 4600f
         private const val VIEW_FADE_FROM = 4100f
+
+        /** Reflexul repetat în pauză: o trecere de [SWEEP_MS] la fiecare perioadă. */
+        private const val SWEEP_MS = 1000f
+        private const val SWEEP_PERIOD_MS = 2600f
+        private const val SWEEP_GAP_MS = 900f
+        private const val PULSE_DEPTH = 0.3f
 
         /** Cadrul pe care salutul așteaptă: complet afișat, reflexul trecut. */
         private const val HOLD_AT = 3700f

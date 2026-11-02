@@ -73,7 +73,7 @@ object TileCatalog {
         // Media sta aici, nu pe pagina 2: dala ei e vie (piesa si barele care
         // canta), deci trebuie sa se vada din primul ecran.
         Tile("carplay", R.drawable.ic_menu_carplay, R.string.menu_carplay, TileAction.CARPLAY),
-        Tile("carinfo", R.drawable.ic_menu_car_info, R.string.menu_car_info, TileAction.CAR_INFO, iconScale = 1.55f),
+        Tile("carinfo", R.drawable.ic_menu_car_info, R.string.menu_car_info, TileAction.CAR_INFO, iconScale = 1.9f),
         Tile("bt", R.drawable.ic_menu_bluetooth, R.string.menu_bluetooth, TileAction.BLUETOOTH),
         Tile("dash", R.drawable.ic_menu_dashboard, R.string.menu_dashboard, TileAction.DASHBOARD),
         Tile("settings", R.drawable.ic_menu_settings, R.string.menu_settings, TileAction.SETTINGS),

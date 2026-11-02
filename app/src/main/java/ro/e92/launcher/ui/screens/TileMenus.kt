@@ -172,6 +172,13 @@ class CarInfoMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 onActivate = { host.push(DashboardScreen(host)) }
             ),
             WheelEntry(
+                id = "car_trip",
+                icon = R.drawable.ic_menu_navigation,
+                title = context.getString(R.string.trip_title),
+                value = String.format(java.util.Locale.US, "%.0f km", Services.trip.drive.value.distanceKm),
+                onActivate = { host.push(TripScreen(host)) }
+            ),
+            WheelEntry(
                 id = "car_app",
                 icon = R.drawable.ic_menu_car_info,
                 title = context.getString(R.string.car_vendor_app),

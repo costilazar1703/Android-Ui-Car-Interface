@@ -4,31 +4,15 @@
   ca bg_tile, dar cu UN singur contur, subțire: conturul interior e transparent.
   Rama dublă, chiar și la jumătate de grosime, se citea în oglindă ca o bandă
   groasă; în apă trebuie să rămână doar o sclipire, nu a doua dală.
+
+  Corpul stă la ACEEAȘI distanță de margine ca linia ramei, nu cu 3 dp mai
+  înăuntru: altfel muchia gradientului făcea o a doua linie paralelă. Fără
+  halourile difuze ale dalei: în reflexie se adunau într-o bandă lată.
 -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item android:state_activated="true">
         <layer-list>
-
-            <!-- 1. Difuzia exterioară, cea mai transparentă. -->
-            <item>
-                <shape android:shape="rectangle">
-                    <solid android:color="@color/glow_outer" />
-                    <corners android:radius="@dimen/tile_corner" />
-                </shape>
-            </item>
-
-            <!-- 2. Difuzia intermediară. -->
-            <item
-                android:bottom="@dimen/tile_glow_step"
-                android:left="@dimen/tile_glow_step"
-                android:right="@dimen/tile_glow_step"
-                android:top="@dimen/tile_glow_step">
-                <shape android:shape="rectangle">
-                    <solid android:color="@color/glow_mid" />
-                    <corners android:radius="@dimen/tile_corner" />
-                </shape>
-            </item>
 
             <!-- 3. Rama EXTERIOARĂ, aprinsă. -->
             <item
@@ -48,10 +32,10 @@
             <!-- 4. Rama INTERIOARĂ + corpul. Gradientul urcă spre portocaliu în
                  partea de sus, ca reflexia de pe sticlă din mașină. -->
             <item
-                android:bottom="@dimen/tile_frame_inset"
-                android:left="@dimen/tile_frame_inset"
-                android:right="@dimen/tile_frame_inset"
-                android:top="@dimen/tile_frame_inset">
+                android:bottom="@dimen/tile_body_inset"
+                android:left="@dimen/tile_body_inset"
+                android:right="@dimen/tile_body_inset"
+                android:top="@dimen/tile_body_inset">
                 <shape android:shape="rectangle">
                     <gradient
                         android:angle="270"
@@ -88,10 +72,10 @@
             </item>
 
             <item
-                android:bottom="@dimen/tile_frame_inset"
-                android:left="@dimen/tile_frame_inset"
-                android:right="@dimen/tile_frame_inset"
-                android:top="@dimen/tile_frame_inset">
+                android:bottom="@dimen/tile_body_inset"
+                android:left="@dimen/tile_body_inset"
+                android:right="@dimen/tile_body_inset"
+                android:top="@dimen/tile_body_inset">
                 <shape android:shape="rectangle">
                     <gradient
                         android:angle="270"

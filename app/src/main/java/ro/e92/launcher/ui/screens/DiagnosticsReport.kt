@@ -56,7 +56,15 @@ object DiagnosticsReport {
 
         sb.append("notif acc  = ").append(Services.media.hasNotificationAccess()).append('\n')
         sb.append("location   = ").append(Services.net.hasLocationPermission()).append('\n')
-        sb.append("su binary  = ").append(suBinaryPresent()).append("\n\n")
+        sb.append("su binary  = ").append(suBinaryPresent()).append('\n')
+        // 0 = Android sare peste animații; salutul de pornire nu depinde de asta.
+        sb.append("anim scale = ").append(
+            runCatching {
+                android.provider.Settings.Global.getFloat(
+                    context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f
+                )
+            }.getOrDefault(-1f)
+        ).append("\n\n")
 
         appendBluetoothAndMedia(context, sb)
 
