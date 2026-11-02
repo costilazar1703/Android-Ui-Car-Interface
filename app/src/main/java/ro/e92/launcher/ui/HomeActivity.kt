@@ -9,6 +9,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
@@ -110,6 +111,11 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         })
 
         maybePlayIntro(savedInstanceState)
+        if (savedInstanceState == null) startGuard()
+        registerReceiver(wakeReceiver, IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        })
 
         requestRuntimePermissionsIfNeeded()
         observeStatusBar()
@@ -121,9 +127,16 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         Services.vehicle.start()
         Services.media.start()
         Services.net.start()
+        Services.kswBt.start()
         Services.apps.startWatching()
 
-        registerReceiver(timeTickReceiver, IntentFilter(Intent.ACTION_TIME_TICK))
+        // Nu doar TIME_TICK: ora se poate schimba brusc (sincronizare GPS/rețea,
+        // fus orar schimbat din Setări) și atunci nu vine niciun tick pe loc.
+        registerReceiver(timeTickReceiver, IntentFilter().apply {
+            addAction(Intent.ACTION_TIME_TICK)
+            addAction(Intent.ACTION_TIME_CHANGED)
+            addAction(Intent.ACTION_TIMEZONE_CHANGED)
+        })
         registerReceiver(btReceiver, IntentFilter().apply {
             addAction(android.bluetooth.BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
             addAction(android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED)
@@ -155,6 +168,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     }
 
     override fun onDestroy() {
+        runCatching { unregisterReceiver(wakeReceiver) }
         stack.destroyAll()
         super.onDestroy()
     }
@@ -167,7 +181,19 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     override fun onResume() {
         super.onResume()
+        resumedNow = true
+        updateClock()
+        if (greetOnResume) {
+            greetOnResume = false
+            if (intro == null) playIntro()
+        }
         applyImmersive()
+    }
+
+    override fun onPause() {
+        resumedNow = false
+        maybeReclaimFront()
+        super.onPause()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -176,6 +202,13 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     }
 
     // ------------------------------------------------------------------ input
+
+    /** Unele rotițe trimit derulare, nu taste: și aceea sare salutul. */
+    override fun dispatchGenericMotionEvent(ev: android.view.MotionEvent): Boolean {
+        lastInteractionAt = SystemClock.elapsedRealtime()
+        intro?.let { it.skip(); return true }
+        return super.dispatchGenericMotionEvent(ev)
+    }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         // Cat ruleaza animatia de pornire, orice tasta doar o sare - nu ajunge si
@@ -416,7 +449,10 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         v.scaleX = scale
         v.scaleY = scale
         if (animate) {
-            v.animate().translationX(tx).setDuration(PARALLAX_ANIM_MS).start()
+            // Aceeași durată și curbă ca banda de dale: fundalul și meniul se
+            // opresc împreună, nu unul după altul.
+            v.animate().translationX(tx).setDuration(PARALLAX_ANIM_MS)
+                .setInterpolator(android.view.animation.DecelerateInterpolator(2.2f)).start()
         } else {
             v.animate().cancel()
             v.translationX = tx
@@ -474,6 +510,109 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     private fun maybePlayIntro(savedInstanceState: Bundle?) {
         if (introPlayedThisProcess || savedInstanceState != null) return
         introPlayedThisProcess = true
+        playIntro()
+    }
+
+    /**
+     * Unitatea KSW nu repornește la contact: la ACC oprit doar stinge ecranul și
+     * adoarme, iar procesul nostru supraviețuiește. „Pornirea la rece" de mai sus
+     * n-ar mai veni niciodată, deci salutul se leagă și de aprinderea ecranului —
+     * doar după o pauză lungă, ca o stingere scurtă a ecranului să nu-l repete.
+     */
+    private val wakeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_OFF -> screenOffAt = SystemClock.elapsedRealtime()
+                Intent.ACTION_SCREEN_ON -> {
+                    updateClock()
+                    val off = screenOffAt ?: return
+                    screenOffAt = null
+                    if (SystemClock.elapsedRealtime() - off < WAKE_GREETING_AFTER_MS) return
+                    goHome()
+                    startGuard()
+                    if (resumedNow) {
+                        if (intro == null) playIntro()
+                    } else {
+                        // Salutul se joacă abia în onResume, cât se vede.
+                        greetOnResume = true
+                        bringToFront(0)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Ca butonul HOME: doar intentul de HOME aduce stiva home peste aplicația
+     * lăsată deschisă (REORDER_TO_FRONT nu). Android ignoră însă pornirile din
+     * fundal în primele secunde după aprinderea ecranului - pe emulator prima
+     * încercare se pierdea - deci mai încercăm de câteva ori până apucăm.
+     */
+    private fun bringToFront(attempt: Int) {
+        if (resumedNow || attempt >= WAKE_RETRY_DELAYS_MS.size) return
+        // Niciodată peste camera de marșarier.
+        if (Services.vehicle.state.value.reverseGear == true) return
+        startActivity(Intent(Intent.ACTION_MAIN)
+            .addCategory(Intent.CATEGORY_HOME)
+            .setClass(this, HomeActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        if (attempt + 1 < WAKE_RETRY_DELAYS_MS.size) {
+            binding.rootLayout.postDelayed({ bringToFront(attempt + 1) }, WAKE_RETRY_DELAYS_MS[attempt + 1])
+        }
+    }
+
+    /**
+     * La pornire, MCU-ul KSW îi spune aplicației vendorului care a fost ultima
+     * sursă, iar aceasta redeschide ecranul ei (de obicei muzica Bluetooth) la
+     * ~15 s după contact, peste meniul nostru (EventService.onCmdKSW0x00_0x15Event
+     * din EventCenter). Sunetul nu ține de ecranul acela, deci îl lăsăm să cânte
+     * și doar ne întoarcem în față - o singură dată pe fereastră și niciodată
+     * în marșarier.
+     *
+     * Ce e al șoferului nu se atinge: dacă meniul pleacă la scurt timp după o
+     * atingere sau o tastă, el a deschis ceva (o dală, Waze) și rămâne acolo.
+     */
+    private fun startGuard() {
+        guardUntil = SystemClock.elapsedRealtime() + START_GUARD_MS
+        guardUsed = false
+    }
+
+    private fun maybeReclaimFront() {
+        val now = SystemClock.elapsedRealtime()
+        if (guardUsed || now > guardUntil) return
+        if (now - lastInteractionAt < USER_CAUSED_MS) return
+        // Consumat doar dacă chiar am rămas acoperiți: o pauză scurtă (un intent
+        // livrat, un dialog de sistem) nu trebuie să ardă singura încercare.
+        binding.rootLayout.postDelayed({
+            if (!resumedNow && !guardUsed) {
+                guardUsed = true
+                bringToFront(0)
+            }
+        }, RECLAIM_DELAY_MS)
+    }
+
+    // Nu onUserInteraction: Android îl cheamă și când o ALTĂ aplicație se
+    // deschide peste noi (împreună cu onUserLeaveHint), deci pornirea automată
+    // a vendorului ar fi părut o atingere. Doar intrările reale contează.
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        lastInteractionAt = SystemClock.elapsedRealtime()
+        return super.dispatchTouchEvent(ev)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        lastInteractionAt = SystemClock.elapsedRealtime()
+        return super.dispatchKeyEvent(event)
+    }
+
+    private var guardUntil = 0L
+    private var guardUsed = false
+    private var lastInteractionAt = 0L
+
+    private var resumedNow = false
+    private var greetOnResume = false
+    private var screenOffAt: Long? = null
+
+    private fun playIntro() {
         if (!Services.prefs.animationsEnabled) return
 
         // Animatia se termina exact pe pozitia fundalului principal - aceeasi
@@ -582,6 +721,12 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     }
 
     private fun updateClock() {
+        // SimpleDateFormat își fixează fusul orar la construcție; fără asta,
+        // după schimbarea lui din Setări ceasul rămânea pe cel vechi până la
+        // repornirea aplicației - pe KSW, care doar adoarme, adică niciodată.
+        val zone = java.util.TimeZone.getDefault()
+        clockFormat.timeZone = zone
+        dateFormat.timeZone = zone
         clockDate.time = System.currentTimeMillis()
         binding.clock.text = clockFormat.format(clockDate)
         binding.dateText.text = dateFormat.format(clockDate)
@@ -741,8 +886,21 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
         /** Cat se misca fotografia principala intre prima si ultima pagina. */
         const val PARALLAX_SHIFT = 0.035f
+
+        /** Sub atât, o stingere a ecranului nu e un contact nou. */
+        const val WAKE_GREETING_AFTER_MS = 60_000L
+
+        /** Cât după contact ne apărăm de ecranul pornit singur de vendor. */
+        const val START_GUARD_MS = 25_000L
+        const val RECLAIM_DELAY_MS = 700L
+
+        /** O pierdere a ecranului atât de aproape de o atingere e a șoferului. */
+        const val USER_CAUSED_MS = 2_000L
+
+        /** Întârzierea fiecărei încercări de a reveni în față după contact. */
+        val WAKE_RETRY_DELAYS_MS = longArrayOf(0L, 1_500L, 3_500L, 6_000L)
         /** Aceeasi durata ca alunecarea paginii, ca sa se miste impreuna. */
-        const val PARALLAX_ANIM_MS = 200L
+        const val PARALLAX_ANIM_MS = 460L
         const val BACKGROUND_FADE_MS = 260L
     }
 }

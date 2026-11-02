@@ -1,7 +1,6 @@
 package ro.e92.launcher.ui.screens
 
 import android.util.TypedValue
-import android.view.GestureDetector
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -71,14 +70,12 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     private var pageWidth = 0
     private var built = false
 
-    private lateinit var swipeDetector: GestureDetector
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup): View =
         ScreenTileGridBinding.inflate(inflater, container, false).also { binding = it }.root
 
     override fun onShow() {
         buildDots()
-        setupSwipe()
         setupMiniPlayer()
 
         BluetoothPresence.start(context)
@@ -204,10 +201,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                     host.rebuildFocus(tile.id)
                     activate(tile)
                 }
-                tileBinding.root.setOnTouchListener { _, event ->
-                    swipeDetector.onTouchEvent(event)
-                    false
-                }
+                tileBinding.root.setOnTouchListener { v, event -> onStripTouch(v, event) }
 
                 val lp = LinearLayout.LayoutParams(tileWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
                     .apply { marginStart = if (index == first) 0 else gap }
@@ -217,6 +211,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                 applyPerspective(tileBinding.root, index - first, tileWidth)
             }
 
+            row.setOnTouchListener { v, event -> onStripTouch(v, event) }
             binding.tileStrip.addView(row)
         }
 
@@ -321,24 +316,6 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         }
     }
 
-    private fun setupSwipe() {
-        swipeDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onDown(e: MotionEvent): Boolean = true
-
-            override fun onFling(
-                e1: MotionEvent?,
-                e2: MotionEvent,
-                velocityX: Float,
-                velocityY: Float
-            ): Boolean {
-                if (abs(velocityX) < abs(velocityY)) return false
-                if (abs(velocityX) < MIN_FLING_VELOCITY) return false
-                val next = if (velocityX < 0) currentPage + 1 else currentPage - 1
-                return focusFirstTileOfPage(next)
-            }
-        })
-    }
-
     private fun focusFirstTileOfPage(page: Int): Boolean {
         if (page < 0 || page >= TileCatalog.pageCount) return false
         val tile = TileCatalog.items.getOrNull(page * TileCatalog.PAGE_SIZE) ?: return false
@@ -377,18 +354,106 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     private fun goToPage(page: Int) {
         if (page == currentPage || page !in 0 until TileCatalog.pageCount) return
         currentPage = page
+        settleStrip()
+    }
 
-        val targetX = -(pageWidth.toFloat() * page)
+    /** Duce banda la pagina curentă, de unde se află acum (inclusiv din mijlocul unui drag). */
+    private fun settleStrip() {
+        val targetX = -(pageWidth.toFloat() * currentPage)
         host.setHomeParallax(pageFraction(), Services.prefs.animationsEnabled)
         if (Services.prefs.animationsEnabled) {
             binding.tileStrip.animate()
                 .translationX(targetX)
                 .setDuration(PAGE_ANIM_MS)
+                .setInterpolator(pageEase)
                 .start()
         } else {
             binding.tileStrip.translationX = targetX
         }
     }
+
+    private val pageEase = android.view.animation.DecelerateInterpolator(2.2f)
+
+    // ------------------------------------------------------------- drag
+
+    /**
+     * Glisarea ca pe telefon: banda de dale (și fundalul, prin parallax) urmează
+     * degetul, deci în timpul gestului se văd ambele pagini. La ridicarea
+     * degetului se așază pe pagina cea mai potrivită: următoarea dacă ai tras
+     * peste un sfert de pagină sau ai dat un flick, altfel înapoi.
+     *
+     * Atinge același listener pe dale și pe spațiile dintre ele. Pe o dală,
+     * atingerea fără mișcare rămâne click; odată pornit drag-ul, click-ul se
+     * anulează - altfel la capătul gestului s-ar deschide dala de sub deget.
+     */
+    private fun onStripTouch(view: View, event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                velocity?.recycle()
+                velocity = android.view.VelocityTracker.obtain().also { it.addMovement(event) }
+                downX = event.rawX
+                stripAtDown = binding.tileStrip.translationX
+                dragging = false
+                return view !in tileViews   // spațiile goale trebuie să ceară restul gestului
+            }
+            MotionEvent.ACTION_MOVE -> {
+                velocity?.addMovement(event)
+                val dx = event.rawX - downX
+                if (!dragging && abs(dx) > touchSlop) {
+                    dragging = true
+                    binding.tileStrip.animate().cancel()
+                    view.isPressed = false
+                    view.parent?.requestDisallowInterceptTouchEvent(true)
+                }
+                if (!dragging) return false
+                binding.tileStrip.translationX = rubberBand(stripAtDown + dx)
+                host.setHomeParallax(stripFraction(), false)
+                return true
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                val tracker = velocity
+                velocity = null
+                if (!dragging) { tracker?.recycle(); return false }
+                dragging = false
+                tracker?.addMovement(event)
+                tracker?.computeCurrentVelocity(1000)
+                val vx = tracker?.xVelocity ?: 0f
+                tracker?.recycle()
+
+                val moved = binding.tileStrip.translationX - (-(pageWidth.toFloat() * currentPage))
+                val target = when {
+                    vx < -MIN_FLING_VELOCITY || moved < -pageWidth * DRAG_PAGE_FRACTION -> currentPage + 1
+                    vx > MIN_FLING_VELOCITY || moved > pageWidth * DRAG_PAGE_FRACTION -> currentPage - 1
+                    else -> currentPage
+                }.coerceIn(0, TileCatalog.pageCount - 1)
+
+                if (target != currentPage) focusFirstTileOfPage(target) else settleStrip()
+                return true
+            }
+        }
+        return false
+    }
+
+    /** Peste prima și ultima pagină banda mai merge, dar tot mai greu - ca pe iOS. */
+    private fun rubberBand(x: Float): Float {
+        val min = -(pageWidth.toFloat() * (TileCatalog.pageCount - 1))
+        return when {
+            x > 0f -> x * RUBBER_BAND
+            x < min -> min + (x - min) * RUBBER_BAND
+            else -> x
+        }
+    }
+
+    private fun stripFraction(): Float {
+        val span = pageWidth.toFloat() * (TileCatalog.pageCount - 1)
+        return if (span <= 0f) 0f else (-binding.tileStrip.translationX / span).coerceIn(0f, 1f)
+    }
+
+    private var velocity: android.view.VelocityTracker? = null
+    private var downX = 0f
+    private var stripAtDown = 0f
+    private var dragging = false
+    private val touchSlop by lazy { android.view.ViewConfiguration.get(context).scaledTouchSlop }
 
     private fun pageFraction(): Float =
         if (TileCatalog.pageCount <= 1) 0f else currentPage / (TileCatalog.pageCount - 1f)
@@ -466,7 +531,13 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     }
 
     private companion object {
-        const val PAGE_ANIM_MS = 200L
+        const val PAGE_ANIM_MS = 460L
+
+        /** Cât din pagină trebuie tras ca, la eliberare, să treacă pe următoarea. */
+        const val DRAG_PAGE_FRACTION = 0.22f
+
+        /** Rezistența la tragerea peste prima / ultima pagină. */
+        const val RUBBER_BAND = 0.3f
         const val FOCUS_ANIM_MS = 140L
         const val MIN_FLING_VELOCITY = 600f
 

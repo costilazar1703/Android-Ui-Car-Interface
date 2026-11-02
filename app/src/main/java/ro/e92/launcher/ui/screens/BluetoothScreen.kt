@@ -1,25 +1,26 @@
 package ro.e92.launcher.ui.screens
 
+import ro.e92.launcher.core.AppLaunch
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import kotlinx.coroutines.launch
 import ro.e92.launcher.R
+import ro.e92.launcher.core.KswBluetooth
 import ro.e92.launcher.core.Services
 import ro.e92.launcher.input.LauncherAction
 import ro.e92.launcher.ui.ScreenHost
 
 /**
- * „Bluetooth Audio" în format split.
+ * „Bluetooth" în format split: muzica, telefonul și setările.
  *
- * Ce face cu adevărat: comandă sursa A2DP care cântă, prin MediaSession (adică
- * exact aceleași butoane pe care le folosește și ecranul Media). Ce NU face:
- * împerecherea. Pe unitățile astea stack-ul Bluetooth e al vendorului, iar
- * dialogul lui de pairing e singurul care funcționează — încercarea de a-l
- * dubla din launcher ar produce două stări care se contrazic. De aceea
- * „Connect new mobile" deschide setările de sistem în loc să pretindă că
- * gestionează el legătura.
+ * Pe unitatea KSW telefonul e al modulului vendorului, nu al Android-ului, iar
+ * ecranul ăsta îl comandă direct prin [ro.e92.launcher.core.KswBluetooth]:
+ * starea legăturii, vizibilitatea pentru împerechere, reconectarea, resetul.
+ * Nu dublăm un stack: trimitem comenzi aceluiași serviciu pe care îl folosește
+ * și aplicația KSW, deci cele două nu se pot contrazice. Pe o unitate fără
+ * KSW rămâne vechiul comportament (lista Android + setările de sistem).
  */
 class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
     override val backgroundRes: Int get() = R.drawable.bg_menu_phone
@@ -39,34 +40,65 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
                 if (selectedNavId == NAV_AUDIO) reloadDetail()
             }
         }
+        screenScope.launch {
+            var lastResult: Int? = ksw.state.value.lastPairResult
+            ksw.state.collect { st ->
+                if (st.lastPairResult != lastResult) {
+                    lastResult = st.lastPairResult
+                    st.lastPairResult?.let { result ->
+                        android.widget.Toast.makeText(
+                            context,
+                            if (result == KswBluetooth.PAIR_SUCCESS) R.string.bt_pair_ok else R.string.bt_pair_failed,
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+                if (selectedNavId == NAV_DEVICES || selectedNavId == NAV_AUDIO) reloadDetail()
+            }
+        }
+        ksw.refresh()
     }
+
+    private val ksw get() = Services.kswBt
+    private val useKsw get() = ksw.isInstalled
+
+    /** „Forget all" cere a doua apăsare; prima doar armează. */
+    private var forgetArmed = false
 
     /** Butoanele de volan rămân active și aici. */
     override fun onAction(action: LauncherAction): Boolean = when (action) {
-        LauncherAction.MEDIA_NEXT -> { Services.media.next(); true }
-        LauncherAction.MEDIA_PREV -> { Services.media.previous(); true }
-        LauncherAction.MEDIA_PLAY_PAUSE -> { Services.media.playPause(); true }
+        LauncherAction.MEDIA_NEXT -> { if (kswAudio) ksw.next() else Services.media.next(); true }
+        LauncherAction.MEDIA_PREV -> { if (kswAudio) ksw.previous() else Services.media.previous(); true }
+        LauncherAction.MEDIA_PLAY_PAUSE -> { if (kswAudio) ksw.playPause() else Services.media.playPause(); true }
         else -> false
     }
 
+    /**
+     * Muzica de pe telefon trece prin modulul KSW și de obicei nu apare ca
+     * MediaSession în Android - atunci butoanele merg direct la modul.
+     */
+    private val kswAudio: Boolean
+        get() = useKsw && !Services.media.snapshot.value.hasSession &&
+            ksw.state.value.link >= KswBluetooth.Link.CONNECTED
+
     override fun navEntries(): List<NavEntry> = listOf(
         NavEntry(NAV_AUDIO, context.getString(R.string.bt_audio)),
-        NavEntry(NAV_DEVICES, context.getString(R.string.bt_devices)),
+        NavEntry(NAV_DEVICES, context.getString(if (useKsw) R.string.bt_phone else R.string.bt_devices)),
         NavEntry(NAV_SETTINGS, context.getString(R.string.bt_settings))
     )
 
     override fun detailTitle(navId: String): String = when (navId) {
         NAV_AUDIO -> context.getString(R.string.bt_audio)
-        NAV_DEVICES -> context.getString(R.string.bt_paired)
+        NAV_DEVICES -> context.getString(if (useKsw) R.string.bt_phone else R.string.bt_paired)
         else -> context.getString(R.string.bt_settings)
     }.uppercase()
 
     override fun detailHint(navId: String): String =
-        if (navId == NAV_DEVICES) context.getString(R.string.bt_hint) else ""
+        if (navId == NAV_DEVICES && !useKsw) context.getString(R.string.bt_hint) else ""
 
     override fun detailRows(navId: String): List<DetailRow> = when (navId) {
         NAV_AUDIO -> audioRows()
-        NAV_DEVICES -> deviceRows()
+        NAV_DEVICES -> if (useKsw) phoneRows() else deviceRows()
         else -> settingsRows()
     }
 
@@ -74,6 +106,7 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
 
     private fun audioRows(): List<DetailRow> {
         val media = Services.media.snapshot.value
+        if (kswAudio) return kswAudioRows()
         if (!media.hasSession) {
             return listOf(
                 DetailRow(
@@ -119,6 +152,76 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
         )
     }
 
+    private fun kswAudioRows(): List<DetailRow> = listOf(
+        DetailRow(
+            id = "bt_track",
+            title = ksw.state.value.phoneName,
+            value = context.getString(R.string.bt_audio)
+        ),
+        DetailRow(
+            id = "bt_playpause",
+            title = context.getString(R.string.bt_play) + " / " + context.getString(R.string.bt_pause),
+            onActivate = { ksw.playPause() }
+        ),
+        DetailRow(id = "bt_next", title = context.getString(R.string.bt_next), onActivate = { ksw.next() }),
+        DetailRow(id = "bt_prev", title = context.getString(R.string.bt_prev), onActivate = { ksw.previous() })
+    )
+
+    // ------------------------------------------------------------------- phone
+
+    private fun phoneRows(): List<DetailRow> {
+        val st = ksw.state.value
+        val status = when {
+            st.visible && st.link < KswBluetooth.Link.CONNECTED -> context.getString(R.string.bt_status_visible)
+            st.link == KswBluetooth.Link.UNAVAILABLE -> context.getString(R.string.bt_status_unavailable)
+            st.link == KswBluetooth.Link.IDLE -> context.getString(R.string.bt_status_idle)
+            st.link == KswBluetooth.Link.CONNECTING -> context.getString(R.string.bt_status_connecting)
+            st.link == KswBluetooth.Link.CONNECTED -> context.getString(R.string.bt_status_connected)
+            else -> context.getString(R.string.bt_status_in_call)
+        }
+        val unit = st.unitName.ifEmpty { "CAR KIT" }
+        val pin = st.pin.ifEmpty { "0000" }
+        return listOf(
+            DetailRow(
+                id = "bt_status",
+                title = status,
+                value = st.phoneName.ifEmpty { if (st.visible) "$unit · PIN $pin" else "" },
+                onActivate = { ksw.refresh() }
+            ),
+            DetailRow(
+                id = "bt_make_visible",
+                title = context.getString(R.string.bt_make_visible),
+                value = context.getString(R.string.bt_make_visible_hint, unit, pin),
+                onActivate = { ksw.makeVisible() }
+            ),
+            DetailRow(
+                id = "bt_reconnect",
+                title = context.getString(R.string.bt_reconnect),
+                onActivate = { ksw.reconnectLast() }
+            ),
+            resetRow(),
+            DetailRow(
+                id = "bt_forget_all",
+                title = context.getString(R.string.bt_forget_all),
+                value = if (forgetArmed) context.getString(R.string.bt_forget_confirm) else "",
+                onActivate = {
+                    if (forgetArmed) {
+                        forgetArmed = false
+                        ksw.forgetAll()
+                    } else {
+                        forgetArmed = true
+                    }
+                    reloadDetail("bt_forget_all")
+                }
+            ),
+            DetailRow(
+                id = "bt_vendor",
+                title = context.getString(R.string.bt_vendor_app),
+                onActivate = { AppLaunch.openBluetooth(context) }
+            )
+        )
+    }
+
     // ------------------------------------------------------------------ devices
 
     /**
@@ -157,17 +260,18 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
                         value = device.address,
                         // Conectarea efectivă e a stack-ului vendorului; noi
                         // ducem utilizatorul acolo unde poate acționa.
-                        onActivate = { openSystem(Settings.ACTION_BLUETOOTH_SETTINGS) }
+                        onActivate = { AppLaunch.openBluetooth(context) }
                     )
                 )
             }
         }
 
+        rows.add(resetRow())
         rows.add(
             DetailRow(
                 id = "bt_connect_new",
                 title = context.getString(R.string.bt_connect_new),
-                onActivate = { openSystem(Settings.ACTION_BLUETOOTH_SETTINGS) }
+                onActivate = { AppLaunch.openBluetooth(context) }
             )
         )
         return rows
@@ -176,10 +280,11 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
     // ----------------------------------------------------------------- settings
 
     private fun settingsRows(): List<DetailRow> = listOf(
+        resetRow(),
         DetailRow(
             id = "bt_sys",
             title = context.getString(R.string.set_bluetooth),
-            onActivate = { openSystem(Settings.ACTION_BLUETOOTH_SETTINGS) }
+            onActivate = { AppLaunch.openBluetooth(context) }
         ),
         DetailRow(
             id = "bt_notif",
@@ -190,6 +295,13 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
             ),
             onActivate = { openSystem(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) }
         )
+    )
+
+    private fun resetRow() = DetailRow(
+        id = "bt_reset",
+        title = context.getString(R.string.bt_reset),
+        value = context.getString(R.string.bt_reset_hint),
+        onActivate = { AppLaunch.resetBluetooth(context) }
     )
 
     private fun openSystem(action: String) {

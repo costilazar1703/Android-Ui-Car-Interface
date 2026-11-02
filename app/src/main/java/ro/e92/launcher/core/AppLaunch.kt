@@ -61,6 +61,30 @@ object AppLaunch {
         return runCatching { context.startActivity(intent); true }.getOrDefault(false)
     }
 
+    /**
+     * Pe unitatea KSW telefonul nu trece prin Bluetooth-ul Android (adaptorul e
+     * oprit): îl ține modulul Goodocom, condus de aplicația vendorului. Doar ea
+     * poate împerechea telefonul, deci acolo trimitem; setările Android rămân
+     * rezerva pentru alte unități.
+     */
+    fun openBluetooth(context: Context) {
+        if (isInstalled(context, VENDOR_BT_PACKAGE)) launch(context, VENDOR_BT_PACKAGE, "Bluetooth")
+        else openSystem(context, android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
+    }
+
+    /**
+     * Reset Bluetooth: ce făceai de mână (închis aplicațiile, repornit navigația)
+     * într-un singur buton, prin serviciul KSW - vezi [KswBluetooth.reset].
+     * Aplicația vendorului rulează ca uid system, deci n-o putem opri și reporni;
+     * o comandăm din interior.
+     */
+    fun resetBluetooth(context: Context) {
+        Toast.makeText(context, R.string.bt_resetting, Toast.LENGTH_SHORT).show()
+        Services.kswBt.reset()
+    }
+
+    private const val VENDOR_BT_PACKAGE = KswBluetooth.PACKAGE
+
     /** Deschide un ecran de setări de sistem, fără să crape dacă nu există. */
     fun openSystem(context: Context, action: String) {
         val intent = Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

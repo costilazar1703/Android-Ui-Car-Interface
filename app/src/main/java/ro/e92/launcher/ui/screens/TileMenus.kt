@@ -119,7 +119,24 @@ class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
             id = "bt_pair_new",
             icon = R.drawable.ic_menu_bluetooth,
             title = context.getString(R.string.bt_connect_new),
-            onActivate = { AppLaunch.openSystem(context, Settings.ACTION_BLUETOOTH_SETTINGS) }
+            onActivate = {
+                // Pe KSW: unitatea devine vizibilă și rămânem în meniul nostru,
+                // pe ecranul care arată starea împerecherii.
+                if (Services.kswBt.isInstalled) {
+                    Services.kswBt.makeVisible()
+                    host.push(BluetoothScreen(host))
+                } else {
+                    AppLaunch.openBluetooth(context)
+                }
+            }
+        ),
+        // Al doilea, la un pas de rotiță: e butonul de folosit când telefonul
+        // nu vede unitatea.
+        WheelEntry(
+            id = "bt_reset",
+            icon = R.drawable.ic_menu_bluetooth,
+            title = context.getString(R.string.bt_reset),
+            onActivate = { AppLaunch.resetBluetooth(context) }
         ),
         WheelEntry(
             id = "bt_paired",

@@ -32,8 +32,11 @@ import ro.e92.launcher.R
  *               poziția finală a fundalului principal
  * 1100 – 2300   sigla, „BMW iDRIVE", apoi „Welcome back, Mr. Lazar"
  * 2400 – 3400   un reflex de lumină trece peste siglă și text
- * 3400 – 3700   rămâne pe ecran
- * 3700 – 4600   textul se stinge, apoi tot view-ul, dezvăluind meniul
+ * 3400 – 3700   ajunge pe cadrul final al salutului
+ *   … pauză     rămâne așa până la o apăsare (ecran sau rotiță) ori până la
+ *               [MAX_SHOWN_MS] de la pornire: un ecran de încărcare cât unitatea
+ *               își reface Bluetooth-ul și ora după contact
+ * apoi 900 ms   textul se stinge, apoi tot view-ul, dezvăluind meniul
  *
  * **Trecerea fără tăietură.** Fotografia se termină EXACT unde stă fundalul
  * ecranului principal — aceeași mărire, același pivot, aceeași deplasare de
@@ -47,7 +50,7 @@ import ro.e92.launcher.R
  * Sigla e opțională: apare doar dacă există o resursă `boot_logo` (vezi
  * [logoBitmap]). Până atunci animația e fotografie + text.
  *
- * Orice apăsare o sare: animația e un salut, nu o barieră.
+ * Orice apăsare o sare, oricând: animația e un salut, nu o barieră.
  */
 class BootIntroView(
     context: Context,
@@ -130,8 +133,26 @@ class BootIntroView(
 
     fun start() {
         if (animator != null || finishing) return
-        animator = ValueAnimator.ofFloat(0f, TOTAL_MS).apply {
-            duration = TOTAL_MS.toLong()
+        startedAt = android.os.SystemClock.uptimeMillis()
+        // Intrarea, până la cadrul final al salutului. Acolo se oprește și
+        // așteaptă: ieșirea pornește din [releaseHold] sau din [skip].
+        animator = segment(0f, HOLD_AT) {
+            postDelayed(releaseHold, (MAX_SHOWN_MS - (TOTAL_MS - HOLD_AT).toLong() - elapsed()).coerceAtLeast(0L))
+        }
+    }
+
+    private var startedAt = 0L
+    private fun elapsed() = android.os.SystemClock.uptimeMillis() - startedAt
+
+    /** Ieșirea normală, după pauză: aceeași stingere ca înainte de pauză. */
+    private val releaseHold = Runnable {
+        if (finishing) return@Runnable
+        animator = segment(HOLD_AT, TOTAL_MS) { finish() }
+    }
+
+    private fun segment(from: Float, to: Float, onEnd: () -> Unit): ValueAnimator =
+        ValueAnimator.ofFloat(from, to).apply {
+            duration = (to - from).toLong()
             interpolator = LinearInterpolator()
             addUpdateListener {
                 t = it.animatedValue as Float
@@ -139,15 +160,17 @@ class BootIntroView(
                 invalidate()
             }
             addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) = finish()
+                private var cancelled = false
+                override fun onAnimationCancel(animation: Animator) { cancelled = true }
+                override fun onAnimationEnd(animation: Animator) { if (!cancelled) onEnd() }
             })
             start()
         }
-    }
 
     /** Sare la final, cu o stingere scurtă — nu taie brusc. */
     fun skip() {
         if (finishing) return
+        removeCallbacks(releaseHold)
         animator?.cancel()
         finishing = true
         animate().alpha(0f).setDuration(SKIP_FADE_MS).withEndAction { finish() }.start()
@@ -288,6 +311,7 @@ class BootIntroView(
     }
 
     override fun onDetachedFromWindow() {
+        removeCallbacks(releaseHold)
         animator?.cancel()
         super.onDetachedFromWindow()
     }
@@ -318,6 +342,12 @@ class BootIntroView(
 
         private const val TOTAL_MS = 4600f
         private const val VIEW_FADE_FROM = 4100f
+
+        /** Cadrul pe care salutul așteaptă: complet afișat, reflexul trecut. */
+        private const val HOLD_AT = 3700f
+
+        /** Cât stă salutul pe ecran fără nicio apăsare, de la pornire până dispare. */
+        private const val MAX_SHOWN_MS = 10_000L
         private const val SKIP_FADE_MS = 180L
         private const val START_ZOOM = 1.14f
 

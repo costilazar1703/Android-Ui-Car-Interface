@@ -56,7 +56,9 @@ class BroadcastCanDataSource(
 
     override fun start() {
         if (registered) return
-        val filter = IntentFilter().apply { config.actions.forEach { addAction(it) } }
+        val filter = IntentFilter().apply {
+            (config.actions + config.reverseStartActions + config.reverseEndActions).forEach { addAction(it) }
+        }
         try {
             context.registerReceiver(receiver, filter)
             registered = true
@@ -73,8 +75,20 @@ class BroadcastCanDataSource(
     }
 
     private fun parse(intent: Intent): VehicleState? {
-        val extras = intent.extras ?: return null
         val prev = _state.value
+
+        // Marșarierul pe KSW vine ca două acțiuni fără extras (început / sfârșit),
+        // nu ca o cheie într-un pachet.
+        val reverseByAction = when (intent.action) {
+            in config.reverseStartActions -> true
+            in config.reverseEndActions -> false
+            else -> null
+        }
+        if (reverseByAction != null) {
+            return prev.copy(reverseGear = reverseByAction, timestamp = SystemClock.elapsedRealtime())
+        }
+
+        val extras = intent.extras ?: return null
 
         // Un broadcast poate purta doar un subset de câmpuri; ce nu vine acum
         // se păstrează din starea anterioară. Contorizăm separat câte chei
@@ -177,20 +191,34 @@ data class CanBroadcastConfig(
     val sportKeys: List<String>,
     val boostKeys: List<String>,
     val oilTempKeys: List<String>,
-    val doorKeys: Map<Door, String>
+    val doorKeys: Map<Door, String>,
+    val reverseStartActions: List<String> = emptyList(),
+    val reverseEndActions: List<String> = emptyList()
 ) {
     companion object {
-        /** PRESUPUNERI. De înlocuit cu ce arată logcat-ul pe unitatea reală. */
+        private const val KSW = "com.choiceway.eventcenter.EventUtils"
+        private const val KSW_8902 = "com.szchoiceway.eventcenter.EventUtils.ZXW_SENDBROADCAST8902MOD"
+
+        /**
+         * Primele intrări din fiecare listă sunt ale unității KSW din mașină,
+         * citite din aplicațiile ei (EventCenter, ksw_dashboard): sunt exact
+         * acțiunile și cheile pe care le ascultă dashboard-ul vendorului. Restul
+         * rămân PRESUPUNERI pentru alte plăci (GS/ZXW).
+         */
         val DEFAULT = CanBroadcastConfig(
             actions = listOf(
+                "$KSW.ZXW_CAN_SPEED_EVT",
+                "$KSW.ZXW_CAN_ROTATING_SPEED_EVT",
+                "$KSW.ZXW_CAN_SEATBELT_EVT",
+                "$KSW_8902",
                 "android.intent.action.CAN_DATA",
                 "com.mcu.CAN_INFO",
                 "com.android.mcu.CAR_INFO",
                 "com.zxw.canbus.DATA"
             ),
-            speedKeys = listOf("speed", "car_speed", "vehicle_speed", "kmh"),
-            rpmKeys = listOf("rpm", "engine_rpm", "revs"),
-            handbrakeKeys = listOf("handbrake", "parking_brake", "brake"),
+            speedKeys = listOf("$KSW.ZXW_CAN_SPEED_EVT_EXTRA", "${KSW_8902}_ShunShiSuDu", "speed", "car_speed", "vehicle_speed", "kmh"),
+            rpmKeys = listOf("$KSW.ZXW_CAN_ROTATING_SPEED_EVT_EXTRA", "${KSW_8902}_fadongjizhuansu", "rpm", "engine_rpm", "revs"),
+            handbrakeKeys = listOf("${KSW_8902}_shousha", "handbrake", "parking_brake", "brake"),
             reverseKeys = listOf("reverse", "back_car", "rear_gear"),
             // Tot presupuneri, ca si restul. Daca unitatea chiar retransmite
             // butonul Sport, numele cheii se citeste din ecranul de Diagnostic,
@@ -205,7 +233,9 @@ data class CanBroadcastConfig(
                 Door.REAR_RIGHT to "door_rr",
                 Door.TRUNK to "door_trunk",
                 Door.HOOD to "door_hood"
-            )
+            ),
+            reverseStartActions = listOf("$KSW.MCU_MSG_BACKCAR_START"),
+            reverseEndActions = listOf("$KSW.MCU_MSG_BACKCAR_END")
         )
     }
 }

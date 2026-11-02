@@ -38,6 +38,10 @@ object Services {
     lateinit var net: ConnectivityMonitor
         private set
 
+    /** Telefonul pe unitatea KSW - modulul nu trece prin Bluetooth-ul Android. */
+    lateinit var kswBt: KswBluetooth
+        private set
+
     /** Ținută separat: ecranul de diagnostic afișează extras-urile brute din ea. */
     lateinit var broadcastCan: BroadcastCanDataSource
         private set
@@ -57,6 +61,7 @@ object Services {
             keys = HardKeyRouter(prefs)
             media = MediaHub(appContext)
             net = ConnectivityMonitor(appContext)
+            kswBt = KswBluetooth(appContext, scope)
             initialized = true
         }
     }

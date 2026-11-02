@@ -4,6 +4,7 @@ import android.app.Application
 import ro.e92.launcher.core.CrashGuard
 import ro.e92.launcher.core.Services
 import ro.e92.launcher.core.SettingsBackup
+import ro.e92.launcher.remote.DiagServer
 
 class E92Application : Application() {
     override fun onCreate() {
@@ -19,5 +20,8 @@ class E92Application : Application() {
         // Cold start-ul are buget de 1.5 s pana la home interactiv.
         Services.init(this)
         SettingsBackup.startAutoBackup(this, Services.prefs)
+
+        // Pe firul lui; doar deschide un socket, nu întârzie home-ul.
+        DiagServer.start(this)
     }
 }

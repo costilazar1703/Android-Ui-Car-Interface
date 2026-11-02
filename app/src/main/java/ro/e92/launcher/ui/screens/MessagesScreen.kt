@@ -1,5 +1,6 @@
 package ro.e92.launcher.ui.screens
 
+import ro.e92.launcher.core.AppLaunch
 import android.content.Intent
 import android.provider.Settings
 import ro.e92.launcher.R
@@ -50,7 +51,7 @@ class MessagesScreen(host: ScreenHost) : SplitScreen(host) {
             DetailRow(
                 id = "msg_bt",
                 title = context.getString(R.string.set_bluetooth),
-                onActivate = { openSystem(Settings.ACTION_BLUETOOTH_SETTINGS) }
+                onActivate = { AppLaunch.openBluetooth(context) }
             ),
             DetailRow(
                 id = "msg_bt_screen",
