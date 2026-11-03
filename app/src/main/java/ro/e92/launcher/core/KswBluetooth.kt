@@ -162,13 +162,9 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         if (_state.value.call != Call.NONE) return
         lastFullRestartAt = now
         EventLog.log(TAG, "refac lanțul Bluetooth ($reason)")
-        withContext(Dispatchers.IO) {
-            runCatching {
-                Runtime.getRuntime().exec(arrayOf("setprop", "ctl.stop", BRIDGE_SERVICE)).waitFor()
-            }
-            Thread.sleep(BRIDGE_STOP_GAP_MS)
-            ensureBridge()
-        }
+        // Stiva Feasycom nu se oprește: repornită peste un cip deja inițializat
+        // ajunge să vadă telefonul, dar nu mai termină asocierea (2026-11-03).
+        withContext(Dispatchers.IO) { ensureBridge() }
         restartKswService()
         startWatchdog(reason)
         delay(HEALTHY_WITHIN_MS)
@@ -480,7 +476,15 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
 
     fun dial(number: String) = command { call(Tx.DIAL_NUMBER) { it.writeString(number) } }
 
-    fun playPause() = command { call(Tx.PLAY_PAUSE) }
+    /** Când a cerut șoferul ultima oară play/pauză - o oprire de atunci e a lui. */
+    @Volatile
+    var lastPlayPauseAt = 0L
+        private set
+
+    fun playPause() {
+        lastPlayPauseAt = android.os.SystemClock.elapsedRealtime()
+        command { call(Tx.PLAY_PAUSE) }
+    }
     fun next() = command { call(Tx.NEXT) }
     fun previous() = command { call(Tx.PREV) }
 
@@ -698,11 +702,12 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         /** Starea HSHF vine la ~5 s; fără nimic în 15 s, serviciul nu vorbește cu modulul. */
         const val HEALTHY_WITHIN_MS = 15_000L
         const val HEALTH_CHECK_AFTER_MS = 15_000L
-        const val BRIDGE_STOP_GAP_MS = 1_500L
         /** O refacere completă rupe legătura; nu mai des de atât, ca să nu buclăm. */
         const val FULL_RESTART_COOLDOWN_MS = 3 * 60_000L
 
         const val PACKAGE = "com.szchoiceway.btsuite"
+        /** Ecranul Bluetooth KSW: cât există (și în spate), BTService lasă muzica să cânte. */
+        const val MAIN_ACTIVITY = "com.szchoiceway.btsuite.BTMainActivity"
         private const val ACTION_SERVICE = "com.szchoiceway.btsuite.BTService"
         private const val DESCRIPTOR = "com.szchoiceway.btsuite.IBTService"
 

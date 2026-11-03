@@ -114,6 +114,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         if (savedInstanceState == null) armGuard()
         maybePlayIntro(savedInstanceState)
         observeCalls()
+        observeMusicHost()
         registerReceiver(kswKeyReceiver, IntentFilter().apply {
             addAction(KSW_KNOB_ACTION)
             addAction(KSW_CAN_KEY_ACTION)
@@ -183,6 +184,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        // Revenirea noastră (după ecranul KSW) păstrează ecranul la care erai.
+        if (intent.getBooleanExtra(EXTRA_RECLAIM, false)) return
         // Apăsarea butonului HOME în timp ce suntem deja în față: înapoi la rădăcină.
         goHome()
     }
@@ -196,6 +199,10 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             if (intro == null) playIntro()
         }
         applyImmersive()
+        if (hostPending) {
+            hostPending = false
+            binding.rootLayout.postDelayed({ hostKswMusic(hostPendingReason) }, HOST_AFTER_RESUME_MS)
+        }
     }
 
     override fun onPause() {
@@ -652,6 +659,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         startActivity(Intent(Intent.ACTION_MAIN)
             .addCategory(Intent.CATEGORY_HOME)
             .setClass(this, HomeActivity::class.java)
+            .putExtra(EXTRA_RECLAIM, true)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         if (attempt + 1 < WAKE_RETRY_DELAYS_MS.size) {
             binding.rootLayout.postDelayed({ bringToFront(attempt + 1) }, WAKE_RETRY_DELAYS_MS[attempt + 1])
@@ -779,6 +787,75 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             else -> Unit
         }
         return true
+    }
+
+    // ------------------------------------------------------- gazda muzicii KSW
+    //
+    // BTService (bTSuite) verifică în fiecare secundă dacă ecranul lui de
+    // Bluetooth există; dacă nu (închis cu BACK sau nedeschis de la pornire),
+    // oprește muzica imediat după play. Cu ecranul lăsat în spate (ca la HOME)
+    // cântă oricât. Așa că îl deschidem noi o clipă și revenim în față: când
+    // se conectează telefonul și când muzica e oprită singură la scurt timp
+    // după pornire. Doar cât meniul nostru e în față - nu scoatem șoferul din
+    // Waze; altfel o facem la următoarea revenire.
+
+    private var hostWasConnected = false
+    private var streamingSince = 0L
+    private var hostPending = false
+    private var hostPendingReason = ""
+
+    private fun observeMusicHost() {
+        lifecycleScope.launch {
+            Services.kswBt.state.collect { st ->
+                val connected = st.link >= ro.e92.launcher.core.KswBluetooth.Link.CONNECTED
+                if (connected && !hostWasConnected) hostKswMusic("telefon conectat")
+                hostWasConnected = connected
+
+                val now = SystemClock.elapsedRealtime()
+                if (st.audioStreaming) {
+                    if (streamingSince == 0L) streamingSince = now
+                } else if (streamingSince != 0L) {
+                    val lasted = now - streamingSince
+                    streamingSince = 0L
+                    val byDriver = now - Services.kswBt.lastPlayPauseAt < HOST_DRIVER_PAUSE_MS
+                    if (connected && lasted < HOST_CUT_SHORT_MS && !byDriver) {
+                        hostKswMusic("muzica oprită după ${lasted / 1000.0}s", resume = true)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun hostKswMusic(reason: String, resume: Boolean = false) {
+        if (!Services.kswBt.isInstalled) return
+        if (Services.kswBt.state.value.call != ro.e92.launcher.core.KswBluetooth.Call.NONE) return
+        if (Services.vehicle.state.value.reverseGear == true) return
+        if (!resumedNow) {
+            hostPending = true
+            hostPendingReason = reason
+            return
+        }
+        // Peste salut nu: după el.
+        if (intro != null) {
+            binding.rootLayout.postDelayed({ hostKswMusic(reason, resume) }, HOST_AFTER_RESUME_MS)
+            return
+        }
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastHostAt < HOST_COOLDOWN_MS) return
+        lastHostAt = now
+        ro.e92.launcher.core.EventLog.log("Home", "deschid Bluetooth KSW în spate ($reason)")
+        val opened = runCatching {
+            startActivity(Intent()
+                .setClassName(ro.e92.launcher.core.KswBluetooth.PACKAGE, ro.e92.launcher.core.KswBluetooth.MAIN_ACTIVITY)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION))
+        }.isSuccess
+        if (!opened) return
+        binding.rootLayout.postDelayed({
+            bringToFront(0)
+            if (resume) binding.rootLayout.postDelayed({
+                if (!Services.kswBt.state.value.audioStreaming) Services.kswBt.playPause()
+            }, HOST_RESUME_PLAY_MS)
+        }, HOST_RETURN_MS)
     }
 
     /** Turațiile trec de la oprit la mers: anunțăm Bluetooth-ul să se verifice. */
@@ -1106,6 +1183,17 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
         /** Cât după pornire/trezire ne apărăm locul în față. */
         const val GUARD_WINDOW_MS = 40_000L
+        const val EXTRA_RECLAIM = "ro.e92.launcher.RECLAIM"
+        /** Cât stă ecranul KSW deschis până revenim: destul cât să-și facă onCreate. */
+        const val HOST_RETURN_MS = 900L
+        const val HOST_RESUME_PLAY_MS = 1_500L
+        const val HOST_AFTER_RESUME_MS = 1_200L
+        /** Oprirea făcută de BTService vine în ~1 s de la play; peste 4 s e altceva. */
+        const val HOST_CUT_SHORT_MS = 4_000L
+        const val HOST_DRIVER_PAUSE_MS = 3_000L
+        const val HOST_COOLDOWN_MS = 20_000L
+        /** Pe proces, nu pe instanță: o a doua instanță a activității n-o mai dublează. */
+        var lastHostAt = 0L
         const val GUARD_MAX_RECLAIMS = 3
         /** O atingere sau o tastă atât de recentă înseamnă că șoferul a ales să plece. */
         const val GUARD_INPUT_GRACE_MS = 2_500L
