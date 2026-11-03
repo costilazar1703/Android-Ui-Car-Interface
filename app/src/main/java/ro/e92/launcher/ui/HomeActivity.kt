@@ -808,7 +808,10 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         lifecycleScope.launch {
             Services.kswBt.state.collect { st ->
                 val connected = st.phoneConnected
-                if (connected && !hostWasConnected) hostKswMusic("telefon conectat")
+                // Nu chiar în clipa conectării: stiva încă negociază profilurile.
+                if (connected && !hostWasConnected) binding.rootLayout.postDelayed({
+                    if (Services.kswBt.state.value.phoneConnected) hostKswMusic("telefon conectat")
+                }, HOST_AFTER_CONNECT_MS)
                 hostWasConnected = connected
 
                 val now = SystemClock.elapsedRealtime()
@@ -1194,6 +1197,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         const val HOST_CUT_SHORT_MS = 4_000L
         const val HOST_DRIVER_PAUSE_MS = 3_000L
         const val HOST_COOLDOWN_MS = 20_000L
+        const val HOST_AFTER_CONNECT_MS = 8_000L
         /** Pe proces, nu pe instanță: o a doua instanță a activității n-o mai dublează. */
         var lastHostAt = 0L
         const val GUARD_MAX_RECLAIMS = 3

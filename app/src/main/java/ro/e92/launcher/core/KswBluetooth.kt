@@ -365,9 +365,9 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
                 val s = _state.value
                 if (s.link >= Link.CONNECTING || s.audioConnected || s.visible || s.call != Call.NONE) return@launch
                 if (s.link == Link.IDLE) {
-                    EventLog.log(TAG, "telefonul nu e legat după contact - reconectez (încercarea ${attempt + 1})")
-                    call(Tx.CONNECT)
-                    delay(STEP_MS)
+                    EventLog.log(TAG, "telefonul nu e legat după contact - reconectez muzica (încercarea ${attempt + 1})")
+                    // Doar A2DP: o cerere HFP spre iPhone (cu „Apeluri" oprit) face
+                    // stiva Feasycom să cadă cu tot cu muzică (2026-11-03 22:00).
                     call(Tx.CON_LAST_A2DP)
                 }
             }
@@ -445,12 +445,8 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         call(Tx.PAIR_DEVICE) { it.writeInt(0) }
     }
 
-    /** Reconectează ultimul telefon: apeluri (HFP) și muzică (A2DP). */
-    fun reconnectLast() = command {
-        call(Tx.CONNECT)
-        delay(STEP_MS)
-        call(Tx.CON_LAST_A2DP)
-    }
+    /** Reconectează ultimul telefon, doar muzica (A2DP) - vezi startWatchdog. */
+    fun reconnectLast() = command { call(Tx.CON_LAST_A2DP) }
 
     /**
      * Ce făceai de mână când telefonul nu mai vedea unitatea, fără repornirea
