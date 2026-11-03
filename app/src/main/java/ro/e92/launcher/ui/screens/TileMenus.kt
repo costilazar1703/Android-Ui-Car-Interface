@@ -54,10 +54,15 @@ class NavigationMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 value = AppLaunch.statusLabel(context, prefs.mapsPackage),
                 onActivate = { AppLaunch.launch(context, prefs.mapsPackage, menuTitle) }
             ),
-            // Atribuirea celor două aplicații se face în Setări → Assigned apps,
-            // unde stau oricum toate celelalte. Aici ar fi fost două rânduri în
-            // plus care fac același lucru.
-            settingsEntry(host, context, SettingsScreen.NAV_APPS)
+            // CarPlay e a treia navigație din mașină (Apple Maps, Waze prin
+            // telefon). Atribuirea aplicațiilor rămâne în Setări → Assigned apps.
+            WheelEntry(
+                id = "nav_carplay",
+                icon = R.drawable.ic_menu_carplay,
+                title = context.getString(R.string.menu_carplay),
+                value = AppLaunch.statusLabel(context, prefs.carPlayPackage),
+                onActivate = { AppLaunch.launch(context, prefs.carPlayPackage, menuTitle) }
+            )
         )
     }
 }

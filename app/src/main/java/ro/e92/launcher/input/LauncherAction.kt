@@ -20,8 +20,8 @@ enum class LauncherAction(val label: String) {
     BACK("BACK"),
     OPTION("OPTION"),
 
-    NAV("NAV"),
-    MEDIA("CD / MEDIA"),
+    NAV("NAV → meniul Navigation"),
+    MEDIA("MEDIA → meniul Media"),
     PHONE("TEL"),
     RADIO("RADIO"),
 

@@ -30,7 +30,6 @@ import ro.e92.launcher.focus.FocusEngine
 import ro.e92.launcher.input.KeyEventLog
 import ro.e92.launcher.input.LauncherAction
 import ro.e92.launcher.input.RotaryAccelerator
-import ro.e92.launcher.nav.NavLauncher
 import ro.e92.launcher.net.ConnectivityMonitor
 import ro.e92.launcher.ui.screens.AppDrawerScreen
 import ro.e92.launcher.ui.widget.BootIntroView
@@ -304,7 +303,9 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             // Butonul hard NAV lansează DIRECT aplicația de navigație — o singură
             // apăsare în mers. Pop-up-ul cu Waze/Chrome e pentru intrarea din meniu,
             // unde ai timp să alegi.
-            LauncherAction.NAV -> { NavLauncher.launch(this, Services.prefs); true }
+            // Ca MEDIA: butonul deschide meniul dalei, cu Waze, Google Maps și
+            // CarPlay la o rotire distanță, nu o singură aplicație fixă.
+            LauncherAction.NAV -> { openTile(TileAction.NAVIGATION); true }
             LauncherAction.MEDIA -> { openTile(TileAction.MEDIA); true }
             LauncherAction.PHONE -> { openTile(TileAction.TELEPHONE); true }
             LauncherAction.APPS -> { pushUnique(AppDrawerScreen::class.java) { AppDrawerScreen(this) }; true }
