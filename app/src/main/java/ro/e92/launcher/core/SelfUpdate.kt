@@ -29,7 +29,10 @@ object SelfUpdate {
 
     suspend fun check(context: Context, url: String): Result = withContext(Dispatchers.IO) {
         val apk = File(updatesDir(context), "update.apk")
-        if (!download(url, apk)) return@withContext Result.NO_SERVER
+        // Un transfer întrerupt („unexpected end of stream") nu înseamnă că
+        // laptopul lipsește: pe Wi-Fi slab se întâmplă. Mai încercăm de câteva ori.
+        val ok = (1..ATTEMPTS).any { download(url, apk) }
+        if (!ok) return@withContext Result.NO_SERVER
         val installed = File(context.applicationInfo.sourceDir)
         if (sha256(apk) == sha256(installed)) return@withContext Result.UP_TO_DATE
         withContext(Dispatchers.Main) { install(context, apk) }
@@ -64,10 +67,15 @@ object SelfUpdate {
         return try {
             conn.connectTimeout = TIMEOUT_MS
             conn.readTimeout = TIMEOUT_MS
-            if (conn.responseCode != 200) return false
+            val code = conn.responseCode
+            if (code != 200) {
+                android.util.Log.w(TAG, "$url -> HTTP $code")
+                return false
+            }
             conn.inputStream.use { input -> out.outputStream().use { input.copyTo(it) } }
             out.length() > 0
         } catch (e: Exception) {
+            android.util.Log.w(TAG, "descărcarea de la $url a eșuat", e)
             false
         } finally {
             conn.disconnect()
@@ -88,4 +96,6 @@ object SelfUpdate {
     }
 
     private const val TIMEOUT_MS = 8_000
+    private const val TAG = "SelfUpdate"
+    private const val ATTEMPTS = 3
 }
