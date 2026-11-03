@@ -71,11 +71,7 @@ class CarStatus(
     }
 
     private fun renderAlert(state: VehicleState) {
-        val moving = (state.speedKmh ?: 0) >= MOVING_KMH
-        if (state.handbrake == true && moving) {
-            show(ctx.getString(R.string.alert_handbrake), sticky = true)
-            return
-        }
+        // Frâna de mână apare doar pe Dashboard (lângă ceasuri), nu peste meniu.
         if (banner.tag == STICKY) hide()
         // Unul pe rând: următorul așteaptă până se stinge cel de acum.
         if (banner.visibility == View.VISIBLE) return
