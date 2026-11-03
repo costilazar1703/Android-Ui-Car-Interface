@@ -242,7 +242,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         if (Services.vehicle.state.value.reverseGear == true) return
         if (Services.kswBt.state.value.call != ro.e92.launcher.core.KswBluetooth.Call.NONE) return
         guardReclaims++
-        android.util.Log.i("HomeActivity", "acoperit la pornire fără intervenția șoferului - revin în față")
+        ro.e92.launcher.core.EventLog.log("Home", "acoperit la pornire fără intervenția șoferului - revin în față")
         binding.rootLayout.postDelayed({ if (!resumedNow) bringToFront(0) }, GUARD_RECLAIM_DELAY_MS)
     }
 
@@ -619,6 +619,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                     val off = screenOffAt ?: return
                     screenOffAt = null
                     if (SystemClock.elapsedRealtime() - off < WAKE_GREETING_AFTER_MS) return
+                    ro.e92.launcher.core.EventLog.log("Home", "trezire după ${(SystemClock.elapsedRealtime() - off) / 1000}s")
                     armGuard()
                     goHome()
                     carStatus.newDrive()
@@ -834,7 +835,15 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         val zone = java.util.TimeZone.getDefault()
         clockFormat.timeZone = zone
         dateFormat.timeZone = zone
-        clockDate.time = System.currentTimeMillis()
+        // După o repornire ceasul unității e în 2013 până se sincronizează;
+        // GpsClock dă ora din GPS, iar fără ea arătăm „--:--", nu o oră falsă.
+        val now = ro.e92.launcher.core.GpsClock.now()
+        if (now == null) {
+            binding.clock.text = "--:--"
+            binding.dateText.text = ""
+            return
+        }
+        clockDate.time = now
         binding.clock.text = clockFormat.format(clockDate)
         binding.dateText.text = dateFormat.format(clockDate)
     }

@@ -51,7 +51,7 @@ object KswVolume {
         val wanted = Services.prefs.unitVolume
         val current = KswSettings.read(context, MAIN_VOL)?.toIntOrNull() ?: return
         if (current >= wanted) return
-        Log.i(TAG, "volumul principal KSW era $current - îl ridic la $wanted")
+        EventLog.log(TAG, "volumul principal KSW era $current - îl ridic la $wanted")
         set(context, wanted)
     }
 
@@ -94,6 +94,6 @@ object KswVolume {
         val ok = runCatching {
             context.bindService(Intent(EVENT_SERVICE).setPackage(EVENT_PACKAGE), connection, Context.BIND_AUTO_CREATE)
         }.onFailure { Log.w(TAG, "nu mă pot lega de EventService", it) }.getOrDefault(false)
-        if (!ok) Log.w(TAG, "EventService indisponibil - volumul se aplică la următoarea pornire")
+        if (!ok) EventLog.log(TAG, "EventService indisponibil - volumul se aplică la următoarea pornire")
     }
 }

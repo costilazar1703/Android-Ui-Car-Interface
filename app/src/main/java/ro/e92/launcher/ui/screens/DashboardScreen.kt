@@ -60,28 +60,26 @@ class DashboardScreen(host: ScreenHost) : Screen(host) {
             startAngle = 142f,
             sweepAngle = 257f
         )
-        // Cadranele mici arată ce trimite unitatea KSW: combustibil și autonomie.
-        // Turbo și ulei rămân în VehicleState pentru o sursă OBD viitoare, dar
-        // fără ea ar fi stat permanent pe „--".
-        //
-        // Combustibilul: rezervorul E92 are 63 l; zona roșie e rezerva, sub 8 l.
+        // Cadranele mici: turbo și lichid de răcire, din adaptorul OBD.
         binding.gaugeBoost.configure(
-            caption = "FUEL",
-            unit = context.getString(R.string.unit_litre),
-            maxValue = 65f,
-            majorTickStep = 10f,
+            caption = "BOOST",
+            unit = "bar",
+            maxValue = 2.5f,
+            majorTickStep = 0.5f,
             minorPerMajor = 1,
-            labelStep = 20f,
+            labelStep = 1f,
+            decimals = 1,
             startAngle = 180f,
             sweepAngle = 180f
         )
         binding.gaugeOil.configure(
-            caption = "RANGE",
-            unit = context.getString(R.string.unit_km),
-            maxValue = 1000f,
-            majorTickStep = 200f,
+            caption = "COOLANT",
+            unit = "°C",
+            maxValue = 130f,
+            majorTickStep = 20f,
             minorPerMajor = 1,
-            labelStep = 500f,
+            labelStep = 40f,
+            redlineFrom = 110f,
             startAngle = 180f,
             sweepAngle = 180f
         )
@@ -138,12 +136,12 @@ class DashboardScreen(host: ScreenHost) : Screen(host) {
         if (rpm != null) binding.gaugeRpm.setValue(rpm.toFloat())
         else binding.gaugeRpm.setUnknown()
 
-        val fuel = state.fuel
-        if (fuel != null) binding.gaugeBoost.setValue(fuel.toFloat())
+        val boost = state.boostBar
+        if (boost != null) binding.gaugeBoost.setValue(boost)
         else binding.gaugeBoost.setUnknown()
 
-        val range = state.rangeKm
-        if (range != null) binding.gaugeOil.setValue(range.toFloat())
+        val coolant = state.coolantTempC
+        if (coolant != null) binding.gaugeOil.setValue(coolant.toFloat())
         else binding.gaugeOil.setUnknown()
 
         val warnings = buildList {

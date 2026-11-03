@@ -48,6 +48,7 @@ function Get-Text([string] $path) {
 switch ($Command) {
     "info"   { Get-Text "/info" }
     "keys"   { Get-Text "/keys" }
+    "events" { $n = if ($Arg) { $Arg } else { 400 }; Get-Text "/events?n=$n" }
     "logcat" { $n = if ($Arg) { $Arg } else { 500 }; Get-Text "/logcat?n=$n" }
     "shell"  {
         $tmp = New-TemporaryFile

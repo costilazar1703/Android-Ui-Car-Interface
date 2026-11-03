@@ -11,6 +11,12 @@ class E92Application : Application() {
         super.onCreate()
         // Primul: un crash din orice vine dupa trebuie sa fie prins si scris.
         CrashGuard.install(this)
+        ro.e92.launcher.core.EventLog.init(this)
+        ro.e92.launcher.core.EventLog.log(
+            "App",
+            "pornire launcher (unitatea pornită de ${android.os.SystemClock.elapsedRealtime() / 1000}s, " +
+                "ceas ${if (ro.e92.launcher.core.GpsClock.systemClockValid()) "bun" else "resetat"})"
+        )
 
         // Inainte de Services: componentele citesc setarile o singura data, la
         // constructie, deci restaurarea trebuie sa fie deja pe disc.

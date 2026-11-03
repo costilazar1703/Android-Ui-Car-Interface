@@ -232,6 +232,7 @@ object DiagServer {
         when (req.path) {
             "/", "/help" -> respond(out, 200, HELP)
             "/info" -> respond(out, 200, info())
+            "/events" -> respond(out, 200, ro.e92.launcher.core.EventLog.tail(req.query["n"]?.toIntOrNull() ?: 400))
             "/keys" -> respond(out, 200, KeyEventLog.snapshot().joinToString("\n").ifEmpty { "(nicio tastă)" } + "\n")
             "/logcat" -> {
                 val lines = req.query["n"]?.toIntOrNull() ?: 500

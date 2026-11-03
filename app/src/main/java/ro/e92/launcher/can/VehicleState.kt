@@ -22,6 +22,8 @@ data class VehicleState(
     val boostBar: Float? = null,
     /** Temperatura uleiului de motor, °C. */
     val oilTempC: Int? = null,
+    /** Temperatura lichidului de răcire, °C (OBD PID 05). */
+    val coolantTempC: Int? = null,
     /** Combustibil rămas, cum îl raportează unitatea (pe KSW: litri). */
     val fuel: Int? = null,
     /** Autonomia estimată de mașină, km. */

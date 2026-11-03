@@ -43,6 +43,7 @@ class GpsSpeedDataSource(private val context: Context) : CanDataSource {
 
     private val listener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
+            ro.e92.launcher.core.GpsClock.onFix(location.time)
             // hasSpeed() e false pe fix-uri fără doppler; nu inventăm o valoare.
             if (!location.hasSpeed()) return
             _state.value = VehicleState(

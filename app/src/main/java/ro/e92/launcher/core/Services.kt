@@ -80,6 +80,11 @@ object Services {
         Prefs.CAN_GPS -> listOf(GpsSpeedDataSource(appContext))
         else -> listOfNotNull(
             broadcastCan,
+            // Înaintea GPS-ului: viteza din OBD e fără întârziere.
+            ro.e92.launcher.can.ObdDataSource(
+                scope,
+                if (isEmulator()) listOf("10.0.2.2") else listOf("192.168.0.10", "192.168.4.1")
+            ),
             GpsSpeedDataSource(appContext),
             // Doar pe emulator. Pe unitate mock-ul era „live" lângă datele reale
             // și umplea golurile cu valori inventate (1047 rpm cu motorul oprit,

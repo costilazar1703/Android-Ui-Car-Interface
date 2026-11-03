@@ -77,6 +77,10 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
 
     @Volatile
     private var binder: IBinder? = null
+
+    /** Ultimele stări jurnalizate, ca repetările modulului să nu umple jurnalul. */
+    private var lastHshf = -1
+    private var lastAv = -1
     private var started = false
 
     val isInstalled: Boolean
@@ -129,19 +133,19 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
      */
     private fun ensureBridge(): Boolean {
         if (File(GOC_SERIAL).exists()) return false
-        Log.w(TAG, "$GOC_SERIAL lipsește - pornesc serviciul $BRIDGE_SERVICE")
+        EventLog.log(TAG, "$GOC_SERIAL lipsește - pornesc serviciul $BRIDGE_SERVICE")
         runCatching {
             Runtime.getRuntime().exec(arrayOf("setprop", "ctl.start", BRIDGE_SERVICE)).waitFor()
         }.onFailure { Log.w(TAG, "nu pot porni $BRIDGE_SERVICE", it) }
         repeat(BRIDGE_WAIT_STEPS) {
             if (File(GOC_SERIAL).exists()) {
-                Log.i(TAG, "$GOC_SERIAL a apărut")
+                EventLog.log(TAG, "$GOC_SERIAL a apărut")
                 return true
             }
             Thread.sleep(BRIDGE_WAIT_STEP_MS)
         }
         // Fără punte, repornirea BTService n-ar schimba nimic; o lăsăm în pace.
-        Log.w(TAG, "$GOC_SERIAL tot lipsește după pornirea $BRIDGE_SERVICE")
+        EventLog.log(TAG, "$GOC_SERIAL tot lipsește după pornirea $BRIDGE_SERVICE")
         return false
     }
 
@@ -153,7 +157,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
      */
     private suspend fun restartKswService() {
         val component = Intent().setClassName(PACKAGE, SERVICE_CLASS)
-        Log.w(TAG, "repornesc BTService ca să redeschidă $GOC_SERIAL")
+        EventLog.log(TAG, "repornesc BTService ca să redeschidă $GOC_SERIAL")
         runCatching { context.unbindService(connection) }
         binder = null
         runCatching { context.stopService(component) }
@@ -175,10 +179,10 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     private fun keepModuleType(): Boolean {
         val wanted = Services.prefs.btModuleType
         val current = KswSettings.read(context, KswSettings.BT_TYPE)
-        Log.i(TAG, "tipul modulului Bluetooth: $current (vrem $wanted)")
+        EventLog.log(TAG, "tipul modulului Bluetooth: $current (vrem $wanted)")
         if (current == wanted) return false
         val written = KswSettings.write(context, KswSettings.BT_TYPE, wanted)
-        if (written) Log.w(TAG, "tipul modulului era $current - l-am pus pe $wanted")
+        if (written) EventLog.log(TAG, "tipul modulului era $current - l-am pus pe $wanted")
         return written
     }
 
@@ -206,7 +210,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         if (!Services.prefs.blockKswReopen) return
         if (KswSettings.read(context, KswSettings.MODE_MEMORY) != "0") {
             KswSettings.write(context, KswSettings.MODE_MEMORY, "0")
-            Log.i(TAG, "am oprit reluarea ultimei surse la pornire")
+            EventLog.log(TAG, "am oprit reluarea ultimei surse la pornire")
         }
     }
 
@@ -222,7 +226,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
                 delay(BRIDGE_CHECK_MS)
                 val restarted = withContext(Dispatchers.IO) { ensureBridge() }
                 if (restarted) {
-                    Log.w(TAG, "puntea Bluetooth căzuse - am repornit-o")
+                    EventLog.log(TAG, "puntea Bluetooth căzuse - am repornit-o")
                     restartKswService()
                 }
             }
@@ -251,13 +255,20 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     private val wakeReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context?, intent: Intent?) {
             when (intent?.action) {
-                android.content.Intent.ACTION_SCREEN_OFF -> screenOffAt = android.os.SystemClock.elapsedRealtime()
+                android.content.Intent.ACTION_SCREEN_OFF -> {
+                    screenOffAt = android.os.SystemClock.elapsedRealtime()
+                    EventLog.log(TAG, "ecran stins")
+                }
                 android.content.Intent.ACTION_SCREEN_ON -> {
                     val off = screenOffAt
                     screenOffAt = 0L
                     if (off != 0L && android.os.SystemClock.elapsedRealtime() - off > WAKE_AFTER_MS) startWatchdog("trezire")
                 }
-                ACTION_ACC -> if (!intent.getBooleanExtra(EXTRA_ACC_OFF, true)) startWatchdog("contact")
+                ACTION_ACC -> {
+                    val off = intent.getBooleanExtra(EXTRA_ACC_OFF, true)
+                    EventLog.log(TAG, if (off) "contact oprit" else "contact pornit")
+                    if (!off) startWatchdog("contact")
+                }
             }
         }
     }
@@ -273,7 +284,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         watchdog?.cancel()
         val started = android.os.SystemClock.elapsedRealtime()
         watchdog = scope.launch {
-            Log.i(TAG, "watchdog ($reason)")
+            EventLog.log(TAG, "watchdog ($reason)")
             repeat(RECONNECT_ATTEMPTS) { attempt ->
                 delay(RECONNECT_AFTER_MS)
                 if (binder == null) bind()
@@ -281,7 +292,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
                 val s = _state.value
                 if (s.link >= Link.CONNECTING || s.visible || s.call != Call.NONE) return@launch
                 if (s.link == Link.IDLE) {
-                    Log.i(TAG, "telefonul nu e legat după contact - reconectez (încercarea ${attempt + 1})")
+                    EventLog.log(TAG, "telefonul nu e legat după contact - reconectez (încercarea ${attempt + 1})")
                     call(Tx.CONNECT)
                     delay(STEP_MS)
                     call(Tx.CON_LAST_A2DP)
@@ -293,7 +304,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
             val quiet = lastModuleEventAt < started
             val stuck = callInt(Tx.GET_CONNECT_STATE).let { it == null || it == 0 }
             if (quiet && stuck && binder != null) {
-                Log.w(TAG, "modulul nu răspunde - BTService nu mai vorbește cu el")
+                EventLog.log(TAG, "modulul nu răspunde - BTService nu mai vorbește cu el")
                 _state.value = _state.value.copy(moduleSilent = true)
             }
         }
@@ -303,7 +314,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         val intent = Intent(ACTION_SERVICE).setPackage(PACKAGE)
         val ok = runCatching { context.bindService(intent, connection, Context.BIND_AUTO_CREATE) }
             .getOrDefault(false)
-        if (!ok) Log.w(TAG, "bindService a refuzat BTService")
+        if (!ok) EventLog.log(TAG, "bindService a refuzat BTService")
     }
 
     private val connection = object : ServiceConnection {
@@ -329,7 +340,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
      */
     fun repair() {
         scope.launch {
-            Log.w(TAG, "reparare Bluetooth cerută din Settings")
+            EventLog.log(TAG, "reparare Bluetooth cerută din Settings")
             keepModuleType()
             withContext(Dispatchers.IO) { ensureBridge() }
             restartKswService()
@@ -356,7 +367,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         // Modul de împerechere cu un telefon legat îl poate deconecta; un
         // telefon nou se adaugă doar când nu e niciunul conectat.
         if (_state.value.link >= Link.CONNECTED) {
-            Log.i(TAG, "nu intru în împerechere cu un telefon conectat")
+            EventLog.log(TAG, "nu intru în împerechere cu un telefon conectat")
             return@command
         }
         call(Tx.PAIR_DEVICE) { it.writeInt(0) }
@@ -457,6 +468,16 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
             val value = intent.getIntExtra(EXTRA_INT, -1)
             val text = intent.getStringExtra(EXTRA_STR)
             val s = _state.value
+            // Doar schimbările de stare - modulul repetă starea la fiecare 5 s.
+            if (intent.action == EVT_HSHF_STATUS && value != lastHshf) {
+                lastHshf = value
+                EventLog.log(TAG, "Bluetooth HSHF $value (${linkOf(value)})")
+            }
+            if (intent.action == EVT_AV_STATUS && value != lastAv) {
+                lastAv = value
+                EventLog.log(TAG, "Bluetooth audio $value" + if (value == AV_STREAMING) " streaming" else "")
+            }
+            if (intent.action == EVT_PAIR_STATUS) EventLog.log(TAG, "Bluetooth pair status $value")
             _state.value = when (intent.action) {
                 EVT_HSHF_STATUS -> {
                     val call = callOf(value)
