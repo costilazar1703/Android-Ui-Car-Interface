@@ -325,8 +325,10 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     /** Chipul din stânga jos: telefonul legat la modulul KSW, cât e legat. */
     private fun renderPhone(st: ro.e92.launcher.core.KswBluetooth.State) {
         val connected = st.link >= ro.e92.launcher.core.KswBluetooth.Link.CONNECTED && st.phoneName.isNotBlank()
-        binding.phoneName.text = st.phoneName
-        binding.phoneChip.visibility = if (connected) View.VISIBLE else View.GONE
+        // Modulul care nu răspunde se anunță aici, unde se vede fără să cauți:
+        // e singura situație din care te scoate doar o repornire a navigației.
+        binding.phoneName.text = if (st.moduleSilent) context.getString(R.string.bt_status_silent_short) else st.phoneName
+        binding.phoneChip.visibility = if (connected || st.moduleSilent) View.VISIBLE else View.GONE
     }
 
     private fun focusFirstTileOfPage(page: Int): Boolean {

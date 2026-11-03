@@ -54,7 +54,13 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         /** Numele din agenda telefonului, când modulul îl are. */
         val callName: String = "",
         /** SystemClock.elapsedRealtime() la care a început convorbirea; 0 = nu vorbim. */
-        val callStartedAt: Long = 0L
+        val callStartedAt: Long = 0L,
+        /**
+         * Modulul n-a raportat nimic de un minut după pornire / contact și nici
+         * nu iese din „initialising": serviciul KSW nu-i mai vorbește (vezi
+         * [startWatchdog]). Doar o repornire a navigației îl readuce.
+         */
+        val moduleSilent: Boolean = false
     )
 
     private val _state = MutableStateFlow(State())
@@ -79,7 +85,85 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
             addAction(EVT_CONTACT_NUM)
             addAction(EVT_CONTACT_ADDRESS)
         })
-        if (isInstalled) bind()
+        context.registerReceiver(wakeReceiver, IntentFilter().apply {
+            addAction(android.content.Intent.ACTION_SCREEN_OFF)
+            addAction(android.content.Intent.ACTION_SCREEN_ON)
+            addAction(ACTION_ACC)
+        })
+        if (isInstalled) {
+            bind()
+            startWatchdog("pornire")
+        }
+    }
+
+    // ------------------------------------------------------------- watchdog
+    //
+    // De ce există: în BTService (bTSuite) comenzile care pornesc conectarea -
+    // „auto-connect", „conectează ultimul telefon" - se trimit O SINGURĂ DATĂ,
+    // la crearea serviciului (checkBTStatus). Unitatea însă nu repornește la
+    // contact, doar adoarme; la trezire modulul repornește și raportează
+    // „Power ON Init", iar serviciul doar își resetează starea, fără să mai
+    // ceară conectarea. De aici „uneori se conectează, uneori nu".
+    //
+    // Al doilea mod de eșec: dacă la crearea serviciului portul serial nu e
+    // încă gata, openSerialPort() înghite eroarea și nu mai reîncearcă - modulul
+    // e pornit, dar nimeni nu-i mai vorbește până la o repornire a navigației.
+    // Pe acela nu-l putem repara din afară; îl recunoaștem și îl spunem.
+
+    private var watchdog: kotlinx.coroutines.Job? = null
+    @Volatile
+    private var lastModuleEventAt = 0L
+    private var screenOffAt = 0L
+
+    private val wakeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context?, intent: Intent?) {
+            when (intent?.action) {
+                android.content.Intent.ACTION_SCREEN_OFF -> screenOffAt = android.os.SystemClock.elapsedRealtime()
+                android.content.Intent.ACTION_SCREEN_ON -> {
+                    val off = screenOffAt
+                    screenOffAt = 0L
+                    if (off != 0L && android.os.SystemClock.elapsedRealtime() - off > WAKE_AFTER_MS) startWatchdog("trezire")
+                }
+                ACTION_ACC -> if (!intent.getBooleanExtra(EXTRA_ACC_OFF, true)) startWatchdog("contact")
+            }
+        }
+    }
+
+    /**
+     * Repetă, o dată sau de două ori, exact ce face serviciul KSW la prima lui
+     * pornire: conectează ultimul telefon (HFP, apoi A2DP). Nimic dacă telefonul
+     * e deja legat, dacă e un apel sau dacă unitatea e în modul de împerechere -
+     * acolo ar strica ce face șoferul.
+     */
+    private fun startWatchdog(reason: String) {
+        if (!isInstalled) return
+        watchdog?.cancel()
+        val started = android.os.SystemClock.elapsedRealtime()
+        watchdog = scope.launch {
+            Log.i(TAG, "watchdog ($reason)")
+            repeat(RECONNECT_ATTEMPTS) { attempt ->
+                delay(RECONNECT_AFTER_MS)
+                if (binder == null) bind()
+                refreshNow()
+                val s = _state.value
+                if (s.link >= Link.CONNECTING || s.visible || s.call != Call.NONE) return@launch
+                if (s.link == Link.IDLE) {
+                    Log.i(TAG, "telefonul nu e legat după contact - reconectez (încercarea ${attempt + 1})")
+                    call(Tx.CONNECT)
+                    delay(STEP_MS)
+                    call(Tx.CON_LAST_A2DP)
+                }
+            }
+            // Tăcerea: niciun eveniment de la modul și serviciul tot „initialising".
+            val waited = android.os.SystemClock.elapsedRealtime() - started
+            if (waited < SILENT_AFTER_MS) delay(SILENT_AFTER_MS - waited)
+            val quiet = lastModuleEventAt < started
+            val stuck = callInt(Tx.GET_CONNECT_STATE).let { it == null || it == 0 }
+            if (quiet && stuck && binder != null) {
+                Log.w(TAG, "modulul nu răspunde - BTService nu mai vorbește cu el")
+                _state.value = _state.value.copy(moduleSilent = true)
+            }
+        }
     }
 
     private fun bind() {
@@ -181,18 +265,20 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     // --------------------------------------------------------------- stare
 
     fun refresh() {
-        scope.launch {
-            if (binder == null) return@launch
-            val link = linkOf(callInt(Tx.GET_CONNECT_STATE) ?: return@launch)
-            _state.value = _state.value.copy(
-                link = link,
-                visible = callInt(Tx.GET_PAIR_STATE) == PAIR_IN_PROGRESS,
-                audioStreaming = callInt(Tx.GET_A2DP_STATE) == AV_STREAMING,
-                phoneName = if (link >= Link.CONNECTED) callString(Tx.GET_CONNECT_PHONE_NAME).orEmpty() else "",
-                unitName = callString(Tx.GET_DEVICE_NAME) ?: _state.value.unitName,
-                pin = callString(Tx.GET_PINCODE) ?: _state.value.pin
-            )
-        }
+        scope.launch { refreshNow() }
+    }
+
+    private fun refreshNow() {
+        if (binder == null) return
+        val link = linkOf(callInt(Tx.GET_CONNECT_STATE) ?: return)
+        _state.value = _state.value.copy(
+            link = link,
+            visible = callInt(Tx.GET_PAIR_STATE) == PAIR_IN_PROGRESS,
+            audioStreaming = callInt(Tx.GET_A2DP_STATE) == AV_STREAMING,
+            phoneName = if (link >= Link.CONNECTED) callString(Tx.GET_CONNECT_PHONE_NAME).orEmpty() else "",
+            unitName = callString(Tx.GET_DEVICE_NAME) ?: _state.value.unitName,
+            pin = callString(Tx.GET_PINCODE) ?: _state.value.pin
+        )
     }
 
     private val receiver = object : BroadcastReceiver() {
@@ -236,6 +322,11 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
             if (intent.action == EVT_HSHF_STATUS && linkOf(value) == Link.CONNECTED) refresh()
             // Numărul și numele apelantului le cerem și direct, dacă broadcast-ul întârzie.
             if (intent.action == EVT_HSHF_STATUS && callOf(value) != Call.NONE) refreshCaller()
+            // Orice veste de la modul înseamnă că serviciul KSW încă îi vorbește.
+            if (intent.action == EVT_HSHF_STATUS || intent.action == EVT_AV_STATUS || intent.action == EVT_PAIR_STATUS) {
+                lastModuleEventAt = android.os.SystemClock.elapsedRealtime()
+                if (_state.value.moduleSilent) _state.value = _state.value.copy(moduleSilent = false)
+            }
         }
     }
 
@@ -349,6 +440,17 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         const val PAIR_TIMEOUT = 1
         private const val PAIR_IN_PROGRESS = 4
         private const val AV_STREAMING = 4
+
+        /** Trimis de EventCenter la contact: extra true = contact oprit. */
+        private const val ACTION_ACC = "com.choiceway.eventcenter.EventUtils.KSW_ZXW_ACC_CONTROL_BEFORE"
+        private const val EXTRA_ACC_OFF = "com.choiceway.eventcenter.EventUtils.KSW_ZXW_ACC_CONTROL_BEFORE_DATA"
+
+        /** Cât lăsăm modulul și telefonul să se lege singure înainte să le dăm un ghiont. */
+        private const val RECONNECT_AFTER_MS = 20_000L
+        private const val RECONNECT_ATTEMPTS = 2
+        private const val SILENT_AFTER_MS = 60_000L
+        /** Ecran stins mai mult de atât = unitatea a dormit, deci modulul a repornit. */
+        private const val WAKE_AFTER_MS = 60_000L
 
         /** Pauza dintre comenzi: modulul serial nu le primește bine lipite. */
         private const val STEP_MS = 600L

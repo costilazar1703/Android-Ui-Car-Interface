@@ -54,6 +54,8 @@
     <string name="bt_status_connected">Connected</string>
     <string name="bt_status_in_call">In a call</string>
     <string name="bt_status_visible">Visible – pair from your phone</string>
+    <string name="bt_status_silent">Bluetooth not responding – restart the unit</string>
+    <string name="bt_status_silent_short">Bluetooth not responding</string>
     <string name="bt_make_visible">Pair a phone</string>
     <string name="bt_make_visible_hint">Search for %1$s, PIN %2$s</string>
     <string name="bt_reconnect">Reconnect last phone</string>
