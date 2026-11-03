@@ -163,7 +163,7 @@ class IDriveWheelView @JvmOverloads constructor(
         rOuter = radius
         rBezel = radius * 0.955f
         rRingOuter = radius * 0.89f
-        rRingInner = radius * 0.64f
+        rRingInner = radius * 0.76f
 
         // Umbra de sub buton: îl ridică de pe fundal fără blur.
         shadowPaint.shader = RadialGradient(
