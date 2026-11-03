@@ -336,7 +336,11 @@ class SettingsScreen(
         DetailRow(
             id = "sys_bt",
             title = context.getString(R.string.set_bluetooth),
-            onActivate = { AppLaunch.openBluetooth(context) }
+            onActivate = {
+                    // Pe KSW: ecranul nostru Bluetooth → Phone, nu meniul vechi al vendorului.
+                    if (Services.kswBt.isInstalled) host.push(BluetoothScreen(host))
+                    else AppLaunch.openBluetooth(context)
+                }
         ),
         DetailRow(
             id = "sys_notif",

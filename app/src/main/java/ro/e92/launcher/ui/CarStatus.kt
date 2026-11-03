@@ -7,7 +7,8 @@ import ro.e92.launcher.can.VehicleState
 import java.util.Locale
 
 /**
- * Ce spune mașina în bara de sus: temperatura de afară și autonomia, plus
+ * Ce spune mașina în bara de sus: autonomia în stânga, temperatura de afară în
+ * dreapta, plus
  * bannerul de avertismente de sub bară.
  *
  * Avertismentele au două feluri, după cât de grave sunt:
@@ -18,9 +19,15 @@ import java.util.Locale
  * „Pe drum" = de la ultima pornire a launcher-ului sau de la ultimul contact
  * (vezi [newDrive]).
  */
-class CarStatus(private val status: TextView, private val banner: TextView) {
+class CarStatus(
+    private val temp: TextView,
+    private val range: TextView,
+    /** Pompa + autonomia; ascunsă (dar păstrându-și locul) cât nu știm autonomia. */
+    private val rangeBlock: View,
+    private val banner: TextView
+) {
 
-    private val ctx = status.context
+    private val ctx = temp.context
     private var fuelShown = false
     private var iceShown = false
     private var transient: Int? = null
@@ -36,11 +43,13 @@ class CarStatus(private val status: TextView, private val banner: TextView) {
     }
 
     private fun renderStatus(state: VehicleState) {
-        val parts = ArrayList<String>(2)
-        state.outsideTempC?.let { parts.add(formatTemp(it)) }
-        state.rangeKm?.let { parts.add(ctx.getString(R.string.car_range_short, it)) }
-        status.text = parts.joinToString(SEPARATOR)
-        status.visibility = if (parts.isEmpty()) View.GONE else View.VISIBLE
+        val t = state.outsideTempC
+        temp.text = t?.let { formatTemp(it) }.orEmpty()
+        temp.visibility = if (t == null) View.GONE else View.VISIBLE
+
+        val r = state.rangeKm
+        range.text = r?.let { ctx.getString(R.string.car_range_short, it) }.orEmpty()
+        rangeBlock.visibility = if (r == null) View.INVISIBLE else View.VISIBLE
     }
 
     private fun renderAlert(state: VehicleState) {
@@ -95,7 +104,6 @@ class CarStatus(private val status: TextView, private val banner: TextView) {
         if (c % 1f == 0f) "${c.toInt()}°" else String.format(Locale.US, "%.1f°", c)
 
     private companion object {
-        const val SEPARATOR = "   ·   "
         const val STICKY = "sticky"
         const val MOVING_KMH = 5
         const val LOW_RANGE_KM = 60

@@ -31,8 +31,8 @@
     <dimen name="cover_corner">14dp</dimen>
     <dimen name="transport_small">64dp</dimen>
     <dimen name="transport_big">84dp</dimen>
-    <dimen name="mini_player_height">34dp</dimen>
-    <dimen name="mini_player_cover">26dp</dimen>
+    <dimen name="mini_player_height">44dp</dimen>
+    <dimen name="mini_player_cover">36dp</dimen>
     <dimen name="mini_player_text_max">220dp</dimen>
     <dimen name="mini_player_artist_max">140dp</dimen>
 

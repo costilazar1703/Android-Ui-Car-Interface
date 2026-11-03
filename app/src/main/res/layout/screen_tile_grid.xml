@@ -93,9 +93,9 @@
 
         <ro.e92.launcher.ui.widget.EqualizerView
             android:id="@+id/miniEq"
-            android:layout_width="11dp"
-            android:layout_height="11dp"
-            android:layout_marginStart="9dp" />
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginStart="10dp" />
 
         <TextView
             android:id="@+id/miniTitle"
@@ -107,7 +107,7 @@
             android:maxWidth="@dimen/mini_player_text_max"
             android:singleLine="true"
             android:textColor="@color/text_primary"
-            android:textSize="13sp"
+            android:textSize="15sp"
             tools:text="Midnight City" />
 
         <TextView
@@ -120,7 +120,7 @@
             android:maxWidth="@dimen/mini_player_artist_max"
             android:singleLine="true"
             android:textColor="@color/text_secondary"
-            android:textSize="13sp"
+            android:textSize="15sp"
             tools:text="M83" />
 
         <ImageView
@@ -129,8 +129,48 @@
             android:layout_height="@dimen/mini_player_cover"
             android:layout_marginStart="8dp"
             android:contentDescription="@null"
-            android:padding="6dp"
+            android:padding="8dp"
             android:src="@drawable/ic_transport_play" />
+    </LinearLayout>
+
+    <!-- Telefonul conectat, în oglindă cu mini-player-ul: același chip, în
+         stânga jos. Apare doar cât modulul KSW raportează un telefon legat;
+         atingerea deschide ecranul Bluetooth → Phone. -->
+    <LinearLayout
+        android:id="@+id/phoneChip"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/mini_player_height"
+        android:layout_marginStart="@dimen/screen_margin"
+        android:layout_marginBottom="3dp"
+        android:background="@drawable/bg_mini_player"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="16dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:visibility="visible">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_status_bt"
+            android:tint="@color/glow_core" />
+
+        <TextView
+            android:id="@+id/phoneName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:ellipsize="end"
+            android:fontFamily="@font/inter_medium"
+            android:maxWidth="@dimen/mini_player_text_max"
+            android:singleLine="true"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            tools:text="iPhone Costi" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

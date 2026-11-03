@@ -65,77 +65,110 @@
         app:layout_constraintGuide_percent="0.115" />
 
     <!--
-      Bara de sus, in stilul lock-screen-ului iOS:
+      Bara de sus, în trei zone:
 
-        [ 14:32 | Sun, 1 Nov ]                 [♪ piesa] [ᛒ] [wifi OBD]
-                | MENU       ]
+        [⛽ 512 km]          [ 14:32 | Sun, 1 Nov ]          [14.5°  ᛒ  wifi]
+                                     | MENU       ]
 
-      Ceasul e mare si subtire (Inter Light, varianta de afisaj); data si numele
-      ecranului stau stivuite langa el, mici. In dreapta, iconite vectoriale care
-      se aprind cand sunt conectate si se estompeaza cand nu - starea se citeste
-      dintr-o privire, fara text de citit in mers.
+      Stânga autonomia, cu pompa; la mijloc ceasul mare și subțire (Inter Light),
+      cu data și numele ecranului stivuite lângă el; dreapta temperatura de afară
+      și iconițele care se aprind când sunt conectate. Melodia nu mai stă aici:
+      o arată deja dala Media și mini-player-ul de jos.
     -->
-    <TextView
-        android:id="@+id/clock"
+    <LinearLayout
+        android:id="@+id/rangeBlock"
         android:layout_width="wrap_content"
         android:layout_height="0dp"
         android:layout_marginStart="@dimen/screen_margin"
-        android:fontFamily="@font/inter_display_light"
-        android:fontFeatureSettings="tnum"
         android:gravity="center_vertical"
-        android:includeFontPadding="false"
-        android:singleLine="true"
-        android:textColor="@color/text_primary"
-        android:textSize="@dimen/topbar_clock_size"
+        android:orientation="horizontal"
+        android:visibility="invisible"
         app:layout_constraintBottom_toTopOf="@id/gTopBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:text="14:32" />
+        tools:visibility="visible">
 
-    <View
-        android:id="@+id/clockRule"
-        android:layout_width="@dimen/divider_height"
-        android:layout_height="0dp"
-        android:layout_marginStart="12dp"
-        android:layout_marginTop="14dp"
-        android:layout_marginBottom="14dp"
-        android:background="@color/split_divider"
-        app:layout_constraintBottom_toTopOf="@id/gTopBar"
-        app:layout_constraintStart_toEndOf="@id/clock"
-        app:layout_constraintTop_toTopOf="parent" />
+        <ImageView
+            android:layout_width="@dimen/topbar_icon"
+            android:layout_height="@dimen/topbar_icon"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_status_fuel"
+            android:tint="@color/glow_core" />
+
+        <TextView
+            android:id="@+id/statusRange"
+            style="@style/Text.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFamily="@font/inter_medium"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            tools:text="512 km" />
+    </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/titleBlock"
-        android:layout_width="0dp"
+        android:id="@+id/centerBlock"
+        android:layout_width="wrap_content"
         android:layout_height="0dp"
-        android:layout_marginStart="12dp"
         android:gravity="center_vertical"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         app:layout_constraintBottom_toTopOf="@id/gTopBar"
-        app:layout_constraintEnd_toStartOf="@id/statusIcons"
-        app:layout_constraintStart_toEndOf="@id/clockRule"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
-            android:id="@+id/dateText"
+            android:id="@+id/clock"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/inter_medium"
+            android:layout_height="match_parent"
+            android:fontFamily="@font/inter_display_light"
+            android:fontFeatureSettings="tnum"
+            android:gravity="center_vertical"
             android:includeFontPadding="false"
             android:singleLine="true"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp"
-            tools:text="Sun, 1 Nov" />
+            android:textColor="@color/text_primary"
+            android:textSize="@dimen/topbar_clock_size"
+            tools:text="14:32" />
 
-        <TextView
-            android:id="@+id/screenTitle"
-            style="@style/Text.Label"
+        <View
+            android:id="@+id/clockRule"
+            android:layout_width="@dimen/divider_height"
+            android:layout_height="match_parent"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="14dp"
+            android:background="@color/split_divider" />
+
+        <LinearLayout
+            android:id="@+id/titleBlock"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="3dp"
-            android:textColor="@color/accent_focus"
-            android:textSize="12sp"
-            tools:text="MENU" />
+            android:layout_height="match_parent"
+            android:layout_marginStart="12dp"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/dateText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter_medium"
+                android:includeFontPadding="false"
+                android:singleLine="true"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                tools:text="Sun, 1 Nov" />
+
+            <TextView
+                android:id="@+id/screenTitle"
+                style="@style/Text.Label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:textColor="@color/accent_focus"
+                android:textSize="12sp"
+                tools:text="MENU" />
+        </LinearLayout>
     </LinearLayout>
 
     <LinearLayout
@@ -149,43 +182,24 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <!-- Temperatura exterioară și autonomia, din CAN-ul unității KSW. -->
+        <!-- Temperatura exterioară, din CAN-ul unității KSW. -->
         <TextView
-            android:id="@+id/statusCar"
+            android:id="@+id/statusTemp"
             style="@style/Text.Body"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="18dp"
+            android:fontFamily="@font/inter_medium"
             android:textColor="@color/text_primary"
-            android:textSize="13sp"
+            android:textSize="15sp"
             android:visibility="gone"
-            tools:text="12.5°   ·   420 km"
+            tools:text="14.5°"
             tools:visibility="visible" />
-
-        <ImageView
-            android:id="@+id/icMedia"
-            android:layout_width="@dimen/topbar_icon"
-            android:layout_height="@dimen/topbar_icon"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_status_music"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/statusMedia"
-            style="@style/Text.Body"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:maxWidth="@dimen/status_field_width"
-            android:textColor="@color/text_primary"
-            android:textSize="13sp"
-            tools:text="Spotify" />
 
         <ImageView
             android:id="@+id/icBt"
             android:layout_width="@dimen/topbar_icon"
             android:layout_height="@dimen/topbar_icon"
-            android:layout_marginStart="18dp"
             android:contentDescription="@null"
             android:src="@drawable/ic_status_bt" />
 
@@ -196,16 +210,6 @@
             android:layout_marginStart="16dp"
             android:contentDescription="@null"
             android:src="@drawable/ic_status_wifi" />
-
-        <TextView
-            android:id="@+id/statusNet"
-            style="@style/Text.Body"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:maxWidth="@dimen/status_field_width"
-            android:textSize="13sp"
-            tools:text="WiFi_OBDII" />
     </LinearLayout>
 
     <View

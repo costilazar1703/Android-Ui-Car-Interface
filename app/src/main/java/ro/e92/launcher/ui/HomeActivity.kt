@@ -611,7 +611,9 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     // ------------------------------------------------------------- top bar
 
-    private val carStatus by lazy { CarStatus(binding.statusCar, binding.alertBanner) }
+    private val carStatus by lazy {
+        CarStatus(binding.statusTemp, binding.statusRange, binding.rangeBlock, binding.alertBanner)
+    }
 
     // ---------------------------------------------------------------- apeluri
     //
@@ -751,8 +753,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                         val connected = net.status == ConnectivityMonitor.Status.ONLINE ||
                             net.status == ConnectivityMonitor.Status.CONNECTED_NO_INTERNET
                         binding.icWifi.alpha = if (connected) ICON_ON else ICON_OFF
-                        binding.statusNet.text = describeNet(net)
-                        binding.statusNet.alpha = if (connected) 1f else ICON_OFF
                     }
                 }
                 launch {
@@ -763,13 +763,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                 }
                 launch {
                     Services.trip.ignitionOff.collect { off -> if (off) showGoodbye() }
-                }
-                launch {
-                    Services.media.snapshot.collect { media ->
-                        val title = if (media.hasSession) media.title.orEmpty() else ""
-                        binding.statusMedia.text = title
-                        binding.icMedia.visibility = if (title.isEmpty()) View.GONE else View.VISIBLE
-                    }
                 }
             }
         }
@@ -803,18 +796,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     fun showDriveMode() {
         if (stack.current is DriveSportScreen) return
         stack.push(DriveSportScreen(this))
-    }
-
-    private fun describeNet(state: ConnectivityMonitor.NetState): String = when (state.status) {
-        ConnectivityMonitor.Status.ONLINE ->
-            state.ssid ?: getString(R.string.net_online)
-        // Cu adaptorul OBD pe Wi-Fi, starea asta e cea NORMALA, nu o eroare:
-        // aratam numele retelei, nu un avertisment care sta pe ecran permanent.
-        ConnectivityMonitor.Status.CONNECTED_NO_INTERNET ->
-            state.ssid ?: getString(R.string.net_no_internet)
-        ConnectivityMonitor.Status.CONNECTING -> getString(R.string.net_connecting)
-        ConnectivityMonitor.Status.WIFI_OFF -> getString(R.string.net_wifi_off)
-        ConnectivityMonitor.Status.DISCONNECTED -> getString(R.string.net_offline)
     }
 
     private fun updateClock() {

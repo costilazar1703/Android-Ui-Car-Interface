@@ -82,6 +82,8 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         screenScope.launch { Services.media.snapshot.collect { renderMedia() } }
         screenScope.launch { BluetoothPresence.deviceName.collect { renderLive() } }
         screenScope.launch { NavNotificationRelay.guidance.collect { renderLive() } }
+        screenScope.launch { Services.kswBt.state.collect { renderPhone(it) } }
+        binding.phoneChip.setOnClickListener { host.push(BluetoothScreen(host)) }
 
         // Lățimea unei pagini se știe abia după măsurare.
         binding.tileViewport.post {
@@ -318,6 +320,13 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         indicator = PageIndicatorView(context, TileCatalog.pageCount).also {
             binding.tilePageDots.addView(it)
         }
+    }
+
+    /** Chipul din stânga jos: telefonul legat la modulul KSW, cât e legat. */
+    private fun renderPhone(st: ro.e92.launcher.core.KswBluetooth.State) {
+        val connected = st.link >= ro.e92.launcher.core.KswBluetooth.Link.CONNECTED && st.phoneName.isNotBlank()
+        binding.phoneName.text = st.phoneName
+        binding.phoneChip.visibility = if (connected) View.VISIBLE else View.GONE
     }
 
     private fun focusFirstTileOfPage(page: Int): Boolean {
