@@ -807,7 +807,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     private fun observeMusicHost() {
         lifecycleScope.launch {
             Services.kswBt.state.collect { st ->
-                val connected = st.link >= ro.e92.launcher.core.KswBluetooth.Link.CONNECTED
+                val connected = st.phoneConnected
                 if (connected && !hostWasConnected) hostKswMusic("telefon conectat")
                 hostWasConnected = connected
 
@@ -904,7 +904,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     }
 
     private fun renderPhoneChip(st: ro.e92.launcher.core.KswBluetooth.State) {
-        val connected = st.link >= ro.e92.launcher.core.KswBluetooth.Link.CONNECTED && st.phoneName.isNotBlank()
+        val connected = st.phoneConnected && st.phoneName.isNotBlank()
         binding.phoneName.text = when {
             st.restartNeeded -> getString(R.string.bt_status_restart_short)
             st.moduleSilent -> getString(R.string.bt_status_silent_short)

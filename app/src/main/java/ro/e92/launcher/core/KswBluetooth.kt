@@ -46,6 +46,11 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         /** Rezultatul ultimei împerecheri, null cât nu s-a terminat niciuna. */
         val lastPairResult: Int? = null,
         val audioStreaming: Boolean = false,
+        /**
+         * Muzica (A2DP) e legată. Cu „Apeluri" oprit pe iPhone - fără el iPhone-ul
+         * nu mai rupe legătura la 15 s cu stiva KSW - telefonul e legat doar așa.
+         */
+        val audioConnected: Boolean = false,
         /** Titlul piesei de pe telefon, singurul câmp de metadata pe care îl dă modulul. */
         val songTitle: String = "",
         val phoneName: String = "",
@@ -70,7 +75,10 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
          * contează abia după o repornire a navigației.
          */
         val restartNeeded: Boolean = false
-    )
+    ) {
+        /** Legat prin apeluri sau doar prin muzică. */
+        val phoneConnected: Boolean get() = link >= Link.CONNECTED || audioConnected
+    }
 
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state.asStateFlow()
@@ -355,7 +363,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
                 if (binder == null) bind()
                 refreshNow()
                 val s = _state.value
-                if (s.link >= Link.CONNECTING || s.visible || s.call != Call.NONE) return@launch
+                if (s.link >= Link.CONNECTING || s.audioConnected || s.visible || s.call != Call.NONE) return@launch
                 if (s.link == Link.IDLE) {
                     EventLog.log(TAG, "telefonul nu e legat după contact - reconectez (încercarea ${attempt + 1})")
                     call(Tx.CONNECT)
@@ -430,7 +438,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     fun makeVisible() = command {
         // Modul de împerechere cu un telefon legat îl poate deconecta; un
         // telefon nou se adaugă doar când nu e niciunul conectat.
-        if (_state.value.link >= Link.CONNECTED) {
+        if (_state.value.phoneConnected) {
             EventLog.log(TAG, "nu intru în împerechere cu un telefon conectat")
             return@command
         }
@@ -524,11 +532,14 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     private fun refreshNow() {
         if (binder == null) return
         val link = linkOf(callInt(Tx.GET_CONNECT_STATE) ?: return)
+        val a2dp = callInt(Tx.GET_A2DP_STATE)
         _state.value = _state.value.copy(
             link = link,
             visible = callInt(Tx.GET_PAIR_STATE) == PAIR_IN_PROGRESS,
-            audioStreaming = callInt(Tx.GET_A2DP_STATE) == AV_STREAMING,
-            phoneName = if (link >= Link.CONNECTED) callString(Tx.GET_CONNECT_PHONE_NAME).orEmpty() else "",
+            audioStreaming = a2dp == AV_STREAMING,
+            audioConnected = a2dp != null && a2dp >= AV_CONNECTED,
+            phoneName = if (link >= Link.CONNECTED || (a2dp ?: 0) >= AV_CONNECTED)
+                callString(Tx.GET_CONNECT_PHONE_NAME).orEmpty() else "",
             unitName = callString(Tx.GET_DEVICE_NAME) ?: _state.value.unitName,
             pin = callString(Tx.GET_PINCODE) ?: _state.value.pin
         )
@@ -555,7 +566,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
                     val call = callOf(value)
                     s.copy(
                         link = linkOf(value),
-                        phoneName = if (linkOf(value) >= Link.CONNECTED) s.phoneName else "",
+                        phoneName = if (linkOf(value) >= Link.CONNECTED || s.audioConnected) s.phoneName else "",
                         call = call,
                         callNumber = if (call == Call.NONE) "" else s.callNumber,
                         callName = if (call == Call.NONE) "" else s.callName,
@@ -571,6 +582,8 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
                 EVT_CONTACT_ADDRESS -> s.copy(callName = text?.takeIf { it.isNotBlank() } ?: s.callName)
                 EVT_AV_STATUS -> s.copy(
                     audioStreaming = value == AV_STREAMING,
+                    audioConnected = value >= AV_CONNECTED,
+                    phoneName = if (value >= AV_CONNECTED || s.link >= Link.CONNECTED) s.phoneName else "",
                     songTitle = text?.trim() ?: s.songTitle
                 )
                 EVT_PAIR_STATUS -> s.copy(
@@ -583,6 +596,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
             }
             // Numele telefonului nu vine pe broadcast: îl cerem la conectare.
             if (intent.action == EVT_HSHF_STATUS && linkOf(value) == Link.CONNECTED) refresh()
+            if (intent.action == EVT_AV_STATUS && value >= AV_CONNECTED && _state.value.phoneName.isBlank()) refresh()
             // Ecranul Bluetooth KSW trimite „mute music" când se închide și abia
             // la redeschidere „unmute" - de aici muzica auzită doar cu ecranul
             // lor deschis. La fiecare pornire a redării deblocăm noi sunetul.
@@ -726,6 +740,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         const val PAIR_TIMEOUT = 1
         private const val PAIR_IN_PROGRESS = 4
         private const val AV_STREAMING = 4
+        private const val AV_CONNECTED = 3
 
         /** Trimis de EventCenter la contact: extra true = contact oprit. */
         private const val ACTION_ACC = "com.choiceway.eventcenter.EventUtils.KSW_ZXW_ACC_CONTROL_BEFORE"

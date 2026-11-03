@@ -80,7 +80,7 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
      */
     private val kswAudio: Boolean
         get() = useKsw && !Services.media.snapshot.value.hasSession &&
-            ksw.state.value.link >= KswBluetooth.Link.CONNECTED
+            ksw.state.value.phoneConnected
 
     override fun navEntries(): List<NavEntry> = listOf(
         NavEntry(NAV_AUDIO, context.getString(R.string.bt_audio)),
@@ -177,6 +177,7 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
             st.moduleSilent -> context.getString(R.string.bt_status_silent)
             st.visible && st.link < KswBluetooth.Link.CONNECTED -> context.getString(R.string.bt_status_visible)
             st.link == KswBluetooth.Link.UNAVAILABLE -> context.getString(R.string.bt_status_unavailable)
+            st.link == KswBluetooth.Link.IDLE && st.audioConnected -> context.getString(R.string.bt_status_connected)
             st.link == KswBluetooth.Link.IDLE -> context.getString(R.string.bt_status_idle)
             st.link == KswBluetooth.Link.CONNECTING -> context.getString(R.string.bt_status_connecting)
             st.link == KswBluetooth.Link.CONNECTED -> context.getString(R.string.bt_status_connected)

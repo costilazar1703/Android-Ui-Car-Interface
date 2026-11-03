@@ -183,7 +183,7 @@ class MediaHub(private val context: Context) {
 
     private fun kswActive(): Boolean {
         val st = ro.e92.launcher.core.Services.kswBt.state.value
-        return st.link >= ro.e92.launcher.core.KswBluetooth.Link.CONNECTED &&
+        return st.phoneConnected &&
             (st.songTitle.isNotBlank() || st.audioStreaming)
     }
 
