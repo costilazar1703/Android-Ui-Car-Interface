@@ -850,12 +850,14 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION))
         }.isSuccess
         if (!opened) return
-        binding.rootLayout.postDelayed({
-            bringToFront(0)
-            if (resume) binding.rootLayout.postDelayed({
-                if (!Services.kswBt.state.value.audioStreaming) Services.kswBt.playPause()
-            }, HOST_RESUME_PLAY_MS)
-        }, HOST_RETURN_MS)
+        // Pe unitate ecranul KSW apare mai încet decât pe emulator: dacă încă
+        // suntem în față, mai verificăm de câteva ori până ne acoperă.
+        for (delayMs in HOST_RETURN_CHECKS_MS) {
+            binding.rootLayout.postDelayed({ if (!resumedNow) bringToFront(0) }, delayMs)
+        }
+        if (resume) binding.rootLayout.postDelayed({
+            if (!Services.kswBt.state.value.audioStreaming) Services.kswBt.playPause()
+        }, HOST_RETURN_CHECKS_MS.last() + HOST_RESUME_PLAY_MS)
     }
 
     /** Turațiile trec de la oprit la mers: anunțăm Bluetooth-ul să se verifice. */
@@ -1185,7 +1187,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         const val GUARD_WINDOW_MS = 40_000L
         const val EXTRA_RECLAIM = "ro.e92.launcher.RECLAIM"
         /** Cât stă ecranul KSW deschis până revenim: destul cât să-și facă onCreate. */
-        const val HOST_RETURN_MS = 900L
+        val HOST_RETURN_CHECKS_MS = longArrayOf(900L, 1_800L, 3_000L, 4_500L)
         const val HOST_RESUME_PLAY_MS = 1_500L
         const val HOST_AFTER_RESUME_MS = 1_200L
         /** Oprirea făcută de BTService vine în ~1 s de la play; peste 4 s e altceva. */
