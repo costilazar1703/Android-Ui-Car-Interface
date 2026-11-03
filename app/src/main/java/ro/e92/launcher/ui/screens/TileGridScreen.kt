@@ -84,6 +84,10 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         screenScope.launch { NavNotificationRelay.guidance.collect { renderLive() } }
         screenScope.launch { Services.kswBt.state.collect { renderPhone(it) } }
         binding.phoneChip.setOnClickListener { host.push(BluetoothScreen(host)) }
+        // Ca la mini-player: doar de atins, altfel focusul nativ îl prinde și
+        // desenează un dreptunghi gri peste el când te miști între dale.
+        binding.phoneChip.isFocusable = false
+        binding.phoneChip.defaultFocusHighlightEnabled = false
 
         // Lățimea unei pagini se știe abia după măsurare.
         binding.tileViewport.post {
