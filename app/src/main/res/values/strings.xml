@@ -56,7 +56,7 @@
     <string name="bt_status_visible">Visible – pair from your phone</string>
     <string name="bt_status_silent">Bluetooth not responding – restart the unit</string>
     <string name="bt_status_silent_short">Bluetooth not responding</string>
-    <string name="bt_status_restart">Bluetooth set back to BC6 – restart the unit once</string>
+    <string name="bt_status_restart">Bluetooth module type changed – restart the unit once</string>
     <string name="bt_status_restart_short">Restart once for Bluetooth</string>
     <string name="bt_make_visible">Pair a phone</string>
     <string name="bt_make_visible_hint">Search for %1$s, PIN %2$s</string>
@@ -64,6 +64,7 @@
     <string name="bt_forget_all">Forget all phones</string>
     <string name="bt_forget_confirm">Press again to confirm</string>
     <string name="bt_vendor_app">KSW Bluetooth app</string>
+    <string name="bt_module_type">Bluetooth module type (restart after change)</string>
     <string name="bt_rename">Rename unit to %1$s</string>
     <string name="bt_rename_now">Now: %1$s</string>
     <string name="bt_pair_ok">Phone paired</string>
@@ -214,7 +215,6 @@
     <string name="intro_kicker">BMW iDRIVE</string>
     <string name="intro_greeting">Welcome back, Mr.</string>
     <string name="intro_greeting_no_name">Welcome back!</string>
-    <string name="goodbye">Goodbye, Mr.</string>
     <string name="set_update">Check for update</string>
     <string name="set_update_hint">From the laptop on the hotspot</string>
     <string name="update_checking">Checking…</string>
@@ -231,7 +231,6 @@
     <string name="call_decline">Decline</string>
     <string name="call_hang_up">Hang up</string>
     <string name="call_to_phone">Use phone</string>
-    <string name="goodbye_no_name">Goodbye.</string>
     <string name="set_greeting_name">Greeting name</string>
     <string name="set_greeting_hint">Shown at start-up as „Welcome back, Mr. …"</string>
     <string name="save">Save</string>

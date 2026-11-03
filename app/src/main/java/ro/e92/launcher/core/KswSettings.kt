@@ -30,6 +30,25 @@ object KswSettings {
      * unitate 2026-11-03. Vezi [KswBluetooth.ensureBridge].
      */
     const val BT_TYPE_BC6 = "3"
+    const val BT_TYPE_BC5 = "1"
+    const val BT_TYPE_FEIYITONG = "5"
+
+    /** Ordinea din meniul Factory → BT Module; toate trei merg prin puntea Feasycom. */
+    val BT_TYPES = listOf(BT_TYPE_BC6, BT_TYPE_BC5, BT_TYPE_FEIYITONG)
+
+    fun btTypeLabel(value: String): String = when (value) {
+        BT_TYPE_BC6 -> "WenqiangBC6"
+        BT_TYPE_BC5 -> "WenqiangBC5"
+        BT_TYPE_FEIYITONG -> "Feiyitong"
+        else -> value
+    }
+
+    /**
+     * „Reia ultima sursă la pornire" (EventCenter: m_bModeMemory, "0"/"1").
+     * Cu ea pornită, la fiecare contact unitatea redeschidea ecranul Bluetooth
+     * KSW peste salutul nostru.
+     */
+    const val MODE_MEMORY = "Sys_Mode_Memory"
 
     fun read(context: Context, key: String): String? = runCatching {
         context.contentResolver.query(URI, arrayOf("keyvalue"), "keyname=?", arrayOf(key), null)?.use { c ->

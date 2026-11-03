@@ -104,11 +104,13 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
                 // Ordinea contează: BTService își deschide portul o singură
                 // dată, la creare, iar bind() îl creează dacă nu rulează. Deci
                 // întâi tipul și puntea, abia apoi legătura cu serviciul.
-                val typeChanged = keepBc6()
+                keepModeMemoryOff()
+                val typeChanged = keepModuleType()
                 val bridgeStarted = withContext(Dispatchers.IO) { ensureBridge() }
                 bind()
                 if (typeChanged || bridgeStarted) restartKswService()
                 startWatchdog("pornire")
+                watchBridge()
             }
         }
     }
@@ -161,19 +163,61 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     }
 
     /**
-     * bTSuite vorbește cu modulul prin puntea Feasycom doar cu tipurile 1-5;
-     * păstrăm BC6 (3), valoarea cu care unitatea a mers. bTSuite citește
-     * tipul doar la crearea BTService, deci o schimbare cere redeschiderea lui.
+     * bTSuite vorbește cu modulul prin puntea Feasycom doar cu tipurile 1-5.
+     * Ținem tipul ales în Bluetooth → Phone (implicit BC6). bTSuite îl citește
+     * doar la crearea BTService, deci o schimbare cere redeschiderea lui.
      *
      * @return true dacă a trebuit schimbat
      */
-    private fun keepBc6(): Boolean {
+    private fun keepModuleType(): Boolean {
+        val wanted = Services.prefs.btModuleType
         val current = KswSettings.read(context, KswSettings.BT_TYPE)
-        Log.i(TAG, "tipul modulului Bluetooth: $current")
-        if (current == KswSettings.BT_TYPE_BC6) return false
-        val written = KswSettings.write(context, KswSettings.BT_TYPE, KswSettings.BT_TYPE_BC6)
-        if (written) Log.w(TAG, "tipul modulului era $current - l-am pus pe BC6")
+        Log.i(TAG, "tipul modulului Bluetooth: $current (vrem $wanted)")
+        if (current == wanted) return false
+        val written = KswSettings.write(context, KswSettings.BT_TYPE, wanted)
+        if (written) Log.w(TAG, "tipul modulului era $current - l-am pus pe $wanted")
         return written
+    }
+
+    /**
+     * Alegerea din meniu: scrie tipul acum, dar BTService îl citește doar la
+     * pornire. Nu-l repornim de aici - ar rupe o legătură în curs; cere o
+     * repornire a unității, după care pornirea îl ia în ordinea bună.
+     */
+    fun setModuleType(value: String) {
+        Services.prefs.btModuleType = value
+        scope.launch {
+            if (KswSettings.write(context, KswSettings.BT_TYPE, value)) {
+                _state.value = _state.value.copy(restartNeeded = true)
+            }
+        }
+    }
+
+    /** Unitatea nu mai redeschide ecranul Bluetooth KSW peste salut la pornire. */
+    private fun keepModeMemoryOff() {
+        if (KswSettings.read(context, KswSettings.MODE_MEMORY) != "0") {
+            KswSettings.write(context, KswSettings.MODE_MEMORY, "0")
+            Log.i(TAG, "am oprit reluarea ultimei surse la pornire")
+        }
+    }
+
+    /**
+     * Stiva Feasycom e un serviciu „oneshot": dacă moare, init nu-l repornește
+     * și Bluetooth-ul rămâne mort până la următorul contact. O verificăm rar
+     * (un test de fișier) și, dacă puntea a dispărut, o pornim și redeschidem
+     * BTService. Cu puntea vie nu atingem nimic.
+     */
+    private fun watchBridge() {
+        scope.launch {
+            while (true) {
+                delay(BRIDGE_CHECK_MS)
+                val restarted = withContext(Dispatchers.IO) { ensureBridge() }
+                if (restarted) {
+                    Log.w(TAG, "puntea Bluetooth căzuse - am repornit-o")
+                    restartKswService()
+                }
+            }
+        }
     }
 
     // ------------------------------------------------------------- watchdog
@@ -270,7 +314,15 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     // ------------------------------------------------------------- comenzi
 
     /** Unitatea devine vizibilă, ca telefonul s-o găsească și să se împerecheze. */
-    fun makeVisible() = command { call(Tx.PAIR_DEVICE) { it.writeInt(0) } }
+    fun makeVisible() = command {
+        // Modul de împerechere cu un telefon legat îl poate deconecta; un
+        // telefon nou se adaugă doar când nu e niciunul conectat.
+        if (_state.value.link >= Link.CONNECTED) {
+            Log.i(TAG, "nu intru în împerechere cu un telefon conectat")
+            return@command
+        }
+        call(Tx.PAIR_DEVICE) { it.writeInt(0) }
+    }
 
     /** Reconectează ultimul telefon: apeluri (HFP) și muzică (A2DP). */
     fun reconnectLast() = command {
@@ -508,6 +560,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         const val BRIDGE_WAIT_STEP_MS = 200L
         const val SERVICE_CLASS = "com.szchoiceway.btsuite.BTService"
         const val SERVICE_RESTART_GAP_MS = 1_500L
+        const val BRIDGE_CHECK_MS = 30_000L
 
         const val PACKAGE = "com.szchoiceway.btsuite"
         private const val ACTION_SERVICE = "com.szchoiceway.btsuite.BTService"

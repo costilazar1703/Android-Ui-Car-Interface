@@ -8,6 +8,7 @@ import android.provider.Settings
 import kotlinx.coroutines.launch
 import ro.e92.launcher.R
 import ro.e92.launcher.core.KswBluetooth
+import ro.e92.launcher.core.KswSettings
 import ro.e92.launcher.core.Services
 import ro.e92.launcher.input.LauncherAction
 import ro.e92.launcher.ui.ScreenHost
@@ -214,6 +215,17 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
                         forgetArmed = true
                     }
                     reloadDetail("bt_forget_all")
+                }
+            ),
+            DetailRow(
+                id = "bt_module_type",
+                title = context.getString(R.string.bt_module_type),
+                value = KswSettings.btTypeLabel(Services.prefs.btModuleType),
+                onActivate = {
+                    val types = KswSettings.BT_TYPES
+                    val next = types[(types.indexOf(Services.prefs.btModuleType) + 1) % types.size]
+                    ksw.setModuleType(next)
+                    reloadDetail("bt_module_type")
                 }
             ),
             DetailRow(
