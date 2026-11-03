@@ -14,7 +14,7 @@ import java.util.Locale
  * singur cât e deschis, ca să-l poți lăsa pe ecran pe autostradă.
  */
 class TripScreen(host: ScreenHost) : SplitScreen(host) {
-    override val backgroundRes: Int get() = R.drawable.bg_menu_tech
+    override val backgroundRes: Int get() = R.drawable.bg_menu_nav
 
     override val title: String get() = "TRIP"
     override val navHeader: String get() = context.getString(R.string.trip_title)

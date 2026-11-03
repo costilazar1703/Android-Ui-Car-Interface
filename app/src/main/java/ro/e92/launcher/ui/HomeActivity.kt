@@ -43,12 +43,12 @@ import ro.e92.launcher.ui.screens.DashboardScreen
 import ro.e92.launcher.ui.screens.DiagnosticsScreen
 import ro.e92.launcher.ui.screens.DriveSportScreen
 import ro.e92.launcher.ui.screens.MediaMenuScreen
+import ro.e92.launcher.ui.screens.MessagesMenuScreen
+import ro.e92.launcher.ui.screens.TelephoneMenuScreen
 import ro.e92.launcher.ui.screens.MediaScreen
-import ro.e92.launcher.ui.screens.MessagesScreen
 import ro.e92.launcher.ui.screens.NavigationMenuScreen
 import ro.e92.launcher.ui.screens.SettingsMenuScreen
 import ro.e92.launcher.ui.screens.SettingsScreen
-import ro.e92.launcher.ui.screens.TelephoneScreen
 import ro.e92.launcher.ui.screens.TileGridScreen
 import ro.e92.launcher.ui.screens.WeatherMenuScreen
 import java.text.SimpleDateFormat
@@ -355,16 +355,13 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             TileAction.WEATHER ->
                 pushUnique(WeatherMenuScreen::class.java) { WeatherMenuScreen(this) }
 
-            // Telefonul si Mesajele SUNT deja meniuri (categorii in stanga,
-            // detaliu in dreapta), iar App drawer-ul e o grila - toate trei au
-            // propria forma si n-ar castiga nimic dintr-un meniu cu rotita in
-            // fata lor. Setarile, in schimb, au primit unul: erau singura dala
-            // care se deschidea altfel decat celelalte unsprezece.
+            // Telefonul si Mesajele au si ele rotita, ca toate dalele; ecranele
+            // split raman un nivel mai jos. Doar App drawer-ul e o grila.
             TileAction.TELEPHONE ->
-                pushUnique(TelephoneScreen::class.java) { TelephoneScreen(this) }
+                pushUnique(TelephoneMenuScreen::class.java) { TelephoneMenuScreen(this) }
 
             TileAction.MESSAGES ->
-                pushUnique(MessagesScreen::class.java) { MessagesScreen(this) }
+                pushUnique(MessagesMenuScreen::class.java) { MessagesMenuScreen(this) }
 
             TileAction.SETTINGS ->
                 pushUnique(SettingsMenuScreen::class.java) { SettingsMenuScreen(this) }

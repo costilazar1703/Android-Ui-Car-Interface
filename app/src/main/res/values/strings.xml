@@ -75,6 +75,10 @@
     <string name="tel_recent">Recent calls</string>
     <string name="tel_contacts">Contacts</string>
     <string name="tel_dialpad">Dial pad</string>
+    <string name="tel_redial">Redial last number</string>
+    <string name="tel_connected_phone">Connected phone</string>
+    <string name="tel_contacts_dialpad">Contacts &amp; dial pad</string>
+    <string name="tel_no_phone">not connected</string>
     <string name="tel_hint">Awaiting HFP/PBAP discovery on the head unit</string>
 
     <string name="msg_inbox">Inbox</string>

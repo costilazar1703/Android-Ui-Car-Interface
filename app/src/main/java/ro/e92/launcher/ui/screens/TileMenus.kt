@@ -366,3 +366,81 @@ private fun settingsEntry(
     title = context.getString(R.string.menu_settings),
     onActivate = { host.push(SettingsScreen(host, navId)) }
 )
+
+// =============================================================== TELEPHONE ===
+
+/**
+ * Pe KSW apelurile trec prin modulul unității, deci rândurile folosesc
+ * comenzile lui (reapelare) și ecranul nostru Bluetooth; agenda și tastatura
+ * rămân în ecranul split [TelephoneScreen].
+ */
+class TelephoneMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_phone
+
+    override val menuTitle: String get() = context.getString(R.string.menu_telephone)
+
+    override fun entries(): List<WheelEntry> = listOf(
+        WheelEntry(
+            id = "tel_redial",
+            icon = R.drawable.ic_menu_telephone,
+            title = context.getString(R.string.tel_redial),
+            onActivate = { Services.kswBt.redial() }
+        ),
+        WheelEntry(
+            id = "tel_phone",
+            icon = R.drawable.ic_menu_bluetooth,
+            title = context.getString(R.string.tel_connected_phone),
+            value = connectedPhone(),
+            onActivate = { host.push(BluetoothScreen(host)) }
+        ),
+        WheelEntry(
+            id = "tel_more",
+            icon = R.drawable.ic_menu_telephone,
+            title = context.getString(R.string.tel_contacts_dialpad),
+            onActivate = { host.push(TelephoneScreen(host)) }
+        )
+    )
+
+    private fun connectedPhone(): String =
+        Services.kswBt.state.value.phoneName.ifBlank { context.getString(R.string.tel_no_phone) }
+}
+
+// ================================================================ MESSAGES ===
+
+class MessagesMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
+    override val backgroundRes: Int get() = R.drawable.bg_menu_phone
+
+    override val menuTitle: String get() = context.getString(R.string.menu_messages)
+
+    override fun entries(): List<WheelEntry> = listOf(
+        WheelEntry(
+            id = "msg_inbox",
+            icon = R.drawable.ic_menu_messages,
+            title = context.getString(R.string.msg_inbox),
+            onActivate = { host.push(MessagesScreen(host)) }
+        ),
+        WheelEntry(
+            id = "msg_app",
+            icon = R.drawable.ic_menu_messages,
+            title = context.getString(R.string.msg_open_app),
+            onActivate = {
+                val intent = android.content.Intent(android.content.Intent.ACTION_MAIN)
+                    .addCategory(android.content.Intent.CATEGORY_APP_MESSAGING)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                if (intent.resolveActivity(context.packageManager) != null) {
+                    runCatching { context.startActivity(intent) }
+                } else {
+                    host.push(AppDrawerScreen(host))
+                }
+            }
+        ),
+        WheelEntry(
+            id = "msg_phone",
+            icon = R.drawable.ic_menu_bluetooth,
+            title = context.getString(R.string.tel_connected_phone),
+            value = Services.kswBt.state.value.phoneName
+                .ifBlank { context.getString(R.string.tel_no_phone) },
+            onActivate = { host.push(BluetoothScreen(host)) }
+        )
+    )
+}
