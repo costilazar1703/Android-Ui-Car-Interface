@@ -4,8 +4,10 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Shader
 import android.util.AttributeSet
 import android.view.View
 import android.view.animation.DecelerateInterpolator
@@ -20,6 +22,10 @@ import ro.e92.launcher.core.Services
  * deci nu are nevoie să știe nimic despre listă: primește o singură valoare —
  * înălțimea la care trebuie să ajungă, în coordonatele PROPRII — și desenează o
  * cubică de la mijlocul marginii din stânga (unde e centrul rotiței) până acolo.
+ *
+ * Desenată ca o rază de lumină, nu ca un fir: pornește invizibilă din
+ * rotiță și se aprinde spre cardul focusat, unde se termină într-un punct cu
+ * halou. Fără capătul gros de la rotiță, nu mai arată ca un cablu.
  *
  * Curba se animă spre noua țintă în loc să sară: la rotirea prin meniu linia
  * „curge" spre cardul următor, ceea ce leagă vizual cele două jumătăți ale
@@ -88,6 +94,20 @@ class ConnectorView @JvmOverloads constructor(
         super.onSizeChanged(w, h, oldw, oldh)
         linePaint.strokeWidth = LINE_DP * density
         glowPaint.strokeWidth = GLOW_DP * density
+        // Raza se aprinde de la stânga la dreapta; prima treime rămâne stinsă,
+        // ca linia să pară că iese din lumina rotiței, nu că e lipită de ea.
+        linePaint.shader = LinearGradient(
+            0f, 0f, w.toFloat(), 0f,
+            intArrayOf(withAlpha(accent, 0), withAlpha(accent, 0), withAlpha(accent, 150), accent),
+            floatArrayOf(0f, 0.18f, 0.6f, 1f),
+            Shader.TileMode.CLAMP
+        )
+        glowPaint.shader = LinearGradient(
+            0f, 0f, w.toFloat(), 0f,
+            intArrayOf(withAlpha(accent, 0), withAlpha(accent, 0), withAlpha(accent, GLOW_ALPHA)),
+            floatArrayOf(0f, 0.35f, 1f),
+            Shader.TileMode.CLAMP
+        )
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -108,15 +128,16 @@ class ConnectorView @JvmOverloads constructor(
             endX, endY
         )
 
-        glowPaint.color = withAlpha(accent, GLOW_ALPHA)
         canvas.drawPath(path, glowPaint)
-
-        linePaint.color = accent
         canvas.drawPath(path, linePaint)
 
-        // Punctul de sosire, chiar pe muchia cardului focusat.
-        dotPaint.color = accent
-        canvas.drawCircle(endX, endY, DOT_DP * density, dotPaint)
+        // Punctul de sosire, chiar pe muchia cardului focusat: halou, inel, miez.
+        dotPaint.color = withAlpha(accent, 40)
+        canvas.drawCircle(endX, endY, HALO_DP * density, dotPaint)
+        dotPaint.color = withAlpha(accent, 110)
+        canvas.drawCircle(endX, endY, DOT_DP * density * 1.6f, dotPaint)
+        dotPaint.color = DOT_CORE
+        canvas.drawCircle(endX, endY, DOT_DP * density * 0.8f, dotPaint)
     }
 
     override fun onDetachedFromWindow() {
@@ -132,10 +153,13 @@ class ConnectorView @JvmOverloads constructor(
         const val UNSET = -1f
         const val SLIDE_MS = 180L
 
-        const val LINE_DP = 1.5f
-        const val GLOW_DP = 5f
+        const val LINE_DP = 1.2f
+        const val GLOW_DP = 6f
         const val DOT_DP = 2.5f
-        const val GLOW_ALPHA = 46
+        const val HALO_DP = 8f
+        const val GLOW_ALPHA = 40
+
+        val DOT_CORE = Color.rgb(255, 210, 175)
 
         /** Cât de „lungi" sunt mânerele cubicei, ca fracțiune din lățime. */
         const val CONTROL = 0.55f
