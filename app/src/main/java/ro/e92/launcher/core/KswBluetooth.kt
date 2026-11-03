@@ -60,7 +60,13 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
          * nu iese din „initialising": serviciul KSW nu-i mai vorbește (vezi
          * [startWatchdog]). Doar o repornire a navigației îl readuce.
          */
-        val moduleSilent: Boolean = false
+        val moduleSilent: Boolean = false,
+        /**
+         * Am readus tipul modulului la BC6 după ce l-am găsit pe altceva (de
+         * obicei BC5, după un reset). bTSuite îl citește doar la pornire, deci
+         * contează abia după o repornire a navigației.
+         */
+        val restartNeeded: Boolean = false
     )
 
     private val _state = MutableStateFlow(State())
@@ -91,8 +97,26 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
             addAction(ACTION_ACC)
         })
         if (isInstalled) {
+            keepBc6()
             bind()
             startWatchdog("pornire")
+        }
+    }
+
+    /**
+     * Modulul din mașină merge doar cu tipul BC6; cu BC5 (valoarea în care
+     * revine unitatea la un reset al interfeței) se conectează și se
+     * deconectează imediat. La fiecare pornire ne asigurăm că setarea e BC6.
+     */
+    private fun keepBc6() {
+        scope.launch {
+            val current = KswSettings.read(context, KswSettings.BT_TYPE)
+            Log.i(TAG, "tipul modulului Bluetooth: $current")
+            if (current == KswSettings.BT_TYPE_BC6) return@launch
+            if (KswSettings.write(context, KswSettings.BT_TYPE, KswSettings.BT_TYPE_BC6)) {
+                Log.w(TAG, "tipul modulului era $current - l-am pus pe BC6, trebuie o repornire")
+                _state.value = _state.value.copy(restartNeeded = true)
+            }
         }
     }
 

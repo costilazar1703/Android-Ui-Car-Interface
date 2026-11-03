@@ -172,6 +172,7 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
     private fun phoneRows(): List<DetailRow> {
         val st = ksw.state.value
         val status = when {
+            st.restartNeeded -> context.getString(R.string.bt_status_restart)
             st.moduleSilent -> context.getString(R.string.bt_status_silent)
             st.visible && st.link < KswBluetooth.Link.CONNECTED -> context.getString(R.string.bt_status_visible)
             st.link == KswBluetooth.Link.UNAVAILABLE -> context.getString(R.string.bt_status_unavailable)

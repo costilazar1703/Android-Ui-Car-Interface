@@ -94,6 +94,9 @@ object DiagnosticsReport {
      */
     private fun appendBluetoothAndMedia(context: Context, sb: StringBuilder) {
         sb.append("--- bluetooth ---\n")
+        sb.append("ksw bt type= ").append(
+            ro.e92.launcher.core.KswSettings.read(context, ro.e92.launcher.core.KswSettings.BT_TYPE) ?: "—"
+        ).append(" (3 = BC6)\n")
 
         val adapter = runCatching {
             (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
