@@ -120,6 +120,14 @@ class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
     override val menuTitle: String get() = context.getString(R.string.menu_bluetooth)
 
     override fun entries(): List<WheelEntry> = listOf(
+        // Primul: la fiecare drum se deschide o dată aplicația KSW, play acolo,
+        // apoi HOME - cât ecranul ei există în spate, muzica nu e oprită.
+        WheelEntry(
+            id = "bt_open_ksw",
+            icon = R.drawable.ic_menu_bluetooth,
+            title = context.getString(R.string.set_open_ksw_bt),
+            onActivate = { AppLaunch.openBluetooth(context) }
+        ),
         WheelEntry(
             id = "bt_pair_new",
             icon = R.drawable.ic_menu_bluetooth,
