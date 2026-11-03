@@ -93,7 +93,6 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             binder = service
             refresh()
-            applyIdentity()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -153,11 +152,12 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     fun previous() = command { call(Tx.PREV) }
 
     /**
-     * Numele sub care telefonul vede unitatea și PIN-ul. Se trimit doar dacă
-     * diferă de ce raportează modulul, ca să nu rescriem memoria lui la fiecare
-     * pornire.
+     * Numele sub care telefonul vede unitatea și PIN-ul. Doar la cerere, din
+     * ecranul Bluetooth: o comandă trimisă modulului la fiecare pornire putea
+     * rupe legătura cu telefonul, iar stabilitatea ei e mai importantă.
+     * Se trimite doar ce diferă de ce raportează modulul.
      */
-    private fun applyIdentity() = command {
+    fun applyIdentity() = command {
         val name = Services.prefs.btUnitName
         val current = callString(Tx.GET_DEVICE_NAME)
         if (name.isNotBlank() && current != null && current != name) {

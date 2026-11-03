@@ -60,6 +60,8 @@
     <string name="bt_forget_all">Forget all phones</string>
     <string name="bt_forget_confirm">Press again to confirm</string>
     <string name="bt_vendor_app">KSW Bluetooth app</string>
+    <string name="bt_rename">Rename unit to %1$s</string>
+    <string name="bt_rename_now">Now: %1$s</string>
     <string name="bt_pair_ok">Phone paired</string>
     <string name="bt_pair_failed">Pairing did not finish – try again</string>
     <string name="bt_paired">Paired devices</string>

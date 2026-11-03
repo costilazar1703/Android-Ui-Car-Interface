@@ -215,6 +215,12 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
                 }
             ),
             DetailRow(
+                id = "bt_rename",
+                title = context.getString(R.string.bt_rename, Services.prefs.btUnitName),
+                value = context.getString(R.string.bt_rename_now, unit),
+                onActivate = { ksw.applyIdentity() }
+            ),
+            DetailRow(
                 id = "bt_vendor",
                 title = context.getString(R.string.bt_vendor_app),
                 onActivate = { AppLaunch.openBluetooth(context) }

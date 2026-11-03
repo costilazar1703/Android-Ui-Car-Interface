@@ -165,8 +165,10 @@ class MediaHub(private val context: Context) {
     //
     // Muzica de pe telefon prin modulul KSW nu e o MediaSession Android: n-o
     // vede nimic din ce ascultă sesiunile. Când nu cântă altceva, o publicăm
-    // noi ca sursă, cu titlul de la modul și coperta căutată după titlu - așa
+    // noi ca sursă, cu titlul de la modul (singurul câmp pe care îl dă) - așa
     // dala Media, mini-player-ul și ecranul Media o arată ca pe oricare alta.
+    // Fără copertă: modulul nu are, iar căutarea pe internet după titlu greșea
+    // la titlurile comune.
 
     private var kswObserved = false
 
@@ -188,18 +190,10 @@ class MediaHub(private val context: Context) {
     private fun kswSnapshot(): Snapshot {
         if (!kswActive()) return Snapshot()
         val st = ro.e92.launcher.core.Services.kswBt.state.value
-        val title = st.songTitle.takeIf { it.isNotBlank() }
-        val art = title?.let { ArtworkLookup.cached(it) }
-        if (title != null && art == null) {
-            ro.e92.launcher.core.Services.scope.launch {
-                if (ArtworkLookup.find(title) != null) handler.post { if (controller == null) publish() }
-            }
-        }
         return Snapshot(
             packageName = ro.e92.launcher.core.KswBluetooth.PACKAGE,
-            title = title,
-            artist = title?.let { ArtworkLookup.artist(it) } ?: st.phoneName.takeIf { it.isNotBlank() },
-            artwork = art,
+            title = st.songTitle.takeIf { it.isNotBlank() },
+            artist = st.phoneName.takeIf { it.isNotBlank() },
             isPlaying = st.audioStreaming
         )
     }

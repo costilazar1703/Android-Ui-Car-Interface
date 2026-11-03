@@ -112,7 +112,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
         maybePlayIntro(savedInstanceState)
         observeCalls()
-        if (savedInstanceState == null) startGuard()
         registerReceiver(wakeReceiver, IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
@@ -194,7 +193,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     override fun onPause() {
         resumedNow = false
-        maybeReclaimFront()
         super.onPause()
     }
 
@@ -207,7 +205,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     /** Unele rotițe trimit derulare, nu taste: și aceea sare salutul. */
     override fun dispatchGenericMotionEvent(ev: android.view.MotionEvent): Boolean {
-        lastInteractionAt = SystemClock.elapsedRealtime()
         goodbye?.let { it.dismiss(); return true }
         intro?.let { it.skip(); return true }
         return super.dispatchGenericMotionEvent(ev)
@@ -534,7 +531,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                     screenOffAt = null
                     if (SystemClock.elapsedRealtime() - off < WAKE_GREETING_AFTER_MS) return
                     goHome()
-                    startGuard()
                     carStatus.newDrive()
                     if (resumedNow) {
                         if (intro == null) playIntro()
@@ -567,52 +563,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         }
     }
 
-    /**
-     * La pornire, MCU-ul KSW îi spune aplicației vendorului care a fost ultima
-     * sursă, iar aceasta redeschide ecranul ei (de obicei muzica Bluetooth) la
-     * ~15 s după contact, peste meniul nostru (EventService.onCmdKSW0x00_0x15Event
-     * din EventCenter). Sunetul nu ține de ecranul acela, deci îl lăsăm să cânte
-     * și doar ne întoarcem în față - o singură dată pe fereastră și niciodată
-     * în marșarier.
-     *
-     * Ce e al șoferului nu se atinge: dacă meniul pleacă la scurt timp după o
-     * atingere sau o tastă, el a deschis ceva (o dală, Waze) și rămâne acolo.
-     */
-    private fun startGuard() {
-        guardUntil = SystemClock.elapsedRealtime() + START_GUARD_MS
-        guardUsed = false
-    }
-
-    private fun maybeReclaimFront() {
-        val now = SystemClock.elapsedRealtime()
-        if (guardUsed || now > guardUntil) return
-        if (now - lastInteractionAt < USER_CAUSED_MS) return
-        // Consumat doar dacă chiar am rămas acoperiți: o pauză scurtă (un intent
-        // livrat, un dialog de sistem) nu trebuie să ardă singura încercare.
-        binding.rootLayout.postDelayed({
-            if (!resumedNow && !guardUsed) {
-                guardUsed = true
-                bringToFront(0)
-            }
-        }, RECLAIM_DELAY_MS)
-    }
-
-    // Nu onUserInteraction: Android îl cheamă și când o ALTĂ aplicație se
-    // deschide peste noi (împreună cu onUserLeaveHint), deci pornirea automată
-    // a vendorului ar fi părut o atingere. Doar intrările reale contează.
-    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
-        lastInteractionAt = SystemClock.elapsedRealtime()
-        return super.dispatchTouchEvent(ev)
-    }
-
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        lastInteractionAt = SystemClock.elapsedRealtime()
-        return super.dispatchKeyEvent(event)
-    }
-
-    private var guardUntil = 0L
-    private var guardUsed = false
-    private var lastInteractionAt = 0L
 
     private var resumedNow = false
     private var greetOnResume = false
@@ -681,9 +631,11 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                     }
                     return@collect
                 }
+                // Doar peste meniul nostru: nu scoatem din față ecranul de apel al
+                // vendorului. Pe KSW sunetul ține de aplicația lui (muzica se auzea
+                // doar cu tab-ul Music deschis), iar la apel nu riscăm asta.
                 val view = callView ?: createCallView()
                 view.update(st)
-                if (!resumedNow) bringToFront(0)
             }
         }
     }
@@ -1041,12 +993,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         const val ENGINE_MIN_RUN_MS = 60_000L
         const val ENGINE_OFF_CONFIRM_MS = 2_000L
 
-        /** Cât după contact ne apărăm de ecranul pornit singur de vendor. */
-        const val START_GUARD_MS = 25_000L
-        const val RECLAIM_DELAY_MS = 700L
-
-        /** O pierdere a ecranului atât de aproape de o atingere e a șoferului. */
-        const val USER_CAUSED_MS = 2_000L
 
         /** Întârzierea fiecărei încercări de a reveni în față după contact. */
         val WAKE_RETRY_DELAYS_MS = longArrayOf(0L, 1_500L, 3_500L, 6_000L)
