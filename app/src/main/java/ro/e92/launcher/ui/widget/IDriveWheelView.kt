@@ -4,7 +4,6 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.RadialGradient
 import android.graphics.RectF
@@ -16,22 +15,23 @@ import android.view.animation.DecelerateInterpolator
 import androidx.core.content.ContextCompat
 import ro.e92.launcher.R
 import ro.e92.launcher.core.Services
-import kotlin.math.cos
 import kotlin.math.min
-import kotlin.math.sin
+import kotlin.math.abs
+import kotlin.math.cos
 
 /**
  * Rotița iDrive desenată în stânga meniului principal.
  *
  * NU e un control: nu primește focus și nu consumă evenimente. E ancora vizuală
- * care arată UNDE ești în meniu — desenată ca butonul fizic din consolă:
- * ramă cromată, coroană zimțată, pista cu câte un marcaj per rând pe care
- * alunecă lumina portocalie și un dom de sticlă în mijloc.
+ * care arată UNDE ești în meniu: o ramă cromată și un inel gros secționat în
+ * blocuri; blocurile din dreptul rândului selectat se aprind portocaliu, iar
+ * lumina alunecă pe ele odată cu focusul. Mijlocul rămâne gol, pentru iconița
+ * și eticheta din layout.
  *
- * Tot ce se desenează e geometrie simplă cu shadere (gradient radial, liniar,
- * sweep), toate create la onSizeChanged. Fără BlurMaskFilter: pe API 27 nu e
- * accelerat hardware și ar forța un layer software la fiecare cadru. Difuzia
- * luminii se face din arce concentrice cu alfa descrescătoare.
+ * Pe cadru: un cerc, rama și [SEGMENTS] arce scurte, cu shadere create la
+ * onSizeChanged — nimic alocat în onDraw. Fără BlurMaskFilter: pe API 27 nu e
+ * accelerat hardware și ar forța un layer software la fiecare cadru; haloul e
+ * făcut din două arce cu alfa mică.
  */
 class IDriveWheelView @JvmOverloads constructor(
     context: Context,
@@ -42,29 +42,36 @@ class IDriveWheelView @JvmOverloads constructor(
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val bezelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val knurlBase = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val domePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val specularPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val hairline = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val segmentPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        // BUTT: fiecare bloc se termină drept, nu ca o pastilă.
+        strokeCap = Paint.Cap.BUTT
+    }
+    private val knurlPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
     }
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        // BUTT, nu ROUND: un cap rotund pe un arc scurt și gros iese în afara
-        // sectorului și transformă segmentul aprins într-o pastilă.
         strokeCap = Paint.Cap.BUTT
     }
 
-    private val notchColor = color(R.color.wheel_notch)
     private val accentColor = color(R.color.glow_core)
 
     /** Dreptunghiuri reutilizate: onDraw nu alocă niciodată. */
-    private val arcBounds = RectF()
+    private val ringBounds = RectF()
     private val bezelBounds = RectF()
-    private val specularBounds = RectF()
+
+    /** Tonul stins al fiecărui bloc, cu lumina din stânga-sus; fix pe mărime. */
+    private val segmentIdle = IntArray(SEGMENTS)
+
+    /**
+     * Zimții din interiorul blocurilor: capetele fiecărei linii și culoarea ei,
+     * calculate o dată pe mărime ca onDraw să nu facă trigonometrie.
+     */
+    private val knurlCoords = FloatArray(KNURL_LINES * 4)
+    private val knurlColor = IntArray(KNURL_LINES)
 
     private var itemCount = 1
     private var selectedIndex = 0
@@ -81,11 +88,8 @@ class IDriveWheelView @JvmOverloads constructor(
     private var cy = 0f
     private var rOuter = 0f
     private var rBezel = 0f
-    private var rKnurlOuter = 0f
-    private var rKnurlInner = 0f
-    private var rTrackOuter = 0f
-    private var rTrackInner = 0f
-    private var rDome = 0f
+    private var rRingOuter = 0f
+    private var rRingInner = 0f
 
     /**
      * Sincronizează rotița cu focusul.
@@ -150,20 +154,16 @@ class IDriveWheelView @JvmOverloads constructor(
         cx = w / 2f
         cy = h / 2f
 
-        // Marginea lăsată liberă e cea în care respiră umbra și glow-ul; fără
-        // ea arcul aprins ar fi tăiat de marginea view-ului.
+        // Marginea lăsată liberă e cea în care respiră umbra și haloul.
         val radius = min(w, h) / 2f - GLOW_MARGIN_RATIO * min(w, h)
         if (radius <= 0f) {
             rOuter = 0f
             return
         }
         rOuter = radius
-        rBezel = radius * 0.955f          // mijlocul ramei cromate
-        rKnurlOuter = radius * 0.91f
-        rKnurlInner = radius * 0.80f
-        rTrackOuter = radius * 0.77f
-        rTrackInner = radius * 0.66f
-        rDome = radius * 0.60f
+        rBezel = radius * 0.955f
+        rRingOuter = radius * 0.89f
+        rRingInner = radius * 0.64f
 
         // Umbra de sub buton: îl ridică de pe fundal fără blur.
         shadowPaint.shader = RadialGradient(
@@ -185,144 +185,128 @@ class IDriveWheelView @JvmOverloads constructor(
         )
         bezelBounds.set(cx - rBezel, cy - rBezel, cx + rBezel, cy + rBezel)
 
-        // Coroana zimțată: baza închisă, peste care vin dinții în onDraw.
-        knurlBase.strokeWidth = rKnurlOuter - rKnurlInner
-        knurlBase.shader = RadialGradient(
-            cx, cy, rKnurlOuter,
-            intArrayOf(KNURL_INNER, KNURL_INNER, KNURL_OUTER),
-            floatArrayOf(0f, rKnurlInner / rKnurlOuter, 1f),
-            Shader.TileMode.CLAMP
-        )
-
-        // Pista luminii: un șanț închis, mai negru spre interior.
-        trackPaint.strokeWidth = rTrackOuter - rTrackInner
-        trackPaint.shader = RadialGradient(
-            cx, cy, rTrackOuter,
-            intArrayOf(TRACK_DEEP, TRACK_DEEP, TRACK_EDGE),
-            floatArrayOf(0f, rTrackInner / rTrackOuter, 1f),
-            Shader.TileMode.CLAMP
-        )
-
-        // Domul de sticlă din mijloc, cu reflexia moale de sus.
-        domePaint.shader = RadialGradient(
-            cx, cy - rDome * 0.25f, rDome * 1.25f,
-            intArrayOf(DOME_CENTER, DOME_EDGE),
-            null,
-            Shader.TileMode.CLAMP
-        )
-        specularBounds.set(cx - rDome * 0.72f, cy - rDome * 0.94f, cx + rDome * 0.72f, cy - rDome * 0.12f)
-        specularPaint.shader = LinearGradient(
-            0f, specularBounds.top, 0f, specularBounds.bottom,
-            Color.argb(46, 255, 255, 255), Color.TRANSPARENT,
-            Shader.TileMode.CLAMP
-        )
-
+        val rMid = (rRingOuter + rRingInner) / 2f
+        ringBounds.set(cx - rMid, cy - rMid, cx + rMid, cy + rMid)
+        segmentPaint.strokeWidth = rRingOuter - rRingInner
         hairline.strokeWidth = radius * 0.012f
-        linePaint.strokeWidth = radius * 0.014f
 
-        val rArc = (rTrackOuter + rTrackInner) / 2f
-        arcBounds.set(cx - rArc, cy - rArc, cx + rArc, cy + rArc)
+        // Zimții: câte KNURL_PER_SEGMENT linii fine în fiecare bloc, alternativ
+        // luminate și umbrite, cu lumina din stânga-sus ca pe ramă.
+        knurlPaint.strokeWidth = radius * 0.014f
+        val inset = (rRingOuter - rRingInner) * 0.12f
+        val usable = SEGMENT_SWEEP - SEGMENT_GAP
+        for (i in 0 until SEGMENTS) {
+            val blockStart = segmentStart(i) + SEGMENT_GAP / 2f
+            for (k in 0 until KNURL_PER_SEGMENT) {
+                val line = i * KNURL_PER_SEGMENT + k
+                val angle = blockStart + usable * (k + 0.5f) / KNURL_PER_SEGMENT
+                val rad = Math.toRadians(angle.toDouble())
+                val c = cos(rad).toFloat()
+                val sn = kotlin.math.sin(rad).toFloat()
+                knurlCoords[line * 4] = cx + c * (rRingInner + inset)
+                knurlCoords[line * 4 + 1] = cy + sn * (rRingInner + inset)
+                knurlCoords[line * 4 + 2] = cx + c * (rRingOuter - inset)
+                knurlCoords[line * 4 + 3] = cy + sn * (rRingOuter - inset)
+                val light = 0.5f + 0.5f * cos(Math.toRadians((angle + 135f).toDouble())).toFloat()
+                knurlColor[line] = if (k % 2 == 0) {
+                    Color.argb((22 + 46 * light).toInt(), 255, 255, 255)
+                } else {
+                    Color.argb(120, 0, 0, 0)
+                }
+            }
+        }
+
+        // Blocurile stinse: puțin mai deschise spre stânga-sus, ca rama.
+        for (i in 0 until SEGMENTS) {
+            val mid = Math.toRadians((segmentStart(i) + SEGMENT_SWEEP / 2f + 135f).toDouble())
+            val light = 0.5f + 0.5f * cos(mid).toFloat()
+            val v = (30 + 22 * light).toInt()
+            segmentIdle[i] = Color.rgb(v, v, v + 3)
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
         if (rOuter <= 0f) return
 
-        // 1. Umbra și corpul.
+        // 1. Umbra și corpul (mijlocul închis, sub iconiță).
         canvas.drawCircle(cx, cy, rOuter * 1.06f, shadowPaint)
         fill.color = BODY
         canvas.drawCircle(cx, cy, rOuter, fill)
 
-        // 2. Rama cromată, cu câte un fir închis pe fiecare muchie.
+        // 2. Rama cromată, cu un fir închis pe muchia exterioară.
         canvas.drawCircle(cx, cy, rBezel, bezelPaint)
         hairline.color = EDGE_DARK
         canvas.drawCircle(cx, cy, rOuter, hairline)
-        canvas.drawCircle(cx, cy, rKnurlOuter + bezelPaint.strokeWidth * 0.02f, hairline)
 
-        // 3. Coroana zimțată: dinți fini, alternativ luminați și umbriți.
-        //    Lumina scade spre dreapta-jos, ca pe ramă.
-        canvas.drawCircle(cx, cy, (rKnurlOuter + rKnurlInner) / 2f, knurlBase)
-        for (i in 0 until KNURL_TEETH) {
-            val angle = FULL_CIRCLE * i / KNURL_TEETH
-            val light = 0.5f + 0.5f * cos(Math.toRadians((angle + 135f).toDouble())).toFloat()
-            linePaint.color = if (i % 2 == 0) {
-                Color.argb((18 + 40 * light).toInt(), 255, 255, 255)
-            } else {
-                Color.argb(120, 0, 0, 0)
+        // 3. Haloul de sub blocurile aprinse, ca lumina să pară că trece prin
+        //    ele, nu că e vopsită pe ele.
+        val spread = spreadDeg()
+        glowPaint.strokeWidth = segmentPaint.strokeWidth * 1.2f
+        glowPaint.color = withAlpha(accentColor, 34)
+        canvas.drawArc(ringBounds, drawnAngle - spread * 1.3f, spread * 2.6f, false, glowPaint)
+        glowPaint.strokeWidth = segmentPaint.strokeWidth * 1.06f
+        glowPaint.color = withAlpha(accentColor, 46)
+        canvas.drawArc(ringBounds, drawnAngle - spread * 0.8f, spread * 1.6f, false, glowPaint)
+
+        // 4. Inelul secționat. Fiecare bloc se aprinde după cât de aproape e de
+        //    unghiul curent — în animație lumina curge de la un bloc la altul.
+        val sweep = SEGMENT_SWEEP - SEGMENT_GAP
+        for (i in 0 until SEGMENTS) {
+            val start = segmentStart(i)
+            val f = litFactor(start + SEGMENT_SWEEP / 2f, spread)
+            segmentPaint.color = if (f <= 0f) segmentIdle[i] else mix(segmentIdle[i], accentColor, f)
+            canvas.drawArc(ringBounds, start + SEGMENT_GAP / 2f, sweep, false, segmentPaint)
+            for (k in 0 until KNURL_PER_SEGMENT) {
+                val line = i * KNURL_PER_SEGMENT + k
+                knurlPaint.color = knurlColor[line]
+                canvas.drawLine(
+                    knurlCoords[line * 4], knurlCoords[line * 4 + 1],
+                    knurlCoords[line * 4 + 2], knurlCoords[line * 4 + 3],
+                    knurlPaint
+                )
             }
-            drawTick(canvas, angle, rKnurlInner + linePaint.strokeWidth, rKnurlOuter - linePaint.strokeWidth, linePaint)
-        }
-
-        // 4. Pista și marcajele: câte unul per rând, plus câte unul mic între ele.
-        canvas.drawCircle(cx, cy, (rTrackOuter + rTrackInner) / 2f, trackPaint)
-        hairline.color = TRACK_LIP
-        canvas.drawCircle(cx, cy, rTrackOuter, hairline)
-        val bandInset = (rTrackOuter - rTrackInner) * 0.22f
-        linePaint.color = notchColor
-        for (i in 0 until itemCount) {
-            drawTick(canvas, angleOf(i), rTrackInner + bandInset, rTrackOuter - bandInset, linePaint)
-        }
-        if (itemCount in 2..MAX_MINOR_TICKS) {
-            linePaint.color = withAlpha(notchColor, 110)
-            val mid = (rTrackOuter + rTrackInner) / 2f
-            val minor = (rTrackOuter - rTrackInner) * 0.12f
-            for (i in 0 until itemCount) {
-                drawTick(canvas, angleOf(i) + FULL_CIRCLE / itemCount / 2f, mid - minor, mid + minor, linePaint)
+            if (f > 0.75f) {
+                // Miezul cald al blocurilor din centru: o bandă subțire pe mijloc.
+                glowPaint.strokeWidth = segmentPaint.strokeWidth * 0.28f
+                glowPaint.color = withAlpha(LED_CORE, ((f - 0.75f) * 4f * 220).toInt())
+                canvas.drawArc(ringBounds, start + SEGMENT_GAP / 2f, sweep, false, glowPaint)
             }
         }
 
-        // 5. Lumina de pe pistă: o coadă largă și slabă, apoi straturi tot mai
-        //    înguste și aprinse — arată ca un LED văzut prin plastic fumuriu.
-        //    Sectorul e PLAFONAT: într-un meniu cu 3 rânduri ar ocupa o treime
-        //    din inel și ar arăta a bară de încărcare, nu a „ești aici".
-        val sweep = minOf((FULL_CIRCLE / itemCount) * SECTOR_FILL, MAX_SWEEP_DEG)
-        val band = rTrackOuter - rTrackInner
-        for (layer in 0 until TAIL_LAYERS) {
-            val t = layer / (TAIL_LAYERS - 1f)               // 0 = cel mai larg
-            val s = sweep * (2.6f - 1.6f * t)
-            glowPaint.strokeWidth = band * (0.95f - 0.25f * t)
-            glowPaint.color = withAlpha(accentColor, (10 + 22 * t).toInt())
-            canvas.drawArc(arcBounds, drawnAngle - s / 2f, s, false, glowPaint)
-        }
-        for (layer in 0 until GLOW_LAYERS) {
-            val t = layer / (GLOW_LAYERS - 1f)
-            glowPaint.strokeWidth = band * (0.80f - 0.45f * t)
-            glowPaint.color = withAlpha(accentColor, (70 + 185 * t).toInt())
-            canvas.drawArc(arcBounds, drawnAngle - sweep / 2f, sweep, false, glowPaint)
-        }
-        // Miezul alb-cald al LED-ului, doar pe mijlocul segmentului.
-        glowPaint.strokeWidth = band * 0.14f
-        glowPaint.color = LED_CORE
-        canvas.drawArc(arcBounds, drawnAngle - sweep * 0.3f, sweep * 0.6f, false, glowPaint)
+        // 5. Muchiile inelului, ca să pară îngropat între ramă și mijloc.
+        hairline.color = EDGE_DARK
+        canvas.drawCircle(cx, cy, rRingOuter, hairline)
+        canvas.drawCircle(cx, cy, rRingInner, hairline)
 
-        // Reflexia LED-ului pe rama cromată, chiar în dreptul lui.
+        // 6. Cele două inele fine din mijloc: unul gri, unul portocaliu stins.
+        hairline.color = INNER_RING
+        canvas.drawCircle(cx, cy, rRingInner * 0.92f, hairline)
+        hairline.color = withAlpha(accentColor, 70)
+        canvas.drawCircle(cx, cy, rRingInner * 0.86f, hairline)
+
+        // Reflexia luminii pe rama cromată, chiar în dreptul ei.
         glowPaint.strokeWidth = bezelPaint.strokeWidth * 0.35f
         glowPaint.color = withAlpha(accentColor, 80)
-        canvas.drawArc(bezelBounds, drawnAngle - sweep * 0.4f, sweep * 0.8f, false, glowPaint)
-
-        // 6. Domul de sticlă: fundalul pe care stau iconița și eticheta.
-        canvas.drawCircle(cx, cy, rDome, domePaint)
-        hairline.color = DOME_RING
-        canvas.drawCircle(cx, cy, rDome, hairline)
-        hairline.color = withAlpha(accentColor, 60)
-        canvas.drawCircle(cx, cy, rDome * 0.93f, hairline)
-        canvas.drawOval(specularBounds, specularPaint)
+        canvas.drawArc(bezelBounds, drawnAngle - spread * 0.5f, spread, false, glowPaint)
     }
 
-    private fun drawTick(
-        canvas: Canvas,
-        angleDeg: Float,
-        rInner: Float,
-        rOuter: Float,
-        paint: Paint
-    ) {
-        val rad = Math.toRadians(angleDeg.toDouble())
-        val c = cos(rad).toFloat()
-        val s = sin(rad).toFloat()
-        canvas.drawLine(
-            cx + c * rInner, cy + s * rInner,
-            cx + c * rOuter, cy + s * rOuter,
-            paint
-        )
+    private fun segmentStart(i: Int): Float = ANGLE_TOP - SEGMENT_SWEEP / 2f + SEGMENT_SWEEP * i
+
+    /**
+     * Cât de lată e pata de lumină: proporțională cu un rând din meniu, dar
+     * plafonată — într-un meniu cu 3 rânduri ar acoperi o treime din inel și ar
+     * arăta a bară de încărcare, nu a „ești aici".
+     */
+    private fun spreadDeg(): Float =
+        (FULL_CIRCLE / itemCount * 0.5f).coerceIn(MIN_SPREAD_DEG, MAX_SPREAD_DEG)
+
+    /** 1 în dreptul unghiului curent, 0 dincolo de [spread]; curbă moale. */
+    private fun litFactor(angle: Float, spread: Float): Float {
+        var d = abs((angle - drawnAngle) % FULL_CIRCLE)
+        if (d > 180f) d = FULL_CIRCLE - d
+        if (d >= spread) return 0f
+        val t = 1f - d / spread
+        return t * t * (3f - 2f * t)
     }
 
     override fun onDetachedFromWindow() {
@@ -336,28 +320,34 @@ class IDriveWheelView @JvmOverloads constructor(
     private fun withAlpha(base: Int, alpha: Int): Int =
         Color.argb(alpha.coerceIn(0, 255), Color.red(base), Color.green(base), Color.blue(base))
 
+    private fun mix(a: Int, b: Int, t: Float): Int = Color.rgb(
+        (Color.red(a) + (Color.red(b) - Color.red(a)) * t).toInt(),
+        (Color.green(a) + (Color.green(b) - Color.green(a)) * t).toInt(),
+        (Color.blue(a) + (Color.blue(b) - Color.blue(a)) * t).toInt()
+    )
+
     private companion object {
         /** Canvas-ul măsoară unghiurile de la ora 3; -90 pune indexul 0 sus. */
         const val ANGLE_TOP = -90f
         const val FULL_CIRCLE = 360f
 
         const val SPIN_MS = 220L
-        const val GLOW_LAYERS = 3
-        const val TAIL_LAYERS = 4
-        const val KNURL_TEETH = 96
 
-        /** Peste atâtea rânduri marcajele mici dintre ele ar face pista zgomotoasă. */
-        const val MAX_MINOR_TICKS = 12
+        /** Câte blocuri are inelul; 24 = câte un bloc la 15°. */
+        const val SEGMENTS = 24
+        const val SEGMENT_SWEEP = FULL_CIRCLE / SEGMENTS
+        const val SEGMENT_GAP = 2.6f
 
-        /** Cât din sectorul unui meniu e acoperit de arcul aprins. */
-        const val SECTOR_FILL = 0.86f
+        /** Zimții din fiecare bloc; 4 × 24 = 96, cât avea coroana zimțată. */
+        const val KNURL_PER_SEGMENT = 4
+        const val KNURL_LINES = SEGMENTS * KNURL_PER_SEGMENT
 
-        /** Plafonul sectorului aprins, oricat de putine intrari ar avea meniul. */
-        const val MAX_SWEEP_DEG = 30f
+        const val MIN_SPREAD_DEG = 14f
+        const val MAX_SPREAD_DEG = 26f
 
         const val GLOW_MARGIN_RATIO = 0.055f
 
-        val BODY = Color.rgb(14, 14, 16)
+        val BODY = Color.rgb(12, 12, 14)
         val EDGE_DARK = Color.argb(200, 0, 0, 0)
 
         // Crom: aceleași tonuri reci ca iconițele dalelor.
@@ -367,17 +357,7 @@ class IDriveWheelView @JvmOverloads constructor(
         val CHROME_LIGHT = Color.rgb(196, 196, 204)
         val CHROME_HI = Color.rgb(232, 232, 238)
 
-        val KNURL_INNER = Color.rgb(20, 20, 23)
-        val KNURL_OUTER = Color.rgb(38, 38, 42)
-
-        val TRACK_DEEP = Color.rgb(6, 6, 7)
-        val TRACK_EDGE = Color.rgb(16, 16, 18)
-        val TRACK_LIP = Color.argb(70, 255, 255, 255)
-
-        val DOME_CENTER = Color.rgb(30, 30, 34)
-        val DOME_EDGE = Color.rgb(9, 9, 10)
-        val DOME_RING = Color.rgb(70, 70, 76)
-
         val LED_CORE = Color.rgb(255, 196, 150)
+        val INNER_RING = Color.rgb(70, 70, 76)
     }
 }

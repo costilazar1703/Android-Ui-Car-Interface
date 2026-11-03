@@ -94,18 +94,18 @@ class ConnectorView @JvmOverloads constructor(
         super.onSizeChanged(w, h, oldw, oldh)
         linePaint.strokeWidth = LINE_DP * density
         glowPaint.strokeWidth = GLOW_DP * density
-        // Raza se aprinde de la stânga la dreapta; prima treime rămâne stinsă,
+        // Raza se aprinde de la stânga la dreapta; începutul rămâne aproape stins,
         // ca linia să pară că iese din lumina rotiței, nu că e lipită de ea.
         linePaint.shader = LinearGradient(
             0f, 0f, w.toFloat(), 0f,
-            intArrayOf(withAlpha(accent, 0), withAlpha(accent, 0), withAlpha(accent, 150), accent),
-            floatArrayOf(0f, 0.18f, 0.6f, 1f),
+            intArrayOf(withAlpha(accent, 40), withAlpha(accent, 90), withAlpha(accent, 200), accent),
+            floatArrayOf(0f, 0.15f, 0.55f, 1f),
             Shader.TileMode.CLAMP
         )
         glowPaint.shader = LinearGradient(
             0f, 0f, w.toFloat(), 0f,
-            intArrayOf(withAlpha(accent, 0), withAlpha(accent, 0), withAlpha(accent, GLOW_ALPHA)),
-            floatArrayOf(0f, 0.35f, 1f),
+            intArrayOf(withAlpha(accent, 8), withAlpha(accent, 30), withAlpha(accent, GLOW_ALPHA)),
+            floatArrayOf(0f, 0.3f, 1f),
             Shader.TileMode.CLAMP
         )
     }
@@ -153,11 +153,11 @@ class ConnectorView @JvmOverloads constructor(
         const val UNSET = -1f
         const val SLIDE_MS = 180L
 
-        const val LINE_DP = 1.2f
-        const val GLOW_DP = 6f
-        const val DOT_DP = 2.5f
-        const val HALO_DP = 8f
-        const val GLOW_ALPHA = 40
+        const val LINE_DP = 2.4f
+        const val GLOW_DP = 10f
+        const val DOT_DP = 3.2f
+        const val HALO_DP = 10f
+        const val GLOW_ALPHA = 70
 
         val DOT_CORE = Color.rgb(255, 210, 175)
 
