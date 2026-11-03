@@ -55,7 +55,7 @@ object KeyEventLog {
             var idx = writeIndex - 1 - i
             if (idx < 0) idx += CAPACITY
             val e = buffer[idx]
-            val name = KeyEvent.keyCodeToString(e.keyCode)
+            val name = HardKeyRouter.label(e.keyCode)
             val mapped = e.action?.name ?: "—"
             val ago = (now - e.atUptimeMs) / 1000
             out.add("${e.keyCode}  $name → $mapped  ${if (e.consumed) "" else "(ignorat) "}${ago}s")

@@ -22,6 +22,55 @@ import ro.e92.launcher.core.Prefs
  */
 class HardKeyRouter(private val prefs: Prefs) {
 
+    companion object {
+        /**
+         * Pe unitatea KSW rotița iDrive și butoanele de volan NU vin ca taste
+         * Android: EventCenter le transformă în broadcast-uri pe care le ascultă
+         * doar aplicațiile lor (onCmdKSW0x00_0xA1_0x17Event). De aceea mergeau
+         * doar în unele aplicații, iar în meniu nu. Le primim noi și le dăm coduri
+         * proprii, peste orice keycode Android, ca să treacă prin aceeași mapare
+         * și prin același „învață tasta" ca restul.
+         */
+        const val KSW_KNOB_BASE = 10_000
+        const val KSW_CAN_BASE = 10_100
+
+        /** Valoarea „third party" a mișcării → acțiunea noastră. */
+        val KSW_KNOB_DEFAULTS = listOf(
+            KSW_KNOB_BASE + 8 to LauncherAction.ROTARY_CW,
+            KSW_KNOB_BASE + 7 to LauncherAction.ROTARY_CCW,
+            KSW_KNOB_BASE + 5 to LauncherAction.SELECT,
+            KSW_KNOB_BASE + 3 to LauncherAction.TILT_UP,
+            KSW_KNOB_BASE + 4 to LauncherAction.TILT_DOWN,
+            KSW_KNOB_BASE + 1 to LauncherAction.TILT_LEFT,
+            KSW_KNOB_BASE + 2 to LauncherAction.TILT_RIGHT,
+            // MENU de pe controller: EventCenter îl trimite ca „tastă CAN" 9
+            // (g_byKeyVal = 9), nu ca HOME, cât timp CarPlay nu e în față.
+            KSW_CAN_BASE + 9 to LauncherAction.HOME
+        )
+        // Butoanele media și volumul de pe volan NU sunt legate implicit: KSW
+        // le tratează deja (melodia pe Bluetooth, volumul prin MCU) și o a doua
+        // acțiune a noastră ar sări două melodii deodată. Cele două butoane
+        // libere se învață din Button mapping și apar ca „VOLAN n".
+
+        fun isKsw(code: Int) = code >= KSW_KNOB_BASE
+
+        /** Numele afișat în jurnalul de taste și în ecranul de mapare. */
+        fun label(code: Int): String = when {
+            code >= KSW_CAN_BASE -> "VOLAN ${code - KSW_CAN_BASE}"
+            code >= KSW_KNOB_BASE -> when (code - KSW_KNOB_BASE) {
+                8 -> "ROTIȚĂ →"
+                7 -> "ROTIȚĂ ←"
+                5 -> "ROTIȚĂ APĂSARE"
+                3 -> "ROTIȚĂ SUS"
+                4 -> "ROTIȚĂ JOS"
+                1 -> "ROTIȚĂ STÂNGA"
+                2 -> "ROTIȚĂ DREAPTA"
+                else -> "ROTIȚĂ ${code - KSW_KNOB_BASE}"
+            }
+            else -> KeyEvent.keyCodeToString(code)
+        }
+    }
+
     private val map = SparseArray<LauncherAction>(32)
 
     /** Non-null cât timp Setările așteaptă o tastă pentru acțiunea respectivă. */
@@ -105,6 +154,10 @@ class HardKeyRouter(private val prefs: Prefs) {
             val action = LauncherAction.byName(part.substring(sep + 1)) ?: continue
             map.put(code, action)
         }
+        // Rotița KSW nu e o tastă Android, deci nu poate fi „învățată" greșit
+        // peste altceva; o păstrăm legată chiar și după o mapare personalizată,
+        // ca să meargă din prima secundă după contact.
+        for ((code, action) in KSW_KNOB_DEFAULTS) if (map.get(code) == null) map.put(code, action)
     }
 
     private fun loadDefaults() {
@@ -116,6 +169,8 @@ class HardKeyRouter(private val prefs: Prefs) {
         map.put(KeyEvent.KEYCODE_NUMPAD_ENTER, LauncherAction.SELECT)
         map.put(KeyEvent.KEYCODE_DPAD_UP, LauncherAction.TILT_UP)
         map.put(KeyEvent.KEYCODE_DPAD_DOWN, LauncherAction.TILT_DOWN)
+
+        for ((code, action) in KSW_KNOB_DEFAULTS) map.put(code, action)
 
         map.put(KeyEvent.KEYCODE_BACK, LauncherAction.BACK)
         map.put(KeyEvent.KEYCODE_ESCAPE, LauncherAction.BACK)

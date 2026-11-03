@@ -112,6 +112,10 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
         maybePlayIntro(savedInstanceState)
         observeCalls()
+        registerReceiver(kswKeyReceiver, IntentFilter().apply {
+            addAction(KSW_KNOB_ACTION)
+            addAction(KSW_CAN_KEY_ACTION)
+        })
         registerReceiver(wakeReceiver, IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
@@ -170,6 +174,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     override fun onDestroy() {
         runCatching { unregisterReceiver(wakeReceiver) }
+        runCatching { unregisterReceiver(kswKeyReceiver) }
         stack.destroyAll()
         super.onDestroy()
     }
@@ -208,6 +213,48 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         goodbye?.let { it.dismiss(); return true }
         intro?.let { it.skip(); return true }
         return super.dispatchGenericMotionEvent(ev)
+    }
+
+    /**
+     * Rotița și butoanele de volan pe KSW: broadcast-uri, nu taste (vezi
+     * [ro.e92.launcher.input.HardKeyRouter.KSW_KNOB_BASE]). Doar cât suntem în
+     * față - altfel aplicația din față le primește direct de la KSW.
+     */
+    private val kswKeyReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (!resumedNow || intent == null) return
+            val code = when (intent.action) {
+                KSW_KNOB_ACTION -> {
+                    val v = intent.getIntExtra(KSW_KNOB_THIRD_PARTY, -1)
+                        .takeIf { it >= 0 } ?: intent.getIntExtra(KSW_KNOB_DATA, -1)
+                    if (v < 0) return
+                    ro.e92.launcher.input.HardKeyRouter.KSW_KNOB_BASE + v
+                }
+                KSW_CAN_KEY_ACTION -> {
+                    val v = intent.getIntExtra(KSW_CAN_KEY_EXTRA, -1)
+                    if (v < 0) return
+                    ro.e92.launcher.input.HardKeyRouter.KSW_CAN_BASE + v
+                }
+                else -> return
+            }
+            dispatchLauncherKey(code)
+        }
+    }
+
+    /** Punctul comun pentru taste Android și pentru rotița KSW. */
+    private fun dispatchLauncherKey(keyCode: Int): Boolean {
+        callView?.let { return handleCallKey(it, keyCode) }
+        goodbye?.let { it.dismiss(); return true }
+        intro?.let { it.skip(); return true }
+        val wasLearning = Services.keys.pendingLearn != null
+        val action = Services.keys.resolve(keyCode)
+        if (action == null) {
+            KeyEventLog.record(keyCode, null, consumed = wasLearning)
+            return wasLearning
+        }
+        val handled = handleAction(action)
+        KeyEventLog.record(keyCode, action, handled)
+        return handled
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -967,6 +1014,12 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
         /** Sub atât, o stingere a ecranului nu e un contact nou. */
         const val WAKE_GREETING_AFTER_MS = 60_000L
+
+        const val KSW_KNOB_ACTION = "com.choiceway.eventcenter.EventUtils.ZXW_ORIGINAL_MCU_KEY_FOCUS_MOVE_EVT"
+        const val KSW_KNOB_DATA = "com.choiceway.eventcenter.EventUtils.ZXW_ORIGINAL_MCU_KEY_FOCUS_MOVE_DATA"
+        const val KSW_KNOB_THIRD_PARTY = "com.choiceway.eventcenter.EventUtils.ZXW_ORIGINAL_MCU_KEY_FOCUS_MOVE_THIRD_PARTY_DATA"
+        const val KSW_CAN_KEY_ACTION = "com.choiceway.eventcenter.EventUtils.ZXW_CAN_KEY_EVT"
+        const val KSW_CAN_KEY_EXTRA = "com.choiceway.eventcenter.EventUtils.ZXW_CAN_KEY_EVT_EXTRA"
 
         /** Motorul pornit: peste ralanti-ul de demaror. */
         const val ENGINE_RUNNING_RPM = 400
