@@ -808,10 +808,12 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         lifecycleScope.launch {
             Services.kswBt.state.collect { st ->
                 val connected = st.phoneConnected
-                // Nu chiar în clipa conectării: stiva încă negociază profilurile.
-                if (connected && !hostWasConnected) binding.rootLayout.postDelayed({
-                    if (Services.kswBt.state.value.phoneConnected) hostKswMusic("telefon conectat")
-                }, HOST_AFTER_CONNECT_MS)
+                // NU la conectare: dacă ecranul KSW există deja, un intent nou îl
+                // trimite în onNewIntent/onResume, unde bTSuite crapă (NPE în
+                // FragmentBase.refreshFocusView_KSW) - procesul moare, BTService
+                // repornește și rupe legătura (2026-11-03 22:00-22:09, crash log).
+                // Doar când muzica e oprită imediat după play: atunci ecranul
+                // sigur nu există și pornirea lui trece prin onCreate.
                 hostWasConnected = connected
 
                 val now = SystemClock.elapsedRealtime()
@@ -1197,7 +1199,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         const val HOST_CUT_SHORT_MS = 4_000L
         const val HOST_DRIVER_PAUSE_MS = 3_000L
         const val HOST_COOLDOWN_MS = 20_000L
-        const val HOST_AFTER_CONNECT_MS = 8_000L
         /** Pe proces, nu pe instanță: o a doua instanță a activității n-o mai dublează. */
         var lastHostAt = 0L
         const val GUARD_MAX_RECLAIMS = 3
