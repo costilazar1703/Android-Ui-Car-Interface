@@ -82,7 +82,9 @@ object Services {
             broadcastCan,
             // Datele de bord pe care le arată aplicația Dashboard a unității:
             // autonomie, combustibil, temperatură, frână de mână.
-            ro.e92.launcher.can.KswCarDataSource(appContext, scope),
+            // Oprit cât refacem starea în care muzica a mers (2026-11-03 21:55):
+            // atunci launcher-ul nu interoga MCU-ul. Se repune după un drum bun.
+            // ro.e92.launcher.can.KswCarDataSource(appContext, scope),
             // Înaintea GPS-ului: viteza din OBD e fără întârziere.
             ro.e92.launcher.can.ObdDataSource(
                 scope,

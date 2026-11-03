@@ -832,6 +832,13 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     }
 
     private fun hostKswMusic(reason: String, resume: Boolean = false) {
+        // Oprit: ca în sesiunea care a mers (2026-11-03 21:55), launcher-ul nu
+        // mai deschide deloc ecranul KSW - orice intent spre el poate prăbuși
+        // bTSuite. Ecranul îl deschide șoferul o dată, din meniul KSW, cu HOME.
+        if (!HOST_ENABLED) {
+            ro.e92.launcher.core.EventLog.log("Home", "muzica oprită de KSW ($reason) - nu deschid ecranul KSW")
+            return
+        }
         if (!Services.kswBt.isInstalled) return
         if (Services.kswBt.state.value.call != ro.e92.launcher.core.KswBluetooth.Call.NONE) return
         if (Services.vehicle.state.value.reverseGear == true) return
@@ -1199,6 +1206,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         const val HOST_CUT_SHORT_MS = 4_000L
         const val HOST_DRIVER_PAUSE_MS = 3_000L
         const val HOST_COOLDOWN_MS = 20_000L
+        const val HOST_ENABLED = false
         /** Pe proces, nu pe instanță: o a doua instanță a activității n-o mai dublează. */
         var lastHostAt = 0L
         const val GUARD_MAX_RECLAIMS = 3
