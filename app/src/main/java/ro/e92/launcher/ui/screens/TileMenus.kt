@@ -333,6 +333,13 @@ class SettingsMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
     override val menuTitle: String get() = context.getString(R.string.menu_settings)
 
     override fun entries(): List<WheelEntry> = listOf(
+        // Primul: reparațiile unității (Bluetooth, volum, tip mașină).
+        WheelEntry(
+            id = "set_car",
+            icon = R.drawable.ic_menu_car_info,
+            title = context.getString(R.string.set_nav_car),
+            onActivate = { host.push(SettingsScreen(host, SettingsScreen.NAV_CAR)) }
+        ),
         WheelEntry(
             id = "set_apps",
             icon = R.drawable.ic_menu_apps,

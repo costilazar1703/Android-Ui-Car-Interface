@@ -64,6 +64,7 @@
     <string name="bt_forget_all">Forget all phones</string>
     <string name="bt_forget_confirm">Press again to confirm</string>
     <string name="bt_vendor_app">KSW Bluetooth app</string>
+    <string name="set_unit_volume">Unit volume (car radio knob does the rest)</string>
     <string name="bt_module_type">Bluetooth module type (restart after change)</string>
     <string name="bt_rename">Rename unit to %1$s</string>
     <string name="bt_rename_now">Now: %1$s</string>
@@ -89,6 +90,14 @@
     <string name="set_nav_assigned">Assigned apps</string>
     <string name="set_nav_buttons">Button mapping</string>
     <string name="set_nav_system">System</string>
+    <string name="set_nav_car">Car &amp; unit</string>
+    <string name="set_car_hint">Fixes for the KSW unit. Settings marked "restart" apply after the ignition is turned off and on.</string>
+    <string name="set_bt_repair">Repair Bluetooth (drops the phone briefly)</string>
+    <string name="set_car_type">Car type – restart after change</string>
+    <string name="set_block_ksw_reopen">Stop KSW reopening its screen at start</string>
+    <string name="set_start_guard">Keep launcher in front at start</string>
+    <string name="set_open_ksw_bt">Open KSW Bluetooth app</string>
+    <string name="set_open_factory">Open KSW Factory settings</string>
     <string name="set_nav_launcher">Launcher</string>
     <string name="set_carplay_pkg">Apple CarPlay app</string>
     <string name="set_dashboard_pkg">Dashboard app</string>

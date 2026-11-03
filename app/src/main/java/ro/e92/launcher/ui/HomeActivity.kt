@@ -109,6 +109,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             }
         })
 
+        if (savedInstanceState == null) armGuard()
         maybePlayIntro(savedInstanceState)
         observeCalls()
         registerReceiver(kswKeyReceiver, IntentFilter().apply {
@@ -198,6 +199,51 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     override fun onPause() {
         resumedNow = false
         super.onPause()
+        guardFront()
+    }
+
+    // ------------------------------------------------------------ start guard
+    //
+    // La pornire și la trezire unitatea KSW redeschide singură ecranul ei de
+    // Bluetooth (sursa ținută minte de MCU), peste salut. Câteva secunde după
+    // pornire, dacă ceva ne acoperă fără ca șoferul să fi atins ceva, revenim
+    // în față cu intentul de HOME - exact ca butonul HOME, care lasă muzica să
+    // cânte (BACK ar închide ecranul KSW și ar opri-o).
+
+    private var guardUntil = 0L
+    private var guardReclaims = 0
+    private var lastInputAt = 0L
+
+    private fun armGuard() {
+        guardUntil = SystemClock.elapsedRealtime() + GUARD_WINDOW_MS
+        guardReclaims = 0
+    }
+
+    private fun noteInput() {
+        lastInputAt = SystemClock.elapsedRealtime()
+    }
+
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        noteInput()
+        return super.dispatchTouchEvent(ev)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        noteInput()
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun guardFront() {
+        if (!Services.prefs.startGuard) return
+        val now = SystemClock.elapsedRealtime()
+        if (now > guardUntil || guardReclaims >= GUARD_MAX_RECLAIMS) return
+        // Am fost acoperiți chiar de o alegere a șoferului: nu ne băgăm.
+        if (now - lastInputAt < GUARD_INPUT_GRACE_MS) return
+        if (Services.vehicle.state.value.reverseGear == true) return
+        if (Services.kswBt.state.value.call != ro.e92.launcher.core.KswBluetooth.Call.NONE) return
+        guardReclaims++
+        android.util.Log.i("HomeActivity", "acoperit la pornire fără intervenția șoferului - revin în față")
+        binding.rootLayout.postDelayed({ if (!resumedNow) bringToFront(0) }, GUARD_RECLAIM_DELAY_MS)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -235,6 +281,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                 }
                 else -> return
             }
+            noteInput()
             dispatchLauncherKey(code)
         }
     }
@@ -572,6 +619,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                     val off = screenOffAt ?: return
                     screenOffAt = null
                     if (SystemClock.elapsedRealtime() - off < WAKE_GREETING_AFTER_MS) return
+                    armGuard()
                     goHome()
                     carStatus.newDrive()
                     if (resumedNow) {
@@ -594,6 +642,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
      */
     private fun bringToFront(attempt: Int) {
         if (resumedNow || attempt >= WAKE_RETRY_DELAYS_MS.size) return
+        // Șoferul a atins ceva între timp: alegerea lui contează, nu revenirea noastră.
+        if (attempt > 0 && SystemClock.elapsedRealtime() - lastInputAt < GUARD_INPUT_GRACE_MS) return
         // Niciodată peste camera de marșarier.
         if (Services.vehicle.state.value.reverseGear == true) return
         startActivity(Intent(Intent.ACTION_MAIN)
@@ -959,6 +1009,13 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
         /** Întârzierea fiecărei încercări de a reveni în față după contact. */
         val WAKE_RETRY_DELAYS_MS = longArrayOf(0L, 1_500L, 3_500L, 6_000L)
+
+        /** Cât după pornire/trezire ne apărăm locul în față. */
+        const val GUARD_WINDOW_MS = 40_000L
+        const val GUARD_MAX_RECLAIMS = 3
+        /** O atingere sau o tastă atât de recentă înseamnă că șoferul a ales să plece. */
+        const val GUARD_INPUT_GRACE_MS = 2_500L
+        const val GUARD_RECLAIM_DELAY_MS = 400L
         /** Aceeasi durata ca alunecarea paginii, ca sa se miste impreuna. */
         const val PARALLAX_ANIM_MS = 460L
         const val BACKGROUND_FADE_MS = 260L

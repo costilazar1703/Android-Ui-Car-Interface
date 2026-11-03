@@ -1,5 +1,7 @@
 package ro.e92.launcher.ui.screens
 
+import ro.e92.launcher.core.KswVolume
+import ro.e92.launcher.core.KswSettings
 import ro.e92.launcher.core.AppLaunch
 import android.content.Intent
 import android.provider.Settings
@@ -54,6 +56,7 @@ class SettingsScreen(
     }
 
     override fun navEntries(): List<NavEntry> = listOf(
+        NavEntry(NAV_CAR, context.getString(R.string.set_nav_car)),
         NavEntry(NAV_APPS, context.getString(R.string.set_nav_assigned)),
         NavEntry(NAV_BUTTONS, context.getString(R.string.set_nav_buttons)),
         NavEntry(NAV_LAUNCHER, context.getString(R.string.set_nav_launcher)),
@@ -61,6 +64,7 @@ class SettingsScreen(
     )
 
     override fun detailTitle(navId: String): String = when (navId) {
+        NAV_CAR -> context.getString(R.string.set_nav_car)
         NAV_APPS -> context.getString(R.string.set_nav_assigned)
         NAV_BUTTONS -> context.getString(R.string.set_nav_buttons)
         NAV_LAUNCHER -> context.getString(R.string.set_nav_launcher)
@@ -68,6 +72,7 @@ class SettingsScreen(
     }.uppercase()
 
     override fun detailHint(navId: String): String = when (navId) {
+        NAV_CAR -> context.getString(R.string.set_car_hint)
         NAV_APPS -> context.getString(R.string.set_assigned_hint)
         NAV_BUTTONS -> context.getString(R.string.set_keymap_hint)
         NAV_SYSTEM -> context.getString(R.string.set_system_hint)
@@ -75,10 +80,112 @@ class SettingsScreen(
     }
 
     override fun detailRows(navId: String): List<DetailRow> = when (navId) {
+        NAV_CAR -> carUnitRows()
         NAV_APPS -> assignedAppRows()
         NAV_BUTTONS -> keymapRows()
         NAV_LAUNCHER -> launcherRows()
         else -> systemRows()
+    }
+
+    // ----------------------------------------------------------- car & unit
+    //
+    // Tot ce am reparat pe unitatea KSW, într-un singur loc, ca să se poată
+    // repara din mașină fără laptop.
+
+    private fun carUnitRows(): List<DetailRow> {
+        val ksw = Services.kswBt
+        val prefs = Services.prefs
+        return listOf(
+            DetailRow(
+                id = "car_bt_repair",
+                title = context.getString(R.string.set_bt_repair),
+                value = ksw.stackStatus() + " · " + KswSettings.btTypeLabel(prefs.btModuleType),
+                onActivate = {
+                    ksw.repair()
+                    screenScope.launch {
+                        kotlinx.coroutines.delay(5_000)
+                        reloadDetail("car_bt_repair")
+                    }
+                }
+            ),
+            DetailRow(
+                id = "car_bt_type",
+                title = context.getString(R.string.bt_module_type),
+                value = KswSettings.btTypeLabel(prefs.btModuleType),
+                onActivate = {
+                    val types = KswSettings.BT_TYPES
+                    ksw.setModuleType(types[(types.indexOf(prefs.btModuleType) + 1) % types.size])
+                    reloadDetail("car_bt_type")
+                }
+            ),
+            DetailRow(
+                id = "car_volume",
+                title = context.getString(R.string.set_unit_volume),
+                value = "${prefs.unitVolume} / ${KswVolume.MAX}",
+                onActivate = {
+                    val steps = KswVolume.STEPS
+                    val next = steps[(steps.indexOf(prefs.unitVolume) + 1) % steps.size]
+                    prefs.unitVolume = next
+                    KswVolume.set(context, next)
+                    reloadDetail("car_volume")
+                }
+            ),
+            DetailRow(
+                id = "car_type",
+                title = context.getString(R.string.set_car_type),
+                value = carTypeValue(),
+                onActivate = {
+                    val keys = KswSettings.CAR_TYPES.keys.toList()
+                    val current = KswSettings.read(context, KswSettings.CAR_TYPE)
+                    val next = keys[(keys.indexOf(current) + 1) % keys.size]
+                    KswSettings.write(context, KswSettings.CAR_TYPE, next)
+                    reloadDetail("car_type")
+                }
+            ),
+            DetailRow(
+                id = "car_block_reopen",
+                title = context.getString(R.string.set_block_ksw_reopen),
+                value = context.getString(if (prefs.blockKswReopen) R.string.on else R.string.off),
+                onActivate = {
+                    prefs.blockKswReopen = !prefs.blockKswReopen
+                    // Oprit = lăsăm unitatea să-și redeschidă sursa, ca înainte.
+                    KswSettings.write(context, KswSettings.MODE_MEMORY, if (prefs.blockKswReopen) "0" else "1")
+                    reloadDetail("car_block_reopen")
+                }
+            ),
+            DetailRow(
+                id = "car_start_guard",
+                title = context.getString(R.string.set_start_guard),
+                value = context.getString(if (prefs.startGuard) R.string.on else R.string.off),
+                onActivate = {
+                    prefs.startGuard = !prefs.startGuard
+                    reloadDetail("car_start_guard")
+                }
+            ),
+            DetailRow(
+                id = "car_ksw_bt",
+                title = context.getString(R.string.set_open_ksw_bt),
+                onActivate = { AppLaunch.openBluetooth(context) }
+            ),
+            DetailRow(
+                id = "car_factory",
+                title = context.getString(R.string.set_open_factory),
+                onActivate = { openPackage(FACTORY_PACKAGE) }
+            )
+        )
+    }
+
+    private fun carTypeValue(): String {
+        val v = KswSettings.read(context, KswSettings.CAR_TYPE) ?: return "—"
+        return "$v · ${KswSettings.CAR_TYPES[v] ?: "?"}"
+    }
+
+    private fun openPackage(pkg: String) {
+        val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+            ?: Intent().setPackage(pkg).setAction(Intent.ACTION_MAIN)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(intent) }
+            .onFailure { toast(R.string.app_not_set) }
     }
 
     // ------------------------------------------------------- aplicații atribuite
@@ -393,6 +500,8 @@ class SettingsScreen(
     }
 
     companion object {
+        const val NAV_CAR = "nav_car"
+        const val FACTORY_PACKAGE = "com.szchoiceway.fatset"
         const val NAV_APPS = "nav_apps"
         const val NAV_BUTTONS = "nav_buttons"
         const val NAV_LAUNCHER = "nav_launcher"

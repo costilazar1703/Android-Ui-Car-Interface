@@ -105,6 +105,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
                 // dată, la creare, iar bind() îl creează dacă nu rulează. Deci
                 // întâi tipul și puntea, abia apoi legătura cu serviciul.
                 keepModeMemoryOff()
+                KswVolume.apply(context)
                 val typeChanged = keepModuleType()
                 activeModuleType = Services.prefs.btModuleType
                 val bridgeStarted = withContext(Dispatchers.IO) { ensureBridge() }
@@ -202,6 +203,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
 
     /** Unitatea nu mai redeschide ecranul Bluetooth KSW peste salut la pornire. */
     private fun keepModeMemoryOff() {
+        if (!Services.prefs.blockKswReopen) return
         if (KswSettings.read(context, KswSettings.MODE_MEMORY) != "0") {
             KswSettings.write(context, KswSettings.MODE_MEMORY, "0")
             Log.i(TAG, "am oprit reluarea ultimei surse la pornire")
@@ -319,6 +321,35 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     }
 
     // ------------------------------------------------------------- comenzi
+
+    /**
+     * „Repair Bluetooth" din Settings → Car & unit: pornește stiva dacă a căzut
+     * și redeschide serviciul KSW, exact ca la o pornire bună. Rupe legătura
+     * curentă, deci e un buton de folosit doar când ceva nu merge.
+     */
+    fun repair() {
+        scope.launch {
+            Log.w(TAG, "reparare Bluetooth cerută din Settings")
+            keepModuleType()
+            withContext(Dispatchers.IO) { ensureBridge() }
+            restartKswService()
+            startWatchdog("reparare")
+        }
+    }
+
+    /** Starea stivei, pe scurt, pentru Settings → Car & unit. */
+    fun stackStatus(): String {
+        val running = runCatching {
+            Runtime.getRuntime().exec(arrayOf("getprop", "init.svc.$BRIDGE_SERVICE"))
+                .inputStream.bufferedReader().readText().trim()
+        }.getOrNull() == "running"
+        val bridge = File(GOC_SERIAL).exists()
+        return when {
+            running && bridge -> "Stack running · bridge OK"
+            running -> "Stack running · no bridge"
+            else -> "Stack stopped"
+        }
+    }
 
     /** Unitatea devine vizibilă, ca telefonul s-o găsească și să se împerecheze. */
     fun makeVisible() = command {

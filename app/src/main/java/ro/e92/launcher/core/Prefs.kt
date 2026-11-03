@@ -91,6 +91,24 @@ class Prefs(context: Context) {
         get() = sp.getString(KEY_BT_MODULE_TYPE, KswSettings.BT_TYPE_BC6) ?: KswSettings.BT_TYPE_BC6
         set(value) = sp.edit().putString(KEY_BT_MODULE_TYPE, value).apply()
 
+    /**
+     * Volumul de bază al unității (volumul principal KSW, 0-40). Volumul real
+     * îl dai din butonul radioului; la pornire unitatea e adusă cel puțin aici.
+     */
+    var unitVolume: Int
+        get() = sp.getInt(KEY_UNIT_VOLUME, DEFAULT_UNIT_VOLUME)
+        set(value) = sp.edit().putInt(KEY_UNIT_VOLUME, value).apply()
+
+    /** Launcher-ul ține oprită „reluarea ultimei surse" a unității la pornire. */
+    var blockKswReopen: Boolean
+        get() = sp.getBoolean(KEY_BLOCK_KSW_REOPEN, true)
+        set(value) = sp.edit().putBoolean(KEY_BLOCK_KSW_REOPEN, value).apply()
+
+    /** La pornire, launcher-ul revine în față dacă îl acoperă ceva neatins de șofer. */
+    var startGuard: Boolean
+        get() = sp.getBoolean(KEY_START_GUARD, true)
+        set(value) = sp.edit().putBoolean(KEY_START_GUARD, value).apply()
+
     /** Numele sub care telefonul vede unitatea pe Bluetooth. */
     var btUnitName: String
         get() = sp.getString(KEY_BT_NAME, DEFAULT_BT_NAME) ?: DEFAULT_BT_NAME
@@ -158,6 +176,10 @@ class Prefs(context: Context) {
         private const val KEY_GREETING_NAME = "greeting_name"
         private const val KEY_BT_NAME = "bt_unit_name"
         private const val KEY_BT_MODULE_TYPE = "bt_module_type"
+        private const val KEY_UNIT_VOLUME = "unit_volume"
+        private const val KEY_BLOCK_KSW_REOPEN = "block_ksw_reopen"
+        private const val KEY_START_GUARD = "start_guard"
+        const val DEFAULT_UNIT_VOLUME = 30
         private const val KEY_UPDATE_URL = "update_url"
         private const val KEY_CARPLAY_PKG = "carplay_package"
         private const val KEY_DASHBOARD_PKG = "dashboard_package"

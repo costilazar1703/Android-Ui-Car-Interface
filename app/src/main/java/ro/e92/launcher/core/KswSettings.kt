@@ -50,6 +50,25 @@ object KswSettings {
      */
     const val MODE_MEMORY = "Sys_Mode_Memory"
 
+    /**
+     * Tipul mașinii din Factory → Car Type (/oem/app/CarType.xml). EventCenter
+     * îl spune MCU-ului; de el depinde cum sunt citite butoanele de volan și
+     * datele mașinii. Se aplică după o repornire.
+     */
+    const val CAR_TYPE = "KESAIWEI_RECORD_CAR_TYPE"
+
+    val CAR_TYPES = linkedMapOf(
+        "1" to "X1 2016, 6.5\" half screen",
+        "2" to "E60 small screen (full)",
+        "3" to "E60 big screen (full)",
+        "4" to "5 Series 2012 / X3 2011, 6.5\" half",
+        "5" to "5 Series 2012 / X3 2011, 6.5\" full",
+        "6" to "X5 2009 / 5 Series 2011 navi (8.8/10.25)",
+        "7" to "X1 2016, 6.5\" full screen",
+        "8" to "7 Series 2011 navi (8.8/10.25)",
+        "9" to "X1 2016 navi (8.8/10.25)"
+    )
+
     fun read(context: Context, key: String): String? = runCatching {
         context.contentResolver.query(URI, arrayOf("keyvalue"), "keyname=?", arrayOf(key), null)?.use { c ->
             if (c.moveToFirst()) c.getString(0) else null
