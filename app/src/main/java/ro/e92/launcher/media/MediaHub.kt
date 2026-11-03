@@ -142,7 +142,7 @@ class MediaHub(private val context: Context) {
     }
 
     fun playPause() {
-        if (controller == null && kswActive()) return ro.e92.launcher.core.Services.kswBt.playPause()
+        if (controller == null && kswPhone()) return ro.e92.launcher.core.Services.kswBt.playPause()
         val c = controller ?: return
         if (c.playbackState?.state == PlaybackState.STATE_PLAYING) {
             c.transportControls.pause()
@@ -152,12 +152,12 @@ class MediaHub(private val context: Context) {
     }
 
     fun next() {
-        if (controller == null && kswActive()) return ro.e92.launcher.core.Services.kswBt.next()
+        if (controller == null && kswPhone()) return ro.e92.launcher.core.Services.kswBt.next()
         controller?.transportControls?.skipToNext()
     }
 
     fun previous() {
-        if (controller == null && kswActive()) return ro.e92.launcher.core.Services.kswBt.previous()
+        if (controller == null && kswPhone()) return ro.e92.launcher.core.Services.kswBt.previous()
         controller?.transportControls?.skipToPrevious()
     }
 
@@ -181,6 +181,9 @@ class MediaHub(private val context: Context) {
         }
     }
 
+    /** Comenzile merg cât e telefon legat: pauza de la conectare n-are nici titlu, nici redare. */
+    private fun kswPhone(): Boolean = ro.e92.launcher.core.Services.kswBt.state.value.phoneConnected
+
     private fun kswActive(): Boolean {
         val st = ro.e92.launcher.core.Services.kswBt.state.value
         return st.phoneConnected &&
@@ -193,7 +196,8 @@ class MediaHub(private val context: Context) {
         return Snapshot(
             packageName = ro.e92.launcher.core.KswBluetooth.PACKAGE,
             title = st.songTitle.takeIf { it.isNotBlank() },
-            artist = st.phoneName.takeIf { it.isNotBlank() },
+            artist = (st.songArtist.ifBlank { st.phoneName }).takeIf { it.isNotBlank() },
+            album = st.songAlbum.takeIf { it.isNotBlank() },
             isPlaying = st.audioStreaming
         )
     }

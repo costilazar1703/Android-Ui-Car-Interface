@@ -119,15 +119,16 @@ class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 
     override val menuTitle: String get() = context.getString(R.string.menu_bluetooth)
 
-    override fun entries(): List<WheelEntry> = listOf(
+    override fun entries(): List<WheelEntry> = listOfNotNull(
         // Primul: la fiecare drum se deschide o dată aplicația KSW, play acolo,
         // apoi HOME - cât ecranul ei există în spate, muzica nu e oprită.
+        // Cu motorul E92 nu mai are ce căuta aici.
         WheelEntry(
             id = "bt_open_ksw",
             icon = R.drawable.ic_menu_bluetooth,
             title = context.getString(R.string.set_open_ksw_bt),
             onActivate = { AppLaunch.openBluetooth(context) }
-        ),
+        ).takeUnless { Services.prefs.btEngine == ro.e92.launcher.core.Prefs.BT_ENGINE_E92 },
         WheelEntry(
             id = "bt_pair_new",
             icon = R.drawable.ic_menu_bluetooth,

@@ -91,6 +91,11 @@ class Prefs(context: Context) {
         get() = sp.getString(KEY_BT_MODULE_TYPE, KswSettings.BT_TYPE_BC6) ?: KswSettings.BT_TYPE_BC6
         set(value) = sp.edit().putString(KEY_BT_MODULE_TYPE, value).apply()
 
+    /** Cine vorbește cu stiva Bluetooth: bTSuite (implicit) sau motorul nostru. */
+    var btEngine: String
+        get() = sp.getString(KEY_BT_ENGINE, BT_ENGINE_KSW) ?: BT_ENGINE_KSW
+        set(value) = sp.edit().putString(KEY_BT_ENGINE, value).apply()
+
     /**
      * Volumul de bază al unității (volumul principal KSW, 0-40). Volumul real
      * îl dai din butonul radioului; la pornire unitatea e adusă cel puțin aici.
@@ -176,6 +181,9 @@ class Prefs(context: Context) {
         private const val KEY_GREETING_NAME = "greeting_name"
         private const val KEY_BT_NAME = "bt_unit_name"
         private const val KEY_BT_MODULE_TYPE = "bt_module_type"
+        private const val KEY_BT_ENGINE = "bt_engine"
+        const val BT_ENGINE_KSW = "ksw"
+        const val BT_ENGINE_E92 = "e92"
         private const val KEY_UNIT_VOLUME = "unit_volume"
         private const val KEY_BLOCK_KSW_REOPEN = "block_ksw_reopen"
         private const val KEY_START_GUARD = "start_guard"

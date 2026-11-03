@@ -33,6 +33,12 @@ object KswSettings {
     const val BT_TYPE_BC5 = "1"
     const val BT_TYPE_FEIYITONG = "5"
 
+    /**
+     * WenqiangBC5 pe /dev/ttyS2 (openSerialPort): acolo nu e nimic legat, deci
+     * bTSuite lasă /dev/goc_serial liber pentru motorul Bluetooth E92.
+     */
+    const val BT_TYPE_FREE_PTY = "6"
+
     /** Ordinea din meniul Factory → BT Module; toate trei merg prin puntea Feasycom. */
     val BT_TYPES = listOf(BT_TYPE_BC6, BT_TYPE_BC5, BT_TYPE_FEIYITONG)
 

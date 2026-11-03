@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Bluetooth-ul telefonului pe unitatea KSW, comandat direct de launcher.
@@ -32,6 +33,9 @@ import kotlinx.coroutines.launch
  * Starea vine pe două căi: la legare și după fiecare comandă o citim din
  * serviciu, iar între timp ascultăm broadcast-urile `HBCP_EVT_*` pe care
  * serviciul le trimite la orice schimbare.
+ *
+ * Cu motorul E92 ([Prefs.BT_ENGINE_E92]) bTSuite iese din joc: comenzile și
+ * starea trec prin [FeasyMusic], iar restul launcher-ului vede aceeași [State].
  */
 class KswBluetooth(private val context: Context, private val scope: CoroutineScope) {
 
@@ -51,8 +55,12 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
          * nu mai rupe legătura la 15 s cu stiva KSW - telefonul e legat doar așa.
          */
         val audioConnected: Boolean = false,
-        /** Titlul piesei de pe telefon, singurul câmp de metadata pe care îl dă modulul. */
+        /** Titlul piesei de pe telefon, singurul câmp de metadata pe care îl dă bTSuite. */
         val songTitle: String = "",
+        /** Restul liniei MI; doar motorul E92 le are, cu bTSuite rămân goale. */
+        val songArtist: String = "",
+        val songAlbum: String = "",
+        val songDurationMs: Long = 0L,
         val phoneName: String = "",
         val unitName: String = "",
         val pin: String = "",
@@ -91,12 +99,105 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     private var lastAv = -1
     private var started = false
 
-    val isInstalled: Boolean
+    /** Motorul propriu; null = bTSuite, ca până acum. Vezi [setEngine]. */
+    @Volatile
+    private var own: FeasyMusic? = null
+    private var engineJob: kotlinx.coroutines.Job? = null
+    private var bridgeJob: kotlinx.coroutines.Job? = null
+    private val engineLock = kotlinx.coroutines.sync.Mutex()
+
+    private val bTSuiteInstalled: Boolean
         get() = runCatching { context.packageManager.getPackageInfo(PACKAGE, 0); true }.getOrDefault(false)
+
+    /** Unitatea are telefon comandat de noi: prin bTSuite sau prin motorul propriu. */
+    val isInstalled: Boolean
+        get() = own != null || bTSuiteInstalled
 
     fun start() {
         if (started) return
         started = true
+        context.registerReceiver(wakeReceiver, IntentFilter().apply {
+            addAction(android.content.Intent.ACTION_SCREEN_OFF)
+            addAction(android.content.Intent.ACTION_SCREEN_ON)
+            addAction(ACTION_ACC)
+        })
+        scope.launch {
+            engineLock.withLock {
+                if (Services.prefs.btEngine == Prefs.BT_ENGINE_E92) startOwn() else startKsw()
+            }
+        }
+    }
+
+    /**
+     * Comutatorul din Settings → Car & unit. Îl citim și la fiecare pornire, deci
+     * alegerea rămâne; schimbarea eliberează pty-ul sau îl dă înapoi lui bTSuite.
+     */
+    fun setEngine(value: String) {
+        if (value == Services.prefs.btEngine) return
+        Services.prefs.btEngine = value
+        EventLog.log(TAG, "motor Bluetooth: $value")
+        scope.launch {
+            engineLock.withLock {
+                if (value == Prefs.BT_ENGINE_E92) {
+                    stopKsw()
+                    startOwn()
+                } else {
+                    stopOwn()
+                    startKsw()
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ motorul E92
+
+    /**
+     * Cu tipul 6 bTSuite își deschide portul pe /dev/ttyS2, unde nu e nimic, iar
+     * pty-ul stivei rămâne al nostru. Tipul e ținut minte, deci după prima dată
+     * BTService pornește direct așa și nu mai trebuie repornit.
+     */
+    private suspend fun startOwn() {
+        keepModeMemoryOff()
+        KswVolume.apply(context)
+        _state.value = State(unitName = _state.value.unitName, pin = _state.value.pin)
+        val music = FeasyMusic(context, scope, _state) { ensureBridge() }
+        own = music
+        if (bTSuiteInstalled && !freePty()) {
+            EventLog.log(TAG, "nu pot scrie tipul modulului - pty-ul rămâne al lui bTSuite")
+            _state.value = _state.value.copy(moduleSilent = true)
+            return
+        }
+        music.start()
+    }
+
+    private suspend fun freePty(): Boolean {
+        val current = KswSettings.read(context, KswSettings.BT_TYPE)
+        EventLog.log(TAG, "tipul modulului Bluetooth: $current (motor E92)")
+        if (current == KswSettings.BT_TYPE_FREE_PTY) return true
+        if (!KswSettings.write(context, KswSettings.BT_TYPE, KswSettings.BT_TYPE_FREE_PTY)) return false
+        restartKswService(rebind = false)
+        return true
+    }
+
+    private fun stopOwn() {
+        own?.stop()
+        own = null
+        // Stare curată: de aici răspunde bTSuite.
+        _state.value = State(unitName = _state.value.unitName, pin = _state.value.pin)
+    }
+
+    private fun stopKsw() {
+        engineJob?.cancel()
+        bridgeJob?.cancel()
+        watchdog?.cancel()
+        runCatching { context.unregisterReceiver(receiver) }
+        runCatching { context.unbindService(connection) }
+        binder = null
+    }
+
+    // ---------------------------------------------------------- motorul bTSuite
+
+    private fun startKsw() {
         context.registerReceiver(receiver, IntentFilter().apply {
             addAction(EVT_HSHF_STATUS)
             addAction(EVT_AV_STATUS)
@@ -106,13 +207,8 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
             addAction(EVT_CONTACT_NUM)
             addAction(EVT_CONTACT_ADDRESS)
         })
-        context.registerReceiver(wakeReceiver, IntentFilter().apply {
-            addAction(android.content.Intent.ACTION_SCREEN_OFF)
-            addAction(android.content.Intent.ACTION_SCREEN_ON)
-            addAction(ACTION_ACC)
-        })
-        if (isInstalled) {
-            scope.launch {
+        if (bTSuiteInstalled) {
+            engineJob = scope.launch {
                 // Ordinea contează: BTService își deschide portul o singură
                 // dată, la creare, iar bind() îl creează dacă nu rulează. Deci
                 // întâi tipul și puntea, abia apoi legătura cu serviciul.
@@ -168,6 +264,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         if (now - lastFullRestartAt < FULL_RESTART_COOLDOWN_MS) return
         // Niciodată în mijlocul unui apel: l-ar închide.
         if (_state.value.call != Call.NONE) return
+        if (own != null) return
         lastFullRestartAt = now
         EventLog.log(TAG, "refac lanțul Bluetooth ($reason)")
         // Stiva Feasycom nu se oprește: repornită peste un cip deja inițializat
@@ -198,6 +295,10 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
      */
     fun onEngineStart() {
         EventLog.log(TAG, "motor pornit")
+        own?.let {
+            it.kick("motor pornit")
+            return
+        }
         if (isInstalled) checkHealthLater("motor pornit")
     }
 
@@ -225,7 +326,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
      * redeschidă. Merge doar dacă nimeni altcineva nu e legat de el; altfel
      * rămâne aviz „repornește o dată" - la pornire puntea vine acum prima.
      */
-    private suspend fun restartKswService() {
+    private suspend fun restartKswService(rebind: Boolean = true) {
         val component = Intent().setClassName(PACKAGE, SERVICE_CLASS)
         EventLog.log(TAG, "repornesc BTService ca să redeschidă $GOC_SERIAL")
         runCatching { context.unbindService(connection) }
@@ -236,7 +337,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         runCatching { context.startService(component) }
             .onFailure { Log.w(TAG, "startService BTService", it) }
         delay(SERVICE_RESTART_GAP_MS)
-        bind()
+        if (rebind) bind()
     }
 
     /**
@@ -263,6 +364,9 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
      */
     fun setModuleType(value: String) {
         Services.prefs.btModuleType = value
+        // Cu motorul E92 tipul din unitate rămâne cel care eliberează pty-ul;
+        // alegerea se aplică la revenirea pe KSW.
+        if (own != null) return
         scope.launch {
             if (KswSettings.write(context, KswSettings.BT_TYPE, value)) {
                 // Înapoi la tipul cu care a pornit BTService nu cere repornire.
@@ -291,7 +395,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
      * BTService. Cu puntea vie nu atingem nimic.
      */
     private fun watchBridge() {
-        scope.launch {
+        bridgeJob = scope.launch {
             while (true) {
                 delay(BRIDGE_CHECK_MS)
                 val restarted = withContext(Dispatchers.IO) { ensureBridge() }
@@ -353,6 +457,10 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
      * acolo ar strica ce face șoferul.
      */
     private fun startWatchdog(reason: String) {
+        own?.let {
+            it.kick(reason)
+            return
+        }
         if (!isInstalled) return
         watchdog?.cancel()
         val started = android.os.SystemClock.elapsedRealtime()
@@ -412,6 +520,10 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
      * curentă, deci e un buton de folosit doar când ceva nu merge.
      */
     fun repair() {
+        own?.let {
+            it.repair()
+            return
+        }
         scope.launch {
             EventLog.log(TAG, "reparare Bluetooth cerută din Settings")
             keepModuleType()
@@ -435,18 +547,18 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     }
 
     /** Unitatea devine vizibilă, ca telefonul s-o găsească și să se împerecheze. */
-    fun makeVisible() = command {
+    fun makeVisible() = ownOr({ it.makeVisible() }) {
         // Modul de împerechere cu un telefon legat îl poate deconecta; un
         // telefon nou se adaugă doar când nu e niciunul conectat.
         if (_state.value.phoneConnected) {
             EventLog.log(TAG, "nu intru în împerechere cu un telefon conectat")
-            return@command
+            return@ownOr
         }
         call(Tx.PAIR_DEVICE) { it.writeInt(0) }
     }
 
     /** Reconectează ultimul telefon, doar muzica (A2DP) - vezi startWatchdog. */
-    fun reconnectLast() = command { call(Tx.CON_LAST_A2DP) }
+    fun reconnectLast() = ownOr({ it.connectLast() }) { call(Tx.CON_LAST_A2DP) }
 
     /**
      * Ce făceai de mână când telefonul nu mai vedea unitatea, fără repornirea
@@ -454,7 +566,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
      * intră din nou în modul vizibil. Telefonul cu „conectare automată" se
      * leagă singur; altfel îl alegi din lista lui de Bluetooth.
      */
-    fun reset() = command {
+    fun reset() = ownOr({ it.reset() }) {
         call(Tx.DISCONNECT_A2DP)
         call(Tx.DISCONNECT)
         delay(STEP_MS)
@@ -464,21 +576,24 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     }
 
     /** Șterge toate telefoanele memorate; modulul intră apoi singur în modul vizibil. */
-    fun forgetAll() = command { call(Tx.DEL_ALL_PAIRED) }
+    fun forgetAll() = ownOr({ it.forgetAll() }) { call(Tx.DEL_ALL_PAIRED) }
 
     // -------------------------------------------------------------- apeluri
 
-    fun answer() = command { call(Tx.ACCEPT_CALL) }
+    // Motorul E92 e doar muzică: comenzile de apel nu fac nimic și nici nu apar,
+    // fiindcă [State.call] rămâne NONE.
+
+    fun answer() = ownOr({ }) { call(Tx.ACCEPT_CALL) }
 
     /** Respinge un apel care sună sau închide unul în curs - pe KSW e aceeași comandă. */
-    fun hangUp() = command { call(Tx.END_CALL) }
+    fun hangUp() = ownOr({ }) { call(Tx.END_CALL) }
 
     /** Convorbirea trece pe telefon (difuzorul mașinii tace). */
-    fun transferToPhone() = command { call(Tx.TRANSFER_TO_PHONE) }
+    fun transferToPhone() = ownOr({ }) { call(Tx.TRANSFER_TO_PHONE) }
 
-    fun redial() = command { call(Tx.DIAL_LAST) }
+    fun redial() = ownOr({ }) { call(Tx.DIAL_LAST) }
 
-    fun dial(number: String) = command { call(Tx.DIAL_NUMBER) { it.writeString(number) } }
+    fun dial(number: String) = ownOr({ }) { call(Tx.DIAL_NUMBER) { it.writeString(number) } }
 
     /** Când a cerut șoferul ultima oară play/pauză - o oprire de atunci e a lui. */
     @Volatile
@@ -487,10 +602,10 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
 
     fun playPause() {
         lastPlayPauseAt = android.os.SystemClock.elapsedRealtime()
-        command { call(Tx.PLAY_PAUSE) }
+        ownOr({ it.playPause() }) { call(Tx.PLAY_PAUSE) }
     }
-    fun next() = command { call(Tx.NEXT) }
-    fun previous() = command { call(Tx.PREV) }
+    fun next() = ownOr({ it.next() }) { call(Tx.NEXT) }
+    fun previous() = ownOr({ it.previous() }) { call(Tx.PREV) }
 
     /**
      * Numele sub care telefonul vede unitatea și PIN-ul. Doar la cerere, din
@@ -498,7 +613,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
      * rupe legătura cu telefonul, iar stabilitatea ei e mai importantă.
      * Se trimite doar ce diferă de ce raportează modulul.
      */
-    fun applyIdentity() = command {
+    fun applyIdentity() = ownOr({ it.applyIdentity() }) {
         val name = Services.prefs.btUnitName
         val current = callString(Tx.GET_DEVICE_NAME)
         if (name.isNotBlank() && current != null && current != name) {
@@ -507,6 +622,12 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         }
         val pin = callString(Tx.GET_PINCODE)
         if (pin != null && pin != UNIT_PIN) call(Tx.SET_PIN) { it.writeString(UNIT_PIN) }
+    }
+
+    /** Comanda merge la motorul care rulează. */
+    private fun ownOr(ownCommand: (FeasyMusic) -> Unit, kswCommand: suspend () -> Unit) {
+        val music = own
+        if (music != null) ownCommand(music) else command(kswCommand)
     }
 
     /** Rulează pe fundal, apoi recitește starea - ecranul arată imediat efectul. */
@@ -522,6 +643,10 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     // --------------------------------------------------------------- stare
 
     fun refresh() {
+        own?.let {
+            it.refresh()
+            return
+        }
         scope.launch { refreshNow() }
     }
 

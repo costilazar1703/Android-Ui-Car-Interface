@@ -109,6 +109,21 @@ class SettingsScreen(
                 }
             ),
             DetailRow(
+                id = "car_bt_engine",
+                title = context.getString(R.string.set_bt_engine),
+                value = context.getString(
+                    if (prefs.btEngine == Prefs.BT_ENGINE_E92) R.string.set_bt_engine_e92
+                    else R.string.set_bt_engine_ksw
+                ),
+                onActivate = {
+                    ksw.setEngine(
+                        if (prefs.btEngine == Prefs.BT_ENGINE_E92) Prefs.BT_ENGINE_KSW
+                        else Prefs.BT_ENGINE_E92
+                    )
+                    reloadDetail("car_bt_engine")
+                }
+            ),
+            DetailRow(
                 id = "car_battery",
                 title = context.getString(R.string.set_battery),
                 value = Services.vehicle.state.value.batteryV?.let { "%.1f V".format(it) }

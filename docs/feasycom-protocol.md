@@ -50,12 +50,34 @@ stack's own log `/data/feasycom/log` read as root on 2026-11-03
 | IV | connecting |
 | IB | HFP connected · IA HFP disconnected |
 | MG<n> | HFP status: 1 idle, 2 connecting, 3 connected, 4-6 call states |
-| MU<n> | AVRCP status: 1 disconnected, 3 connected, 4 paused, 5 playing |
+| MU<n> | AVRCP status: 1 disconnected, 2 connecting, 3 connected, 4 paused, 5 playing |
 | MA / MB | AV suspended / AV playing |
 | MY | A2DP disconnected |
 | MI<title>\xff<artist>\xff<album>\xff<n>\xff<ms>\xff | track info |
 | MX0/1<addr><name> | connected / paired device |
 | PA1 / PB.. / PC | phonebook ready / entry / end |
+
+Details seen in the logs, used by the launcher's own engine (`core/FeasyLink.kt`, `core/FeasyMusic.kt`):
+
+- `AT#MI` answers `OK`, then `MU2` (connecting), then `MA` + `MU3`. A second `MI` while one is
+  in progress answers `ERROR`.
+- `AT#MV` answers `MU<n>`, with the same numbers as `a2dp_sink_set_state`.
+- `II` repeats while music is playing, so on its own it does not mean the unit is pairing.
+- `MX0` comes only with HFP (`IB`). `AT#MX` lists the paired phones as `MX1..`, so on an A2DP-only
+  link the phone name comes from there.
+- `MG` arrives by itself only when HFP changes. Regular `MG` means another client polls `DY`,
+  which means bTSuite still holds the pty.
+- The stack does not send anything on its own while nothing changes, so the engine polls `MV`
+  every 30 s to know it is alive.
+
+## Opening the pty from an app
+
+- `O_NOCTTY` is required. App processes are session leaders with no terminal, so a plain open
+  makes the pty their controlling terminal and they get SIGHUP when blueware exits.
+- The pty must be raw. Otherwise it echoes the stack's own lines back to the stack. Java has no
+  `tcsetattr`, there is no NDK in the project, and Android 8.1 ships toybox without `stty`. The
+  hidden framework class `android.hardware.SerialPort` does exactly this `tcsetattr` in `open()`,
+  and hidden APIs are unrestricted on API 27, so `FeasyLink` calls it by reflection.
 
 ## Observed failure modes (2026-11-03)
 
