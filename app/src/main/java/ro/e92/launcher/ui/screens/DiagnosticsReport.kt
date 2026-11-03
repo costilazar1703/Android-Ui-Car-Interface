@@ -97,6 +97,19 @@ object DiagnosticsReport {
         sb.append("ksw bt type= ").append(
             ro.e92.launcher.core.KswSettings.read(context, ro.e92.launcher.core.KswSettings.BT_TYPE) ?: "—"
         ).append(" (3 = BC6)\n")
+        // Data ultimei scrieri pe portul modulului: 2013 = nimeni nu i-a
+        // trimis nimic de la boot (unitatea pornește cu ceasul în 2013).
+        sb.append("ttyS4 used= ").append(
+            java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+                .format(java.util.Date(File("/dev/ttyS4").lastModified()))
+        ).append('\n')
+        sb.append("goc_serial= ").append(File("/dev/goc_serial").exists()).append('\n')
+        sb.append("feasycom  = ").append(
+            runCatching {
+                Runtime.getRuntime().exec(arrayOf("getprop", "init.svc.feasycom"))
+                    .inputStream.bufferedReader().readText().trim()
+            }.getOrNull().orEmpty().ifEmpty { "—" }
+        ).append('\n')
         // Setări pe care un reset al interfeței le readuce la valori implicite.
         for ((key, label) in listOf(
             "KESAIWEI_RECORD_CAR_TYPE" to "car type  ",

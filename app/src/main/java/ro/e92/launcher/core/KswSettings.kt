@@ -22,8 +22,12 @@ object KswSettings {
     /**
      * Valorile din pagina „BT Module" a aplicației Factory (BTSetFragment):
      * 1 SudingBC5/WenqingBC5, 2 SudingBC8, 3 WenqiangBC6, 4 WenqiangBC9.
-     * La un reset al interfeței valoarea revine la 1 (BC5) - cu el modulul din
-     * mașină se conectează și se deconectează imediat; cu BC6 merge.
+     *
+     * Cu 1-5 bTSuite vorbește cu modulul prin /dev/goc_serial, puntea pe care
+     * o face stiva Bluetooth Feasycom (/oem/bin/blueware, cip CSR pe ttyS4).
+     * Modulul din mașină e un cip HCI: fără blueware nu răspunde la nimic,
+     * deci deschiderea directă a ttyS4 (tipul 0) nu ajută - verificat pe
+     * unitate 2026-11-03. Vezi [KswBluetooth.ensureBridge].
      */
     const val BT_TYPE_BC6 = "3"
 

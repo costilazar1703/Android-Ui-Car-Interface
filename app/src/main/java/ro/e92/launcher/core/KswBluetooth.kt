@@ -10,6 +10,9 @@ import android.os.IBinder
 import android.os.Parcel
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -62,7 +65,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
          */
         val moduleSilent: Boolean = false,
         /**
-         * Am readus tipul modulului la BC6 după ce l-am găsit pe altceva (de
+         * Am readus tipul modulului la portul direct după ce l-am găsit pe altceva (de
          * obicei BC5, după un reset). bTSuite îl citește doar la pornire, deci
          * contează abia după o repornire a navigației.
          */
@@ -97,27 +100,80 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
             addAction(ACTION_ACC)
         })
         if (isInstalled) {
-            keepBc6()
-            bind()
-            startWatchdog("pornire")
+            scope.launch {
+                // Ordinea contează: BTService își deschide portul o singură
+                // dată, la creare, iar bind() îl creează dacă nu rulează. Deci
+                // întâi tipul și puntea, abia apoi legătura cu serviciul.
+                val typeChanged = keepBc6()
+                val bridgeStarted = withContext(Dispatchers.IO) { ensureBridge() }
+                bind()
+                if (typeChanged || bridgeStarted) restartKswService()
+                startWatchdog("pornire")
+            }
         }
     }
 
     /**
-     * Modulul din mașină merge doar cu tipul BC6; cu BC5 (valoarea în care
-     * revine unitatea la un reset al interfeței) se conectează și se
-     * deconectează imediat. La fiecare pornire ne asigurăm că setarea e BC6.
+     * Stiva Bluetooth a unității e serviciul init „feasycom"
+     * (/oem/bin/blueware /dev/ttyS4 921600): vorbește HCI cu cipul CSR și
+     * expune /dev/goc_serial, pe care bTSuite trimite comenzile. Serviciul e
+     * „disabled" în /oem/etc/init/init.rc și pe build-ul ăsta nimic nu-l mai
+     * pornește - de aici „Initialising" la nesfârșit. Îl pornim noi; SELinux e
+     * permisiv pe unitate, deci ctl.start e acceptat și de la o aplicație.
+     *
+     * @return true dacă a trebuit pornit acum (BTService trebuie redeschis)
      */
-    private fun keepBc6() {
-        scope.launch {
-            val current = KswSettings.read(context, KswSettings.BT_TYPE)
-            Log.i(TAG, "tipul modulului Bluetooth: $current")
-            if (current == KswSettings.BT_TYPE_BC6) return@launch
-            if (KswSettings.write(context, KswSettings.BT_TYPE, KswSettings.BT_TYPE_BC6)) {
-                Log.w(TAG, "tipul modulului era $current - l-am pus pe BC6, trebuie o repornire")
-                _state.value = _state.value.copy(restartNeeded = true)
+    private fun ensureBridge(): Boolean {
+        if (File(GOC_SERIAL).exists()) return false
+        Log.w(TAG, "$GOC_SERIAL lipsește - pornesc serviciul $BRIDGE_SERVICE")
+        runCatching {
+            Runtime.getRuntime().exec(arrayOf("setprop", "ctl.start", BRIDGE_SERVICE)).waitFor()
+        }.onFailure { Log.w(TAG, "nu pot porni $BRIDGE_SERVICE", it) }
+        repeat(BRIDGE_WAIT_STEPS) {
+            if (File(GOC_SERIAL).exists()) {
+                Log.i(TAG, "$GOC_SERIAL a apărut")
+                return true
             }
+            Thread.sleep(BRIDGE_WAIT_STEP_MS)
         }
+        Log.w(TAG, "$GOC_SERIAL tot lipsește după pornirea $BRIDGE_SERVICE")
+        return true
+    }
+
+    /**
+     * BTService deschide portul doar în onCreate. Dacă a pornit înaintea
+     * punții (sau cu alt tip de modul), îl oprim și îl pornim iar ca să-l
+     * redeschidă. Merge doar dacă nimeni altcineva nu e legat de el; altfel
+     * rămâne aviz „repornește o dată" - la pornire puntea vine acum prima.
+     */
+    private suspend fun restartKswService() {
+        val component = Intent().setClassName(PACKAGE, SERVICE_CLASS)
+        Log.w(TAG, "repornesc BTService ca să redeschidă $GOC_SERIAL")
+        runCatching { context.unbindService(connection) }
+        binder = null
+        runCatching { context.stopService(component) }
+            .onFailure { Log.w(TAG, "stopService BTService", it) }
+        delay(SERVICE_RESTART_GAP_MS)
+        runCatching { context.startService(component) }
+            .onFailure { Log.w(TAG, "startService BTService", it) }
+        delay(SERVICE_RESTART_GAP_MS)
+        bind()
+    }
+
+    /**
+     * bTSuite vorbește cu modulul prin puntea Feasycom doar cu tipurile 1-5;
+     * păstrăm BC6 (3), valoarea cu care unitatea a mers. bTSuite citește
+     * tipul doar la crearea BTService, deci o schimbare cere redeschiderea lui.
+     *
+     * @return true dacă a trebuit schimbat
+     */
+    private fun keepBc6(): Boolean {
+        val current = KswSettings.read(context, KswSettings.BT_TYPE)
+        Log.i(TAG, "tipul modulului Bluetooth: $current")
+        if (current == KswSettings.BT_TYPE_BC6) return false
+        val written = KswSettings.write(context, KswSettings.BT_TYPE, KswSettings.BT_TYPE_BC6)
+        if (written) Log.w(TAG, "tipul modulului era $current - l-am pus pe BC6")
+        return written
     }
 
     // ------------------------------------------------------------- watchdog
@@ -445,6 +501,14 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     }
 
     companion object {
+        /** Puntea stivei Feasycom spre bTSuite și serviciul init care o face. */
+        const val GOC_SERIAL = "/dev/goc_serial"
+        const val BRIDGE_SERVICE = "feasycom"
+        const val BRIDGE_WAIT_STEPS = 25
+        const val BRIDGE_WAIT_STEP_MS = 200L
+        const val SERVICE_CLASS = "com.szchoiceway.btsuite.BTService"
+        const val SERVICE_RESTART_GAP_MS = 1_500L
+
         const val PACKAGE = "com.szchoiceway.btsuite"
         private const val ACTION_SERVICE = "com.szchoiceway.btsuite.BTService"
         private const val DESCRIPTOR = "com.szchoiceway.btsuite.IBTService"
