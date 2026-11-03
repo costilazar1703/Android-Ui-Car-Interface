@@ -459,6 +459,12 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
             }
             // Numele telefonului nu vine pe broadcast: îl cerem la conectare.
             if (intent.action == EVT_HSHF_STATUS && linkOf(value) == Link.CONNECTED) refresh()
+            // Ecranul Bluetooth KSW trimite „mute music" când se închide și abia
+            // la redeschidere „unmute" - de aici muzica auzită doar cu ecranul
+            // lor deschis. La fiecare pornire a redării deblocăm noi sunetul.
+            if (intent.action == EVT_AV_STATUS && value == AV_STREAMING && !s.audioStreaming) {
+                scope.launch { call(Tx.UNMUTE_MUSIC) }
+            }
             // Numărul și numele apelantului le cerem și direct, dacă broadcast-ul întârzie.
             if (intent.action == EVT_HSHF_STATUS && callOf(value) != Call.NONE) refreshCaller()
             // Orice veste de la modul înseamnă că serviciul KSW încă îi vorbește.
@@ -549,6 +555,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         const val PREV = 26
         const val NEXT = 27
         const val DISCONNECT_A2DP = 28
+        const val UNMUTE_MUSIC = 33
         const val CON_LAST_A2DP = 29
         const val GET_CONNECT_STATE = 34
         const val GET_PAIR_STATE = 35
