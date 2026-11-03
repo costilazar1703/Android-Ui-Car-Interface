@@ -493,10 +493,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         if (!built) return
         val media = Services.media.snapshot.value
         setLive("media", media.title.takeIf { media.hasSession })
-        tileBindings["media"]?.tileEq?.let {
-            it.visibility = if (media.hasSession) View.VISIBLE else View.GONE
-            it.playing = media.isPlaying
-        }
+        // Animația de redare stă doar în mini-player; pe dală ar fi dublură.
         setLive("bt", BluetoothPresence.deviceName.value)
         val nav = NavNotificationRelay.guidance.value
         setLive("nav", if (nav.isEmpty) null else nav.primary?.takeIf { it.isNotBlank() } ?: nav.secondary)
