@@ -24,6 +24,8 @@ data class VehicleState(
     val oilTempC: Int? = null,
     /** Temperatura lichidului de răcire, °C (OBD PID 05). */
     val coolantTempC: Int? = null,
+    /** Tensiunea bateriei la priza OBD, V (ELM327 ATRV). */
+    val batteryV: Float? = null,
     /** Combustibil rămas, cum îl raportează unitatea (pe KSW: litri). */
     val fuel: Int? = null,
     /** Autonomia estimată de mașină, km. */

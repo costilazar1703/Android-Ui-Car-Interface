@@ -116,6 +116,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
                 bind()
                 if (typeChanged || bridgeStarted) restartKswService()
                 startWatchdog("pornire")
+                checkHealthLater("pornire")
                 watchBridge()
             }
         }
@@ -131,6 +132,71 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
      *
      * @return true dacă puntea a apărut acum (BTService trebuie redeschis)
      */
+    /**
+     * Din Application.onCreate, pe un fir separat: pornim stiva cât mai devreme,
+     * înainte ca bTSuite să-și creeze serviciul la BOOT_COMPLETED - așa îl
+     * deschide direct pe puntea bună și nu mai trebuie repornit.
+     */
+    fun ensureBridgeEarly() {
+        if (!isInstalled) return
+        ensureBridge()
+    }
+
+    /**
+     * Modulul „trăiește" cât bTSuite primește ceva de la el: starea HSHF vine
+     * periodic (la ~5 s) doar când serviciul chiar vorbește cu modulul.
+     */
+    private fun healthy(): Boolean =
+        android.os.SystemClock.elapsedRealtime() - lastModuleEventAt < HEALTHY_WITHIN_MS
+
+    /**
+     * Refacerea completă, în ordinea de la o pornire bună: stiva Feasycom
+     * oprită și pornită din nou, apoi BTService redeschis pe ea. Pentru când
+     * modulul a rămas fără curent o clipă (la demaraj, cu bateria slabă) și
+     * stiva a rămas agățată, deși puntea încă există.
+     */
+    private suspend fun fullRestart(reason: String) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastFullRestartAt < FULL_RESTART_COOLDOWN_MS) return
+        // Niciodată în mijlocul unui apel: l-ar închide.
+        if (_state.value.call != Call.NONE) return
+        lastFullRestartAt = now
+        EventLog.log(TAG, "refac lanțul Bluetooth ($reason)")
+        withContext(Dispatchers.IO) {
+            runCatching {
+                Runtime.getRuntime().exec(arrayOf("setprop", "ctl.stop", BRIDGE_SERVICE)).waitFor()
+            }
+            Thread.sleep(BRIDGE_STOP_GAP_MS)
+            ensureBridge()
+        }
+        restartKswService()
+        startWatchdog(reason)
+        delay(HEALTHY_WITHIN_MS)
+        EventLog.log(TAG, if (healthy()) "lanțul Bluetooth răspunde din nou" else "modulul tot nu răspunde după refacere")
+    }
+
+    @Volatile
+    private var lastFullRestartAt = 0L
+
+    /** După o pornire sau un demaraj: dacă modulul tace, refacem tot lanțul. */
+    private fun checkHealthLater(reason: String) {
+        scope.launch {
+            delay(HEALTH_CHECK_AFTER_MS)
+            if (!healthy()) fullRestart(reason)
+        }
+    }
+
+    /**
+     * Chemat la pornirea motorului. Demarajul trage tensiunea în jos; cu o
+     * baterie obosită modulul Bluetooth (sau toată unitatea) poate pierde
+     * curentul o clipă. Verificăm după câteva secunde și reparăm doar dacă e
+     * nevoie - cu telefonul conectat și modulul viu nu atingem nimic.
+     */
+    fun onEngineStart() {
+        EventLog.log(TAG, "motor pornit")
+        if (isInstalled) checkHealthLater("motor pornit")
+    }
+
     private fun ensureBridge(): Boolean {
         if (File(GOC_SERIAL).exists()) return false
         EventLog.log(TAG, "$GOC_SERIAL lipsește - pornesc serviciul $BRIDGE_SERVICE")
@@ -228,6 +294,9 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
                 if (restarted) {
                     EventLog.log(TAG, "puntea Bluetooth căzuse - am repornit-o")
                     restartKswService()
+                } else if (binder != null && !healthy() && File(GOC_SERIAL).exists()) {
+                    // Puntea există, dar modulul nu mai spune nimic: stiva agățată.
+                    fullRestart("modulul tace")
                 }
             }
         }
@@ -342,9 +411,8 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         scope.launch {
             EventLog.log(TAG, "reparare Bluetooth cerută din Settings")
             keepModuleType()
-            withContext(Dispatchers.IO) { ensureBridge() }
-            restartKswService()
-            startWatchdog("reparare")
+            lastFullRestartAt = 0L
+            fullRestart("reparare din Settings")
         }
     }
 
@@ -627,6 +695,12 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         const val SERVICE_CLASS = "com.szchoiceway.btsuite.BTService"
         const val SERVICE_RESTART_GAP_MS = 1_500L
         const val BRIDGE_CHECK_MS = 30_000L
+        /** Starea HSHF vine la ~5 s; fără nimic în 15 s, serviciul nu vorbește cu modulul. */
+        const val HEALTHY_WITHIN_MS = 15_000L
+        const val HEALTH_CHECK_AFTER_MS = 15_000L
+        const val BRIDGE_STOP_GAP_MS = 1_500L
+        /** O refacere completă rupe legătura; nu mai des de atât, ca să nu buclăm. */
+        const val FULL_RESTART_COOLDOWN_MS = 3 * 60_000L
 
         const val PACKAGE = "com.szchoiceway.btsuite"
         private const val ACTION_SERVICE = "com.szchoiceway.btsuite.BTService"

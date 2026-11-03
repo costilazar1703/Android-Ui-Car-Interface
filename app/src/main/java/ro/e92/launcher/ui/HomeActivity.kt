@@ -779,6 +779,15 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         return true
     }
 
+    /** Turațiile trec de la oprit la mers: anunțăm Bluetooth-ul să se verifice. */
+    private var engineRunning = false
+
+    private fun watchEngineStart(rpm: Int?) {
+        val running = (rpm ?: 0) >= ENGINE_RUNNING_RPM
+        if (running && !engineRunning) Services.kswBt.onEngineStart()
+        engineRunning = running
+    }
+
     private fun observeStatusBar() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -792,6 +801,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                 launch {
                     Services.vehicle.state.collect {
                         carStatus.render(it)
+                        watchEngineStart(it.rpm)
                     }
                 }
             }
@@ -1018,6 +1028,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
         /** Întârzierea fiecărei încercări de a reveni în față după contact. */
         val WAKE_RETRY_DELAYS_MS = longArrayOf(0L, 1_500L, 3_500L, 6_000L)
+        const val ENGINE_RUNNING_RPM = 400
 
         /** Cât după pornire/trezire ne apărăm locul în față. */
         const val GUARD_WINDOW_MS = 40_000L

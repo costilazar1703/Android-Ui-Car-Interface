@@ -68,6 +68,7 @@ class VehicleRepository(
         var boost: Float? = null
         var oilTemp: Int? = null
         var coolant: Int? = null
+        var battery: Float? = null
         var fuel: Int? = null
         var range: Int? = null
         var outside: Float? = null
@@ -102,6 +103,7 @@ class VehicleRepository(
             if (boost == null) boost = s.boostBar
             if (oilTemp == null) oilTemp = s.oilTempC
             if (coolant == null) coolant = s.coolantTempC
+            if (battery == null) battery = s.batteryV
             if (!doorsSet && s.doorsOpen.isNotEmpty()) {
                 doors = s.doorsOpen
                 doorsSet = true
@@ -121,6 +123,7 @@ class VehicleRepository(
             boostBar = boost,
             oilTempC = oilTemp,
             coolantTempC = coolant,
+            batteryV = battery,
             fuel = fuel,
             rangeKm = range,
             outsideTempC = outside,

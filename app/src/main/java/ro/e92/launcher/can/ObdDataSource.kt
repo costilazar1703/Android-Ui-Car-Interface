@@ -105,6 +105,7 @@ class ObdDataSource(
             val rpm = pid(output, input, "0C")?.let { (it[0] * 256 + it[1]) / 4 }
             if (cycle % 2 == 0) mapKpa = pid(output, input, "0B")?.let { it[0] } ?: mapKpa
             if (cycle % 20 == 0) {
+                readVoltage(output, input)
                 pid(output, input, "33")?.let { baroKpa = it[0] }
                 coolant = pid(output, input, "05")?.let { it[0] - 40 } ?: coolant
                 fuelPct = pid(output, input, "2F")?.let { it[0] * 100 / 255 } ?: fuelPct
@@ -116,9 +117,28 @@ class ObdDataSource(
                 boostBar = boost,
                 coolantTempC = coolant,
                 fuel = fuelPct?.let { it * TANK_LITRES / 100 },
+                batteryV = voltage,
                 timestamp = SystemClock.elapsedRealtime()
             )
             cycle++
+        }
+    }
+
+    private var voltage: Float? = null
+    private var loggedVoltage = 0f
+
+    /**
+     * Tensiunea bateriei, măsurată de adaptor la priza OBD. Intră în jurnal la
+     * schimbări de peste 0.5 V - așa se vede căderea de la demaraj și dacă
+     * bateria ține sub 12 V cu motorul oprit.
+     */
+    private fun readVoltage(output: OutputStream, input: InputStream) {
+        val v = Regex("""(\d+(\.\d+)?)\s*V""").find(command(output, input, "ATRV"))
+            ?.groupValues?.get(1)?.toFloatOrNull() ?: return
+        voltage = v
+        if (kotlin.math.abs(v - loggedVoltage) >= 0.5f) {
+            loggedVoltage = v
+            EventLog.log(TAG, "baterie %.1f V".format(v))
         }
     }
 

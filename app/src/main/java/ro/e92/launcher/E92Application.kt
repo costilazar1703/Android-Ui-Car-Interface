@@ -25,6 +25,8 @@ class E92Application : Application() {
         // Doar constructie de obiecte - nimic care sa atinga reteaua.
         // Cold start-ul are buget de 1.5 s pana la home interactiv.
         Services.init(this)
+        // Stiva Bluetooth a unității, cât mai devreme - vezi KswBluetooth.ensureBridgeEarly.
+        Thread({ runCatching { Services.kswBt.ensureBridgeEarly() } }, "bt-bridge").start()
         SettingsBackup.startAutoBackup(this, Services.prefs)
 
         // Pe firul lui; doar deschide un socket, nu întârzie home-ul.

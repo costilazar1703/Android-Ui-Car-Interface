@@ -93,6 +93,8 @@
     <string name="set_nav_car">Car &amp; unit</string>
     <string name="set_car_hint">Fixes for the KSW unit. Settings marked "restart" apply after the ignition is turned off and on.</string>
     <string name="set_bt_repair">Repair Bluetooth (drops the phone briefly)</string>
+    <string name="set_battery">Battery (OBD) – below 12.2 V parked = weak battery</string>
+    <string name="set_battery_no_obd">needs the OBD Wi-Fi</string>
     <string name="set_car_type">Car type – restart after change</string>
     <string name="set_block_ksw_reopen">Stop KSW reopening its screen at start</string>
     <string name="set_start_guard">Keep launcher in front at start</string>

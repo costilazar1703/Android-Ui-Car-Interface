@@ -109,6 +109,13 @@ class SettingsScreen(
                 }
             ),
             DetailRow(
+                id = "car_battery",
+                title = context.getString(R.string.set_battery),
+                value = Services.vehicle.state.value.batteryV?.let { "%.1f V".format(it) }
+                    ?: context.getString(R.string.set_battery_no_obd),
+                onActivate = { reloadDetail("car_battery") }
+            ),
+            DetailRow(
                 id = "car_bt_type",
                 title = context.getString(R.string.bt_module_type),
                 value = KswSettings.btTypeLabel(prefs.btModuleType),
