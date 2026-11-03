@@ -97,6 +97,15 @@ object DiagnosticsReport {
         sb.append("ksw bt type= ").append(
             ro.e92.launcher.core.KswSettings.read(context, ro.e92.launcher.core.KswSettings.BT_TYPE) ?: "—"
         ).append(" (3 = BC6)\n")
+        // Setări pe care un reset al interfeței le readuce la valori implicite.
+        for ((key, label) in listOf(
+            "KESAIWEI_RECORD_CAR_TYPE" to "car type  ",
+            "KESAIWEI_RECORD_BT_OFF" to "bt switch ",
+            "Set_Canbustype" to "canbus    "
+        )) {
+            sb.append(label).append("= ")
+                .append(ro.e92.launcher.core.KswSettings.read(context, key) ?: "—").append('\n')
+        }
 
         val adapter = runCatching {
             (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
