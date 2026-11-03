@@ -22,6 +22,10 @@ import java.util.Locale
 class CarStatus(
     private val temp: TextView,
     private val range: TextView,
+    /** Procentul de rezervor de lângă autonomie. */
+    private val fuelPct: TextView,
+    /** Bara de rezervor de sub autonomie. */
+    private val fuelBar: ro.e92.launcher.ui.widget.FuelBarView,
     /** Pompa + autonomia; ascunsă (dar păstrându-și locul) cât nu știm autonomia. */
     private val rangeBlock: View,
     private val banner: TextView
@@ -50,6 +54,20 @@ class CarStatus(
         val r = state.rangeKm
         range.text = r?.let { ctx.getString(R.string.car_range_short, it) }.orEmpty()
         rangeBlock.visibility = if (r == null) View.INVISIBLE else View.VISIBLE
+
+        val level = fuelLevel(state)
+        fuelPct.text = level?.let { "${(it * 100).toInt()}%" }.orEmpty()
+        fuelBar.visibility = if (level == null) View.GONE else View.VISIBLE
+        level?.let { fuelBar.setLevel(it) }
+    }
+
+    /**
+     * Nivelul rezervorului, 0..1. Din litrii trimiși de KSW dacă vin; altfel
+     * estimat din autonomie față de un plin, ca bara să aibă ce arăta.
+     */
+    private fun fuelLevel(state: VehicleState): Float? {
+        state.fuel?.let { return it / TANK_LITRES }
+        return state.rangeKm?.let { it / FULL_TANK_RANGE_KM }
     }
 
     private fun renderAlert(state: VehicleState) {
@@ -107,6 +125,12 @@ class CarStatus(
         const val STICKY = "sticky"
         const val MOVING_KMH = 5
         const val LOW_RANGE_KM = 60
+
+        /** Rezervorul E92 diesel. */
+        const val TANK_LITRES = 61f
+
+        /** Autonomia aproximativă cu plinul; doar pentru estimarea barei. */
+        const val FULL_TANK_RANGE_KM = 800f
         const val ICE_C = 3f
         const val TRANSIENT_MS = 8_000L
         const val ANIM_MS = 220L

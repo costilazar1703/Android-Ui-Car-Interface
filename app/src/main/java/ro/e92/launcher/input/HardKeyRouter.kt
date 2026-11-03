@@ -56,16 +56,16 @@ class HardKeyRouter(private val prefs: Prefs) {
 
         /** Numele afișat în jurnalul de taste și în ecranul de mapare. */
         fun label(code: Int): String = when {
-            code >= KSW_CAN_BASE -> "VOLAN ${code - KSW_CAN_BASE}"
+            code >= KSW_CAN_BASE -> "STEERING ${code - KSW_CAN_BASE}"
             code >= KSW_KNOB_BASE -> when (code - KSW_KNOB_BASE) {
-                8 -> "ROTIȚĂ →"
-                7 -> "ROTIȚĂ ←"
-                5 -> "ROTIȚĂ APĂSARE"
-                3 -> "ROTIȚĂ SUS"
-                4 -> "ROTIȚĂ JOS"
-                1 -> "ROTIȚĂ STÂNGA"
-                2 -> "ROTIȚĂ DREAPTA"
-                else -> "ROTIȚĂ ${code - KSW_KNOB_BASE}"
+                8 -> "KNOB →"
+                7 -> "KNOB ←"
+                5 -> "KNOB PRESS"
+                3 -> "KNOB UP"
+                4 -> "KNOB DOWN"
+                1 -> "KNOB LEFT"
+                2 -> "KNOB RIGHT"
+                else -> "KNOB ${code - KSW_KNOB_BASE}"
             }
             else -> KeyEvent.keyCodeToString(code)
         }

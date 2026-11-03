@@ -25,7 +25,7 @@ import kotlin.random.Random
 class MockCanDataSource(private val scope: CoroutineScope) : CanDataSource {
 
     override val id = "mock"
-    override val description = "Simulator (fără mașină)"
+    override val description = "Simulator (no car)"
 
     private val _state = MutableStateFlow(VehicleState.EMPTY)
     override val vehicleState: StateFlow<VehicleState> = _state.asStateFlow()

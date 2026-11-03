@@ -106,6 +106,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
                 // întâi tipul și puntea, abia apoi legătura cu serviciul.
                 keepModeMemoryOff()
                 val typeChanged = keepModuleType()
+                activeModuleType = Services.prefs.btModuleType
                 val bridgeStarted = withContext(Dispatchers.IO) { ensureBridge() }
                 bind()
                 if (typeChanged || bridgeStarted) restartKswService()
@@ -123,7 +124,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
      * pornește - de aici „Initialising" la nesfârșit. Îl pornim noi; SELinux e
      * permisiv pe unitate, deci ctl.start e acceptat și de la o aplicație.
      *
-     * @return true dacă a trebuit pornit acum (BTService trebuie redeschis)
+     * @return true dacă puntea a apărut acum (BTService trebuie redeschis)
      */
     private fun ensureBridge(): Boolean {
         if (File(GOC_SERIAL).exists()) return false
@@ -138,8 +139,9 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
             }
             Thread.sleep(BRIDGE_WAIT_STEP_MS)
         }
+        // Fără punte, repornirea BTService n-ar schimba nimic; o lăsăm în pace.
         Log.w(TAG, "$GOC_SERIAL tot lipsește după pornirea $BRIDGE_SERVICE")
-        return true
+        return false
     }
 
     /**
@@ -188,10 +190,15 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         Services.prefs.btModuleType = value
         scope.launch {
             if (KswSettings.write(context, KswSettings.BT_TYPE, value)) {
-                _state.value = _state.value.copy(restartNeeded = true)
+                // Înapoi la tipul cu care a pornit BTService nu cere repornire.
+                _state.value = _state.value.copy(restartNeeded = value != activeModuleType)
             }
         }
     }
+
+    /** Tipul cu care a pornit BTService la pornirea asta. */
+    @Volatile
+    private var activeModuleType: String? = null
 
     /** Unitatea nu mai redeschide ecranul Bluetooth KSW peste salut la pornire. */
     private fun keepModeMemoryOff() {

@@ -654,7 +654,10 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     // ------------------------------------------------------------- top bar
 
     private val carStatus by lazy {
-        CarStatus(binding.statusTemp, binding.statusRange, binding.rangeBlock, binding.alertBanner)
+        CarStatus(
+            binding.statusTemp, binding.statusRange, binding.statusFuelPct, binding.fuelBar,
+            binding.rangeBlock, binding.alertBanner
+        )
     }
 
     // ---------------------------------------------------------------- apeluri

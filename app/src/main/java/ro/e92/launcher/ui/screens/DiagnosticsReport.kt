@@ -70,7 +70,7 @@ object DiagnosticsReport {
 
         val raw = Services.broadcastCan.lastRaw.value
         sb.append("last CAN broadcast:\n")
-        sb.append(if (raw.isEmpty()) "  (niciunul)" else raw)
+        sb.append(if (raw.isEmpty()) "  (none)" else raw)
         return sb.toString()
     }
 
@@ -125,7 +125,7 @@ object DiagnosticsReport {
         }.getOrNull()
 
         if (adapter == null) {
-            sb.append("adapter    = absent (modul pe MCU?)\n")
+            sb.append("adapter    = absent (module on MCU?)\n")
         } else {
             sb.append("adapter    = ")
                 .append(if (adapter.isEnabled) "on" else "off")

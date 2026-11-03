@@ -26,7 +26,7 @@ import kotlin.math.roundToInt
 class GpsSpeedDataSource(private val context: Context) : CanDataSource {
 
     override val id = "gps"
-    override val description = "Viteză din GPS (fallback)"
+    override val description = "GPS speed (fallback)"
 
     private val _state = MutableStateFlow(VehicleState.EMPTY)
     override val vehicleState: StateFlow<VehicleState> = _state.asStateFlow()

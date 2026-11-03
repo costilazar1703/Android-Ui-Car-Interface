@@ -75,7 +75,7 @@ class DiagnosticsScreen(host: ScreenHost) : Screen(host) {
         // ecran și le dai laptopului.
         val remote = DiagServer.address()
             ?.let { "wi-fi diag = http://$it  cheie ${DiagServer.key()}\n\n" }
-            ?: "wi-fi diag = fără rețea\n\n"
+            ?: "wi-fi diag = no network\n\n"
         binding.txtState.text = remote + DiagnosticsReport.build(context, host.activity.window?.decorView)
     }
 

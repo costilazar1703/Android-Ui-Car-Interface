@@ -7,31 +7,31 @@ package ro.e92.launcher.input
  */
 enum class LauncherAction(val label: String) {
 
-    ROTARY_CW("Rotiță — dreapta"),
-    ROTARY_CCW("Rotiță — stânga"),
-    SELECT("Apăsare rotiță"),
+    ROTARY_CW("Knob — turn right"),
+    ROTARY_CCW("Knob — turn left"),
+    SELECT("Knob — press"),
 
-    TILT_UP("Tilt sus"),
-    TILT_DOWN("Tilt jos"),
-    TILT_LEFT("Tilt stânga"),
-    TILT_RIGHT("Tilt dreapta"),
+    TILT_UP("Knob — tilt up"),
+    TILT_DOWN("Knob — tilt down"),
+    TILT_LEFT("Knob — tilt left"),
+    TILT_RIGHT("Knob — tilt right"),
 
     HOME("MENU / Home"),
     BACK("BACK"),
     OPTION("OPTION"),
 
-    NAV("NAV → meniul Navigation"),
-    MEDIA("MEDIA → meniul Media"),
+    NAV("NAV → Navigation menu"),
+    MEDIA("MEDIA → Media menu"),
     PHONE("TEL"),
     RADIO("RADIO"),
 
-    MEDIA_NEXT("Volan — următoarea"),
-    MEDIA_PREV("Volan — anterioara"),
-    MEDIA_PLAY_PAUSE("Volan — play/pause"),
-    VOICE("Volan — voice"),
+    MEDIA_NEXT("Steering — next track"),
+    MEDIA_PREV("Steering — previous track"),
+    MEDIA_PLAY_PAUSE("Steering — play/pause"),
+    VOICE("Steering — voice"),
 
     APPS("App drawer"),
-    DIAGNOSTICS("Diagnostic");
+    DIAGNOSTICS("Diagnostics");
 
     companion object {
         fun byName(name: String): LauncherAction? = entries.firstOrNull { it.name == name }
