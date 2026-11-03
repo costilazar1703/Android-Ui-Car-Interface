@@ -31,9 +31,9 @@
     <dimen name="cover_corner">14dp</dimen>
     <dimen name="transport_small">64dp</dimen>
     <dimen name="transport_big">84dp</dimen>
-    <dimen name="mini_player_height">58dp</dimen>
-    <dimen name="mini_player_cover">46dp</dimen>
-    <dimen name="mini_player_text_max">220dp</dimen>
+    <dimen name="mini_player_height">68dp</dimen>
+    <dimen name="mini_player_cover">60dp</dimen>
+    <dimen name="mini_player_text_max">180dp</dimen>
     <dimen name="mini_player_artist_max">100dp</dimen>
 
     <!-- Meniu principal. Înălțimea rândurilor NU e fixată aici: cele 5 rânduri

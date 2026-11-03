@@ -179,7 +179,6 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                 tileBinding.tileLabel.setTextSize(TypedValue.COMPLEX_UNIT_PX, labelTextPx)
                 tileBinding.tileBody.layoutParams.height = bodySize
                 tileBinding.tileShadow.layoutParams.height = shadowHeight
-                tileBinding.tileShadow.setSource(tile.icon, iconSize, bodySize)
                 tileBinding.tileLive.setTextSize(TypedValue.COMPLEX_UNIT_PX, liveTextPx)
                 tileBinding.tileLive.setPadding(liveInset, 0, liveInset, 0)
                 (tileBinding.tileLive.layoutParams as FrameLayout.LayoutParams).bottomMargin =
@@ -202,6 +201,11 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                     it.width = minOf(scaled, bodySize - margin)
                     it.height = scaled
                 }
+                // Reflexia ia mărimea pe care iconița o are efectiv pe dală: un
+                // pătrat cât lățimea ei (fitCenter). Cu iconSize simplu, mașina
+                // mărită din Car Info se reflecta la mărimea veche.
+                val shown = minOf((iconSize * tile.iconScale).toInt(), bodySize - (if (tile.iconScale > 1f) iconMargin / 3 else iconMargin))
+                tileBinding.tileShadow.setSource(tile.icon, shown, bodySize)
 
                 tileBinding.root.setOnClickListener {
                     host.rebuildFocus(tile.id)
@@ -532,11 +536,21 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         }
         mini.visibility = View.VISIBLE
         val art = media.artwork
-        if (art != null) binding.miniCover.setImageBitmap(art)
-        else binding.miniCover.setImageResource(R.drawable.media_cover_default)
+        // Fără copertă arătăm nota decupată de pe dala Media, fără ramă.
+        if (art != null) {
+            binding.miniCover.setBackgroundResource(R.drawable.bg_mini_cover)
+            binding.miniCover.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+            binding.miniCover.setImageBitmap(art)
+        } else {
+            binding.miniCover.background = null
+            binding.miniCover.scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            binding.miniCover.setImageResource(R.drawable.ic_menu_media)
+        }
         binding.miniTitle.text = media.title
         binding.miniArtist.text = media.artist.orEmpty()
-        binding.miniArtist.visibility = if (media.artist.isNullOrBlank()) View.GONE else View.VISIBLE
+        // Artistul nu încape lângă titlu în chip-ul mare fără să intre peste
+        // indicatorul de pagini; titlul spune destul aici, restul e în Media.
+        binding.miniArtist.visibility = View.GONE
         binding.miniEq.playing = media.isPlaying
         binding.miniPlay.setImageResource(
             if (media.isPlaying) R.drawable.ic_transport_pause else R.drawable.ic_transport_play
