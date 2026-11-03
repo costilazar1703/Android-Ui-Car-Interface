@@ -29,6 +29,9 @@ class ScreenStack(
 
     var onTitleChanged: ((String) -> Unit)? = null
 
+    /** Ecranul din vârf, la fiecare schimbare (pentru ce depinde de el în activitate). */
+    var onTopChanged: ((Screen) -> Unit)? = null
+
     /** Anuntat cu drawable-ul cerut de ecranul ajuns deasupra. */
     var onBackgroundChanged: ((Int) -> Unit)? = null
 
@@ -65,6 +68,7 @@ class ScreenStack(
         screen.show()
         focus.setTargets(screen.focusTargets())
         onTitleChanged?.invoke(screen.title)
+        onTopChanged?.invoke(screen)
         // Un overlay (salutul Drive Sport) se deseneaza PESTE ecranul curent si
         // il lasa vizibil - deci nu are voie sa-i schimbe fundalul. La pop, cel
         // de dedesubt si-l reafirma oricum.
@@ -82,6 +86,7 @@ class ScreenStack(
         top.screen.show()
         focus.setTargets(top.screen.focusTargets(), top.savedFocusId)
         onTitleChanged?.invoke(top.screen.title)
+        onTopChanged?.invoke(top.screen)
         onBackgroundChanged?.invoke(top.screen.backgroundRes)
         return true
     }
@@ -101,6 +106,7 @@ class ScreenStack(
         top.screen.show()
         focus.setTargets(top.screen.focusTargets(), focus.focusedId)
         onTitleChanged?.invoke(top.screen.title)
+        onTopChanged?.invoke(top.screen)
         onBackgroundChanged?.invoke(top.screen.backgroundRes)
     }
 

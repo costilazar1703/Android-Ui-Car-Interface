@@ -95,10 +95,12 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             animationsEnabled = { Services.prefs.animationsEnabled }
         ).apply {
             onTitleChanged = { binding.screenTitle.text = it }
+            onTopChanged = { reserveChipSpace(it !is ro.e92.launcher.ui.screens.TileGridScreen) }
             onBackgroundChanged = ::showBackground
         }
 
         stack.setRoot(TileGridScreen(this))
+        setupBottomChips()
 
         // BACK de la touch / sistem: aceeași cale ca BACK-ul fizic.
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -786,6 +788,78 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         val running = (rpm ?: 0) >= ENGINE_RUNNING_RPM
         if (running && !engineRunning) Services.kswBt.onEngineStart()
         engineRunning = running
+    }
+
+    // ------------------------------------------------------- chip-urile de jos
+    //
+    // Telefonul conectat (stânga) și ce cântă (dreapta), pe orice ecran. Pe
+    // meniul principal stau lângă indicatorul de pagini; celelalte ecrane își
+    // lasă jos [R.dimen.bottom_chips_space] liber, ca să nu intre sub ele.
+
+    private fun reserveChipSpace(reserve: Boolean) {
+        val bottom = if (reserve) resources.getDimensionPixelSize(R.dimen.bottom_chips_space) else 0
+        binding.screenContainer.setPadding(0, 0, 0, bottom)
+    }
+
+    private fun setupBottomChips() {
+        binding.miniCover.clipToOutline = true
+        binding.miniPlay.setOnClickListener { Services.media.playPause() }
+        binding.miniPlayer.setOnClickListener {
+            pushUnique(ro.e92.launcher.ui.screens.MediaScreen::class.java) { ro.e92.launcher.ui.screens.MediaScreen(this) }
+        }
+        binding.phoneChip.setOnClickListener {
+            pushUnique(ro.e92.launcher.ui.screens.BluetoothScreen::class.java) { ro.e92.launcher.ui.screens.BluetoothScreen(this) }
+        }
+        // Doar de atins: focusabile, ar prinde DPAD_CENTER înaintea FocusEngine
+        // și ar desena dreptunghiul gri de focus peste ele.
+        for (v in listOf(binding.miniPlayer, binding.miniPlay, binding.phoneChip)) {
+            v.isFocusable = false
+            v.defaultFocusHighlightEnabled = false
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch { Services.media.snapshot.collect { renderMiniPlayer() } }
+                launch { Services.kswBt.state.collect { renderPhoneChip(it) } }
+            }
+        }
+    }
+
+    private fun renderPhoneChip(st: ro.e92.launcher.core.KswBluetooth.State) {
+        val connected = st.link >= ro.e92.launcher.core.KswBluetooth.Link.CONNECTED && st.phoneName.isNotBlank()
+        binding.phoneName.text = when {
+            st.restartNeeded -> getString(R.string.bt_status_restart_short)
+            st.moduleSilent -> getString(R.string.bt_status_silent_short)
+            else -> st.phoneName
+        }
+        binding.phoneChip.visibility =
+            if (connected || st.moduleSilent || st.restartNeeded) View.VISIBLE else View.GONE
+    }
+
+    private fun renderMiniPlayer() {
+        val media = Services.media.snapshot.value
+        if (!media.hasSession || media.title.isNullOrBlank()) {
+            binding.miniPlayer.visibility = View.GONE
+            binding.miniEq.playing = false
+            return
+        }
+        binding.miniPlayer.visibility = View.VISIBLE
+        val art = media.artwork
+        // Fără copertă arătăm nota decupată de pe dala Media, fără ramă.
+        if (art != null) {
+            binding.miniCover.setBackgroundResource(R.drawable.bg_mini_cover)
+            binding.miniCover.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+            binding.miniCover.setImageBitmap(art)
+        } else {
+            binding.miniCover.background = null
+            binding.miniCover.scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            binding.miniCover.setImageResource(R.drawable.ic_menu_media)
+        }
+        binding.miniTitle.text = media.title
+        binding.miniArtist.visibility = View.GONE
+        binding.miniEq.playing = media.isPlaying
+        binding.miniPlay.setImageResource(
+            if (media.isPlaying) R.drawable.ic_transport_pause else R.drawable.ic_transport_play
+        )
     }
 
     private fun observeStatusBar() {

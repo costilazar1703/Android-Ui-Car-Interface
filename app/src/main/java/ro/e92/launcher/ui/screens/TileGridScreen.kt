@@ -76,18 +76,11 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
 
     override fun onShow() {
         buildDots()
-        setupMiniPlayer()
 
         BluetoothPresence.start(context)
-        screenScope.launch { Services.media.snapshot.collect { renderMedia() } }
+        screenScope.launch { Services.media.snapshot.collect { renderLive() } }
         screenScope.launch { BluetoothPresence.deviceName.collect { renderLive() } }
         screenScope.launch { NavNotificationRelay.guidance.collect { renderLive() } }
-        screenScope.launch { Services.kswBt.state.collect { renderPhone(it) } }
-        binding.phoneChip.setOnClickListener { host.push(BluetoothScreen(host)) }
-        // Ca la mini-player: doar de atins, altfel focusul nativ îl prinde și
-        // desenează un dreptunghi gri peste el când te miști între dale.
-        binding.phoneChip.isFocusable = false
-        binding.phoneChip.defaultFocusHighlightEnabled = false
 
         // Lățimea unei pagini se știe abia după măsurare.
         binding.tileViewport.post {
@@ -238,7 +231,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         }
 
         built = true
-        renderMedia()
+        renderLive()
         host.rebuildFocus(restoreId())
     }
 
@@ -328,20 +321,6 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         indicator = PageIndicatorView(context, TileCatalog.pageCount).also {
             binding.tilePageDots.addView(it)
         }
-    }
-
-    /** Chipul din stânga jos: telefonul legat la modulul KSW, cât e legat. */
-    private fun renderPhone(st: ro.e92.launcher.core.KswBluetooth.State) {
-        val connected = st.link >= ro.e92.launcher.core.KswBluetooth.Link.CONNECTED && st.phoneName.isNotBlank()
-        // Modulul care nu răspunde se anunță aici, unde se vede fără să cauți:
-        // e singura situație din care te scoate doar o repornire a navigației.
-        binding.phoneName.text = when {
-            st.restartNeeded -> context.getString(R.string.bt_status_restart_short)
-            st.moduleSilent -> context.getString(R.string.bt_status_silent_short)
-            else -> st.phoneName
-        }
-        binding.phoneChip.visibility =
-            if (connected || st.moduleSilent || st.restartNeeded) View.VISIBLE else View.GONE
     }
 
     private fun focusFirstTileOfPage(page: Int): Boolean {
@@ -509,53 +488,6 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         b.tileLive.text = text.orEmpty()
         b.tileLive.visibility = if (show) View.VISIBLE else View.GONE
         b.tileIcon.translationY = if (show) -liveIconShift else 0f
-    }
-
-    // --------------------------------------------------------- mini-player
-
-    private fun setupMiniPlayer() {
-        binding.miniCover.clipToOutline = true
-        binding.miniPlay.setOnClickListener { Services.media.playPause() }
-        binding.miniPlayer.setOnClickListener { host.push(MediaScreen(host)) }
-        // setOnClickListener le face focusabile pentru Android, iar focusul
-        // nativ primește DPAD_CENTER înaintea FocusEngine: SELECT pe orice dală
-        // deschidea Media. Rămân doar de atins.
-        for (v in listOf(binding.miniPlayer, binding.miniPlay)) {
-            v.isFocusable = false
-            v.defaultFocusHighlightEnabled = false
-        }
-    }
-
-    private fun renderMedia() {
-        val media = Services.media.snapshot.value
-        renderLive()
-        val mini = binding.miniPlayer
-        if (!media.hasSession || media.title.isNullOrBlank()) {
-            mini.visibility = View.GONE
-            binding.miniEq.playing = false
-            return
-        }
-        mini.visibility = View.VISIBLE
-        val art = media.artwork
-        // Fără copertă arătăm nota decupată de pe dala Media, fără ramă.
-        if (art != null) {
-            binding.miniCover.setBackgroundResource(R.drawable.bg_mini_cover)
-            binding.miniCover.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
-            binding.miniCover.setImageBitmap(art)
-        } else {
-            binding.miniCover.background = null
-            binding.miniCover.scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-            binding.miniCover.setImageResource(R.drawable.ic_menu_media)
-        }
-        binding.miniTitle.text = media.title
-        binding.miniArtist.text = media.artist.orEmpty()
-        // Artistul nu încape lângă titlu în chip-ul mare fără să intre peste
-        // indicatorul de pagini; titlul spune destul aici, restul e în Media.
-        binding.miniArtist.visibility = View.GONE
-        binding.miniEq.playing = media.isPlaying
-        binding.miniPlay.setImageResource(
-            if (media.isPlaying) R.drawable.ic_transport_pause else R.drawable.ic_transport_play
-        )
     }
 
     // -------------------------------------------------------------- acțiuni

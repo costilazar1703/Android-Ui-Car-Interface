@@ -31,6 +31,10 @@
     <dimen name="cover_corner">14dp</dimen>
     <dimen name="transport_small">64dp</dimen>
     <dimen name="transport_big">84dp</dimen>
+    <!-- Lățimea indicatorului de pagini (2 × 6 celule de 26dp, 10 goluri de 4dp, 24dp între pagini). -->
+    <dimen name="page_indicator_width">376dp</dimen>
+    <!-- Cât lasă ecranele (în afară de meniul principal) jos pentru chip-uri. -->
+    <dimen name="bottom_chips_space">66dp</dimen>
     <dimen name="mini_player_height">54dp</dimen>
     <dimen name="mini_player_cover">48dp</dimen>
     <dimen name="mini_player_text_max">210dp</dimen>
