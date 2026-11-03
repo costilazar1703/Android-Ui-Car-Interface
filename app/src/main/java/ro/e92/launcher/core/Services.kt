@@ -80,6 +80,9 @@ object Services {
         Prefs.CAN_GPS -> listOf(GpsSpeedDataSource(appContext))
         else -> listOfNotNull(
             broadcastCan,
+            // Datele de bord pe care le arată aplicația Dashboard a unității:
+            // autonomie, combustibil, temperatură, frână de mână.
+            ro.e92.launcher.can.KswCarDataSource(appContext, scope),
             // Înaintea GPS-ului: viteza din OBD e fără întârziere.
             ro.e92.launcher.can.ObdDataSource(
                 scope,
