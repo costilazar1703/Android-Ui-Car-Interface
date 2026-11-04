@@ -92,5 +92,5 @@
     <dimen name="tile_grid_margin_v">8dp</dimen>
     <!-- Bara de sus -->
     <dimen name="topbar_clock_size">32sp</dimen>
-    <dimen name="topbar_icon">17dp</dimen>
+    <dimen name="topbar_icon">30dp</dimen>
 </resources>

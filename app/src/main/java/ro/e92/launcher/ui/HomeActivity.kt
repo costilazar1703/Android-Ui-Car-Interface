@@ -934,7 +934,12 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { Services.media.snapshot.collect { renderMiniPlayer() } }
-                launch { Services.kswBt.state.collect { renderPhoneChip(it) } }
+                launch {
+                    Services.kswBt.state.collect {
+                        renderPhoneChip(it)
+                        updateBluetooth()
+                    }
+                }
             }
         }
     }
@@ -1074,7 +1079,9 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                     android.bluetooth.BluetoothProfile.STATE_CONNECTED
                 )
         }.getOrDefault(false)
-        binding.icBt.alpha = if (connected) ICON_ON else ICON_OFF
+        // Pe KSW telefonul e legat prin stiva unității, nu prin Bluetooth-ul Android.
+        val phone = Services.kswBt.state.value.phoneConnected
+        binding.icBt.alpha = if (connected || phone) ICON_ON else ICON_OFF
     }
 
     // ------------------------------------------------------------- helpers

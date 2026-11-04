@@ -64,6 +64,16 @@
         android:orientation="horizontal"
         app:layout_constraintGuide_percent="0.115" />
 
+    <!-- Aceeași placă, în oglindă, în spatele temperaturii și iconițelor. -->
+    <ro.e92.launcher.ui.widget.TopPlateView
+        android:id="@+id/topPlateRight"
+        android:layout_width="400dp"
+        android:layout_height="0dp"
+        android:scaleX="-1"
+        app:layout_constraintBottom_toTopOf="@id/gTopBar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <!-- Placa din spatele autonomiei. -->
     <ro.e92.launcher.ui.widget.TopPlateView
         android:id="@+id/topPlate"
@@ -230,10 +240,12 @@
             style="@style/Text.Body"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="18dp"
-            android:fontFamily="@font/inter_medium"
+            android:layout_marginEnd="16dp"
+            android:fontFamily="@font/inter_display_light"
+            android:fontFeatureSettings="tnum"
+            android:includeFontPadding="false"
             android:textColor="@color/text_primary"
-            android:textSize="15sp"
+            android:textSize="25sp"
             android:visibility="gone"
             tools:text="14.5°"
             tools:visibility="visible" />
@@ -243,13 +255,14 @@
             android:layout_width="@dimen/topbar_icon"
             android:layout_height="@dimen/topbar_icon"
             android:contentDescription="@null"
-            android:src="@drawable/ic_status_bt" />
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_menu_bluetooth" />
 
         <ImageView
             android:id="@+id/icWifi"
             android:layout_width="@dimen/topbar_icon"
             android:layout_height="@dimen/topbar_icon"
-            android:layout_marginStart="16dp"
+            android:layout_marginStart="12dp"
             android:contentDescription="@null"
             android:src="@drawable/ic_status_wifi" />
     </LinearLayout>
