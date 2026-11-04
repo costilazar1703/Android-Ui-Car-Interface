@@ -34,11 +34,14 @@
     <!-- Lățimea indicatorului de pagini (2 × 6 celule de 26dp, 10 goluri de 4dp, 24dp între pagini). -->
     <dimen name="page_indicator_width">376dp</dimen>
     <!-- Cât lasă ecranele (în afară de meniul principal) jos pentru chip-uri. -->
-    <dimen name="bottom_chips_space">62dp</dimen>
-    <dimen name="bottom_bar_height">62dp</dimen>
-    <dimen name="bar_plate_button">96dp</dimen>
-    <dimen name="bar_button_height">54dp</dimen>
-    <dimen name="mini_player_height">46dp</dimen>
+    <dimen name="bottom_chips_space">58dp</dimen>
+    <dimen name="bottom_bar_height">58dp</dimen>
+    <!-- Partea de jos a barei, sub treapta din mijloc: aici se centrează tot. -->
+    <dimen name="bar_body_height">44dp</dimen>
+    <!-- Până unde ajung plăcile de la capete, cu tot cu tăietura oblică. -->
+    <dimen name="bar_plate_edge">110dp</dimen>
+    <dimen name="bar_plate_button">80dp</dimen>
+    <dimen name="mini_player_height">44dp</dimen>
     <dimen name="mini_player_cover">40dp</dimen>
     <dimen name="mini_player_text_max">210dp</dimen>
     <dimen name="mini_player_artist_max">100dp</dimen>

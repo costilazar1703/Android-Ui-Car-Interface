@@ -290,10 +290,10 @@
     <ImageView
         android:id="@+id/barHome"
         android:layout_width="@dimen/bar_plate_button"
-        android:layout_height="@dimen/bar_button_height"
+        android:layout_height="@dimen/bar_body_height"
         android:contentDescription="@string/bar_home"
-        android:paddingTop="15dp"
-        android:paddingBottom="8dp"
+        android:paddingTop="7dp"
+        android:paddingBottom="7dp"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_bar_home"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -302,21 +302,36 @@
     <ImageView
         android:id="@+id/barBack"
         android:layout_width="@dimen/bar_plate_button"
-        android:layout_height="@dimen/bar_button_height"
+        android:layout_height="@dimen/bar_body_height"
         android:contentDescription="@string/bar_back"
-        android:paddingTop="15dp"
-        android:paddingBottom="8dp"
+        android:paddingTop="7dp"
+        android:paddingBottom="7dp"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_bar_back"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Telefonul și muzica se centrează între plăci și indicatorul de pagini. -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/gBarLeft"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_begin="@dimen/bar_plate_edge" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/gBarRight"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_end="@dimen/bar_plate_edge" />
 
     <!-- Mijlocul barei: indicatorul de pagini pe meniul principal, numele ecranului în rest. -->
     <FrameLayout
         android:id="@+id/barPages"
         android:layout_width="wrap_content"
         android:layout_height="16dp"
-        android:layout_marginBottom="20dp"
+        android:layout_marginBottom="14dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -326,7 +341,7 @@
         style="@style/Text.Label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="19dp"
+        android:layout_marginBottom="12dp"
         android:letterSpacing="0.14"
         android:singleLine="true"
         android:textColor="@color/tile_label_idle"
@@ -359,11 +374,8 @@
         android:orientation="horizontal"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/barBack"
+        app:layout_constraintEnd_toStartOf="@id/gBarRight"
         app:layout_constraintStart_toEndOf="@id/chipCenter"
-        app:layout_constraintHorizontal_bias="0"
-        android:layout_marginStart="18dp"
-        android:layout_marginBottom="4dp"
         tools:visibility="visible">
 
         <ImageView
@@ -425,15 +437,12 @@
         android:id="@+id/phoneChip"
         android:layout_width="wrap_content"
         android:layout_height="@dimen/mini_player_height"
-        android:layout_marginBottom="4dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/chipCenter"
-        app:layout_constraintHorizontal_bias="1"
-        android:layout_marginEnd="18dp"
-        app:layout_constraintStart_toEndOf="@id/barHome"
+        app:layout_constraintStart_toEndOf="@id/gBarLeft"
         tools:visibility="visible">
 
         <ImageView
