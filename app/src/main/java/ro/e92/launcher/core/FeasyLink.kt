@@ -238,8 +238,8 @@ class FeasyLink(
             "VA", "VB",
             "MM", "MN", "MX",
             "DA", "DB", "DV",
-            // Închide HFP-ul ridicat de telefon: cu el sus, legătura cade la 15 s.
-            "DD"
+            // Conectarea automată a stivei (ea e cea care cheamă HFP).
+            "MH", "MF"
         )
 
         private const val CODE_LENGTH = 2

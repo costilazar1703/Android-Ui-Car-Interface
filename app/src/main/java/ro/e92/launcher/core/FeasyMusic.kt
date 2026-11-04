@@ -169,6 +169,12 @@ class FeasyMusic(
 
     // ---------------------------------------------------------------- pty
 
+    /**
+     * MH oprește conectarea automată a stivei. Ea cheamă HFP la 14 s („hfp conn
+     * to"), iar cu HFP ridicat sau chiar doar încercat cade și muzica. Închiderea
+     * cu DD nu e o soluție: la 5 s după ea stiva s-a reinițializat (2026-11-04
+     * 13:53). Muzica o reconectăm noi, cu MI.
+     */
     override fun onLinkOpen() {
         val now = SystemClock.elapsedRealtime()
         lastLineAt = now
@@ -180,6 +186,8 @@ class FeasyMusic(
         nextConnectAt = now + FIRST_CONNECT_MS
         state.update { it.copy(link = Link.IDLE, moduleSilent = false) }
         // Starea reală, dacă launcher-ul a repornit cu telefonul deja legat.
+        link.send("MH")
+        link.send("MF")
         link.send("MM")
         link.send("MN")
         link.send("MX")
@@ -258,6 +266,7 @@ class FeasyMusic(
             "MY" -> onA2dpGone("MY")
             "MI" -> onTrack(data)
             "MX" -> onDevice(data)
+            "MF" -> EventLog.log(TAG, "← MF${text(data)} (răspuns automat, conectare automată)")
             "MM" -> text(data).let { name -> state.update { it.copy(unitName = name) } }
             "MN" -> text(data).let { pin -> state.update { it.copy(pin = pin) } }
             "ER" -> EventLog.log(TAG, "← ERROR")
@@ -310,13 +319,6 @@ class FeasyMusic(
         }
         hfp = value
         publishLink()
-        // Cu HFP ridicat, legătura cu iPhone-ul cade toată la 15 s, și fără bTSuite
-        // (2026-11-04 12:00:50 -> 12:01:05). Apelurile nu trec prin mașină, așa că
-        // îl închidem imediat și rămâne doar muzica.
-        if (value == Link.CONNECTED) {
-            EventLog.log(TAG, "închid HFP, rămâne doar muzica")
-            link.send("DD")
-        }
     }
 
     private fun onHfpStatus(n: Int) {
