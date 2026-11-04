@@ -914,6 +914,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             }
         }
         binding.miniPlay.setOnClickListener { Services.media.playPause() }
+        binding.miniPrev.setOnClickListener { Services.media.previous() }
+        binding.miniNext.setOnClickListener { Services.media.next() }
         binding.miniPlayer.setOnClickListener {
             pushUnique(ro.e92.launcher.ui.screens.MediaScreen::class.java) { ro.e92.launcher.ui.screens.MediaScreen(this) }
         }
@@ -922,7 +924,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         }
         // Doar de atins: focusabile, ar prinde DPAD_CENTER înaintea FocusEngine
         // și ar desena dreptunghiul gri de focus peste ele.
-        for (v in listOf(binding.miniPlayer, binding.miniPlay, binding.phoneChip, binding.barBack, binding.barHome)) {
+        for (v in listOf(binding.miniPlayer, binding.miniPrev, binding.miniPlay, binding.miniNext, binding.phoneChip, binding.barBack, binding.barHome)) {
             v.isFocusable = false
             v.defaultFocusHighlightEnabled = false
         }

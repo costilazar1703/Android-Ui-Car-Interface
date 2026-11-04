@@ -46,6 +46,7 @@
     <dimen name="bar_plate_button">80dp</dimen>
     <dimen name="mini_player_height">44dp</dimen>
     <dimen name="mini_player_cover">40dp</dimen>
+    <dimen name="mini_player_title_max">130dp</dimen>
     <dimen name="mini_player_text_max">210dp</dimen>
     <dimen name="mini_player_artist_max">100dp</dimen>
 
