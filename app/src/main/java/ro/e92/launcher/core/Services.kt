@@ -49,6 +49,10 @@ object Services {
     lateinit var broadcastCan: BroadcastCanDataSource
         private set
 
+    /** Treapta de marșarier, din mesajele MCU; aceeași instanță peste reconstruirea surselor. */
+    lateinit var reverse: ro.e92.launcher.can.ReverseSource
+        private set
+
     @Volatile
     private var initialized = false
 
@@ -59,6 +63,7 @@ object Services {
             appContext = context.applicationContext
             prefs = Prefs(appContext)
             broadcastCan = BroadcastCanDataSource(appContext)
+            reverse = ro.e92.launcher.can.ReverseSource(appContext, scope)
             vehicle = VehicleRepository(scope, buildSources())
             apps = AppRepository(appContext)
             keys = HardKeyRouter(prefs)
@@ -67,6 +72,7 @@ object Services {
             kswBt = KswBluetooth(appContext, scope)
             trip = TripComputer(appContext, scope)
             initialized = true
+            reverse.watchForScene()
         }
     }
 
@@ -79,6 +85,7 @@ object Services {
         Prefs.CAN_BROADCAST -> listOf(broadcastCan)
         Prefs.CAN_GPS -> listOf(GpsSpeedDataSource(appContext))
         else -> listOfNotNull(
+            reverse,
             broadcastCan,
             // Datele de bord pe care le arată aplicația Dashboard a unității:
             // autonomie, combustibil, temperatură, frână de mână.

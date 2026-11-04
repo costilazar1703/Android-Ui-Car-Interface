@@ -8,6 +8,10 @@
     .\scripts\car.ps1 watch -Minutes 10    urmareste muzica si numara caderile
     .\scripts\car.ps1 play                 play/pauza de pe laptop
     .\scripts\car.ps1 revert               inapoi pe motorul KSW
+    .\scripts\car.ps1 grant                permisiunea pentru marsarier, o data, prin adb
+    .\scripts\car.ps1 reverse -Minutes 5   arata marsarierul si datele de la senzori
+    .\scripts\car.ps1 scene-on             scena E92 in marsarier (tip camera KSW = 0)
+    .\scripts\car.ps1 scene-off            inapoi la ecranul KSW (tip camera KSW = 1)
 
   Fara diacritice: PowerShell 5.1 citeste scripturile fara BOM ca ANSI.
 #>
@@ -100,6 +104,39 @@ Write-Output "Unitatea: $base"
 switch ($Command) {
     "status" { Call $base "/bt" }
     "play" { Call $base "/bt/do?c=playpause" }
+    "scene-on" { Call $base "/sim?scene=1"; Start-Sleep 2; Call $base "/events?n=5" }
+    "scene-off" { Call $base "/sim?scene=0"; Start-Sleep 2; Call $base "/events?n=5" }
+    "grant" {
+        # Deschide adb doar cat dureaza acordarea, apoi il inchide la loc.
+        $adb = Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.exe"
+        $target = "$(([uri]$base).Host):5555"
+        curl.exe -s --max-time 10 -H "X-Key: $Key" --data-binary "setprop service.adb.tcp.port 5555; setprop ctl.restart adbd" "$base/shell" | Out-Null
+        Start-Sleep 4
+        & $adb connect $target
+        & $adb -s $target shell pm grant ro.e92.launcher android.permission.READ_LOGS
+        $granted = & $adb -s $target shell "dumpsys package ro.e92.launcher | grep READ_LOGS"
+        & $adb -s $target shell "setprop service.adb.tcp.port -1; setprop ctl.restart adbd" 2>$null
+        & $adb disconnect $target | Out-Null
+        if ("$granted" -match "granted=true") { Write-Output "OK: launcher-ul poate citi marsarierul." }
+        else { Write-Output "ROSU: permisiunea nu s-a acordat: $granted"; exit 1 }
+    }
+    "reverse" {
+        $end = (Get-Date).AddMinutes($Minutes)
+        $seen = @{}
+        Write-Output "Urmaresc $Minutes minute. Intra in marsarier si apropie-te incet de un obstacol."
+        while ((Get-Date) -lt $end) {
+            foreach ($line in @(Call $base "/events?n=80")) {
+                if ("$line" -match "Reverse|scena de|radar KSW" -and -not $seen.ContainsKey("$line")) {
+                    $seen["$line"] = $true
+                    Write-Output "$line"
+                }
+            }
+            Start-Sleep 2
+        }
+        if (($seen.Keys | Where-Object { $_ -match "radar KSW" }).Count -eq 0) {
+            Write-Output "Nicio data de la senzori pe canalul KSW."
+        }
+    }
     "revert" {
         Call $base "/bt/engine?set=ksw"
         Start-Sleep 8
@@ -199,9 +236,10 @@ switch ($Command) {
             exit 1
         }
         Write-Output "VERDE - poti porni Bluetooth pe telefon."
-        Write-Output "iPhone: Settings > Bluetooth > $($s.unitName) > Calls (Apeluri) OPRIT, PIN $($s.pin)."
+        Write-Output "Profil Bluetooth: $($s.profile)"
+        Write-Output "iPhone: Settings > Bluetooth > uita '$($s.unitName)', apoi asociaza din nou, PIN $($s.pin)."
         if ($s.audioConnected -eq "true") { Write-Output "Telefonul e deja legat: $($s.phone). Apasa play." }
         if ($yellow.Count -gt 0) { $yellow | ForEach-Object { Write-Output "  de retinut: $_" } }
     }
-    default { Write-Output "prepare | status | watch | play | revert" }
+    default { Write-Output "prepare | status | watch | play | revert | grant | reverse | scene-on | scene-off" }
 }

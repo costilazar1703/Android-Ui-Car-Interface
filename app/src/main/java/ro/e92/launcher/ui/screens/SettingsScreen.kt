@@ -165,6 +165,26 @@ class SettingsScreen(
                 }
             ),
             DetailRow(
+                id = "car_bt_music_only",
+                title = context.getString(R.string.set_bt_music_only),
+                value = context.getString(if (prefs.btMusicOnly) R.string.on else R.string.off),
+                onActivate = {
+                    prefs.btMusicOnly = !prefs.btMusicOnly
+                    Services.kswBt.applyProfile()
+                    reloadDetail("car_bt_music_only")
+                }
+            ),
+            DetailRow(
+                id = "car_reverse_scene",
+                title = context.getString(R.string.set_reverse_scene),
+                value = context.getString(if (prefs.reverseScene) R.string.on else R.string.off),
+                onActivate = {
+                    prefs.reverseScene = !prefs.reverseScene
+                    Services.reverse.applyCameraMode()
+                    reloadDetail("car_reverse_scene")
+                }
+            ),
+            DetailRow(
                 id = "car_block_reopen",
                 title = context.getString(R.string.set_block_ksw_reopen),
                 value = context.getString(if (prefs.blockKswReopen) R.string.on else R.string.off),

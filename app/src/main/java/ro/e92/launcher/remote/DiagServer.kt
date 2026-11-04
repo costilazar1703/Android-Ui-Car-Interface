@@ -248,6 +248,7 @@ object DiagServer {
                 if (cmd.isBlank()) respond(out, 400, "comandă goală\n") else respond(out, 200, shell(cmd))
             }
             "/sniff" -> respond(out, 200, sniff(req.query["actions"]))
+            "/sim" -> respond(out, 200, simulate(req.query))
             "/content" -> respond(out, 200, content(req.query["uri"].orEmpty()))
             "/screenshot" -> {
                 val png = screenshot()
@@ -280,6 +281,23 @@ object DiagServer {
         if (value != Prefs.BT_ENGINE_E92 && value != Prefs.BT_ENGINE_KSW) return "set=e92 sau set=ksw\n"
         Services.kswBt.setEngine(value)
         return "motor: $value\n"
+    }
+
+    /** Pentru probe fără mașină: /sim?reverse=1&cm=150,40,18,60 /sim?wifi=0..3|off|real */
+    private fun simulate(query: Map<String, String>): String {
+        query["wifi"]?.let {
+            Services.net.simulatedLevel = if (it == "real") null else if (it == "off") -1 else it.toIntOrNull()
+            Services.net.refresh()
+        }
+        query["scene"]?.let {
+            Services.prefs.reverseScene = it == "1"
+            Services.reverse.applyCameraMode()
+        }
+        query["reverse"]?.let { on ->
+            val cm = query["cm"]?.split(",")?.mapNotNull { it.toIntOrNull() }
+            Services.reverse.simulate(on == "1", cm)
+        }
+        return "ok\n"
     }
 
     private fun btDo(command: String): String {
@@ -417,6 +435,7 @@ object DiagServer {
         E92 diag - comenzi (toate cer cheia: header X-Key sau ?k=)
           GET  /info                 unitate + tot ce arată ecranul Diagnostic
           GET  /bt                   starea Bluetooth, cheie=valoare
+          GET  /sim?reverse=1&cm=150,40,18,60   simulează marșarierul; /sim?wifi=0..3|off|real
           GET  /bt/engine?set=e92    motorul Bluetooth: e92 sau ksw
           GET  /bt/do?c=playpause    connect, repair, pair, playpause, next, previous
           GET  /keys                 ultimele taste primite

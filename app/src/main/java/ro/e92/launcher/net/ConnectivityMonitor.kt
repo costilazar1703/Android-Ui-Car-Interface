@@ -1,8 +1,10 @@
 package ro.e92.launcher.net
 
 import android.Manifest
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.Network
@@ -29,7 +31,12 @@ class ConnectivityMonitor(private val context: Context) {
 
     enum class Status { WIFI_OFF, DISCONNECTED, CONNECTING, CONNECTED_NO_INTERNET, ONLINE }
 
-    data class NetState(val status: Status = Status.DISCONNECTED, val ssid: String? = null)
+    /** [level]: -1 fără conexiune, altfel 0 (slab) ... 3 (plin). */
+    data class NetState(
+        val status: Status = Status.DISCONNECTED,
+        val ssid: String? = null,
+        val level: Int = -1
+    )
 
     private val _state = MutableStateFlow(NetState())
     val state: StateFlow<NetState> = _state.asStateFlow()
@@ -39,6 +46,14 @@ class ConnectivityMonitor(private val context: Context) {
         .getSystemService(Context.WIFI_SERVICE) as? WifiManager
 
     private var registered = false
+
+    /** Doar din /sim, ca să se poată verifica iconița fără să muți antena. */
+    @Volatile
+    var simulatedLevel: Int? = null
+
+    private val rssiReceiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context?, intent: Intent?) = refresh()
+    }
 
     private val callback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) = refresh()
@@ -54,6 +69,7 @@ class ConnectivityMonitor(private val context: Context) {
             .build()
         runCatching {
             manager.registerNetworkCallback(request, callback)
+            context.registerReceiver(rssiReceiver, IntentFilter(WifiManager.RSSI_CHANGED_ACTION))
             registered = true
         }.onFailure { Log.w(TAG, "registerNetworkCallback a eșuat", it) }
         refresh()
@@ -62,13 +78,14 @@ class ConnectivityMonitor(private val context: Context) {
     fun stop() {
         if (!registered) return
         runCatching { cm?.unregisterNetworkCallback(callback) }
+        runCatching { context.unregisterReceiver(rssiReceiver) }
         registered = false
     }
 
     fun refresh() {
         val manager = cm
         val wifiEnabled = runCatching { wifi?.isWifiEnabled == true }.getOrDefault(false)
-        if (!wifiEnabled) {
+        if (!wifiEnabled && simulatedLevel == null) {
             _state.value = NetState(Status.WIFI_OFF, null)
             return
         }
@@ -86,7 +103,20 @@ class ConnectivityMonitor(private val context: Context) {
             caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true -> Status.ONLINE
             else -> Status.CONNECTED_NO_INTERNET
         }
-        _state.value = NetState(status, if (onWifi) currentSsid() else null)
+        _state.value = NetState(status, if (onWifi) currentSsid() else null, signalLevel())
+    }
+
+    /**
+     * Din WifiManager, nu din rețeaua activă: adaptorul OBD nu dă internet, iar o
+     * asemenea rețea poate să nu fie cea implicită deși suntem conectați la ea.
+     */
+    private fun signalLevel(): Int {
+        simulatedLevel?.let { return it }
+        return runCatching {
+            val info = wifi?.connectionInfo
+            if (info == null || info.networkId == -1) -1
+            else WifiManager.calculateSignalLevel(info.rssi, SIGNAL_LEVELS)
+        }.getOrDefault(-1)
     }
 
     /**
@@ -120,5 +150,6 @@ class ConnectivityMonitor(private val context: Context) {
     private companion object {
         const val TAG = "Connectivity"
         const val UNKNOWN_SSID = "<unknown ssid>"
+        const val SIGNAL_LEVELS = 4
     }
 }

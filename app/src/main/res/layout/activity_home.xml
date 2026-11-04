@@ -250,12 +250,10 @@
             tools:text="14.5°"
             tools:visibility="visible" />
 
-        <ImageView
+        <ro.e92.launcher.ui.widget.WifiIconView
             android:id="@+id/icWifi"
             android:layout_width="@dimen/topbar_icon"
-            android:layout_height="@dimen/topbar_icon"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_status_wifi" />
+            android:layout_height="@dimen/topbar_icon" />
     </LinearLayout>
 
     <View
@@ -335,7 +333,7 @@
         android:id="@+id/barPages"
         android:layout_width="wrap_content"
         android:layout_height="16dp"
-        android:layout_marginBottom="14dp"
+        android:layout_marginBottom="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -345,7 +343,7 @@
         style="@style/Text.Label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
+        android:layout_marginBottom="14dp"
         android:letterSpacing="0.14"
         android:singleLine="true"
         android:textColor="@color/tile_label_idle"
@@ -362,7 +360,7 @@
         android:id="@+id/chipCenter"
         android:layout_width="@dimen/page_indicator_width"
         android:layout_height="1dp"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="26dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -376,14 +374,16 @@
         android:layout_height="@dimen/mini_player_height"
         android:gravity="center_vertical"
         android:orientation="horizontal"
+        android:layout_marginEnd="@dimen/bar_media_end"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/gBarRight"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/chipCenter"
         tools:visibility="visible">
 
         <TextView
             android:id="@+id/miniTitle"
+            android:paddingStart="16dp"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -392,7 +392,7 @@
             android:gravity="center"
             android:singleLine="true"
             android:textColor="@color/tile_label_idle"
-            android:textSize="18sp"
+            android:textSize="20sp"
             tools:text="Midnight City" />
 
         <TextView
@@ -471,7 +471,7 @@
             android:maxWidth="@dimen/mini_player_text_max"
             android:singleLine="true"
             android:textColor="@color/tile_label_idle"
-            android:textSize="18sp"
+            android:textSize="20sp"
             tools:text="iPhone Costi" />
     </LinearLayout>
 

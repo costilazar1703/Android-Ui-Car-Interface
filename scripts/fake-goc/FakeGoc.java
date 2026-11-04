@@ -120,7 +120,20 @@ public class FakeGoc {
         }
     }
 
+    private static int profile = 1192;
+
     private static void handle(String raw) {
+        // Configurarea stivei; ca pe unitate, răspunsul n-are „+" în față.
+        if (raw.startsWith("AT+")) {
+            clientSeen = true;
+            note("<< " + raw);
+            if (raw.startsWith("AT+PROFILE=")) {
+                profile = Integer.parseInt(raw.substring(11).trim());
+            } else if (raw.startsWith("AT+PROFILE")) {
+                send("PROFILE" + profile);
+            }
+            return;
+        }
         if (!raw.startsWith("AT#")) {
             // Tot ce am scris noi și se întoarce: pty-ul face ecou, deci nu e raw.
             // Înainte de prima comandă e normal: clientul încă n-a pus modul raw.

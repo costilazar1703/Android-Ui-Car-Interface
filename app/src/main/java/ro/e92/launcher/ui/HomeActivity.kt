@@ -186,6 +186,11 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         super.onNewIntent(intent)
         // Revenirea noastră (după ecranul KSW) păstrează ecranul la care erai.
         if (intent.getBooleanExtra(EXTRA_RECLAIM, false)) return
+        // Marșarierul păstrează și el ecranul; la ieșire te întorci unde erai.
+        if (intent.getBooleanExtra(ro.e92.launcher.can.EXTRA_REVERSE, false)) {
+            reverseFromOutside = true
+            return
+        }
         // Apăsarea butonului HOME în timp ce suntem deja în față: înapoi la rădăcină.
         goHome()
     }
@@ -194,6 +199,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         super.onResume()
         keepAnimationsOn()
         resumedNow = true
+        Services.reverse.launcherInFront = true
         updateClock()
         if (greetOnResume) {
             greetOnResume = false
@@ -208,6 +214,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     override fun onPause() {
         resumedNow = false
+        Services.reverse.launcherInFront = false
         super.onPause()
         guardFront()
     }
@@ -915,6 +922,27 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     // meniul principal stau lângă indicatorul de pagini; celelalte ecrane își
     // lasă jos [R.dimen.bottom_chips_space] liber, ca să nu intre sub ele.
 
+    /** Pe tranziții: BACK trebuie să poată închide scena cât timp treapta e încă băgată. */
+    private fun renderReverse(state: ro.e92.launcher.can.VehicleState) {
+        val on = state.reverseGear == true && Services.prefs.reverseScene &&
+            (state.speedKmh ?: 0) <= REVERSE_CLOSE_ABOVE_KMH
+        if (on == reverseShown) return
+        reverseShown = on
+        ro.e92.launcher.core.EventLog.log("Home", "scena de marșarier: $on, sus e ${stack.current?.javaClass?.simpleName}")
+        if (on) {
+            pushUnique(ro.e92.launcher.ui.screens.ReverseScreen::class.java) {
+                ro.e92.launcher.ui.screens.ReverseScreen(this)
+            }
+            return
+        }
+        if (stack.current is ro.e92.launcher.ui.screens.ReverseScreen) stack.pop()
+        if (reverseFromOutside) moveTaskToBack(true)
+        reverseFromOutside = false
+    }
+
+    private var reverseShown = false
+    private var reverseFromOutside = false
+
     private fun renderBarFor(top: ro.e92.launcher.ui.Screen) {
         val isMenu = top is ro.e92.launcher.ui.screens.TileGridScreen
         val bottom = if (isMenu) 0 else resources.getDimensionPixelSize(R.dimen.bottom_chips_space)
@@ -991,15 +1019,12 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    Services.net.state.collect { net ->
-                        val connected = net.status == ConnectivityMonitor.Status.ONLINE ||
-                            net.status == ConnectivityMonitor.Status.CONNECTED_NO_INTERNET
-                        binding.icWifi.alpha = if (connected) ICON_ON else ICON_OFF
-                    }
+                    Services.net.state.collect { net -> binding.icWifi.level = net.level }
                 }
                 launch {
                     Services.vehicle.state.collect {
                         carStatus.render(it)
+                        renderReverse(it)
                         watchEngineStart(it.rpm)
                     }
                 }
@@ -1193,8 +1218,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         const val IMMERSIVE_REAPPLY_MS = 400L
 
         /** Iconitele de stare: aprinse cand e conectat, estompate cand nu. */
-        const val ICON_ON = 1f
-        const val ICON_OFF = 0.3f
 
         /** Cat se misca fotografia principala intre prima si ultima pagina. */
         const val PARALLAX_SHIFT = 0.035f
@@ -1218,6 +1241,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
         /** Cât după pornire/trezire ne apărăm locul în față. */
         const val GUARD_WINDOW_MS = 40_000L
+        private const val REVERSE_CLOSE_ABOVE_KMH = 25
         const val EXTRA_RECLAIM = "ro.e92.launcher.RECLAIM"
         /** Cât stă ecranul KSW deschis până revenim: destul cât să-și facă onCreate. */
         val HOST_RETURN_CHECKS_MS = longArrayOf(900L, 1_800L, 3_000L, 4_500L)

@@ -6,6 +6,9 @@
     <!-- DiagServer: unitatea nu are adb (USB doar host, adb pe Wi-Fi refuzat fără
          root), așa că launcher-ul ascultă el pe hotspot și primește update-uri. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Marșarierul ajunge doar în jurnalul EventCenter. Se acordă o dată, prin adb:
+         pm grant ro.e92.launcher android.permission.READ_LOGS -->
+    <uses-permission android:name="android.permission.READ_LOGS" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Între bara de sus și cea de jos rămân 362 dp. Mașina stă sus, ca sub bara ei să
+     încapă senzorii; poziția e aceeași cu umbra desenată în bg_reverse. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ro.e92.launcher.ui.widget.ParkSensorView
+        android:id="@+id/reverseSensors"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ImageView
+        android:layout_width="170dp"
+        android:layout_height="253dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="4dp"
+        android:contentDescription="@null"
+        android:scaleType="fitXY"
+        android:src="@drawable/reverse_car" />
+
+    <LinearLayout
+        android:layout_width="360dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="72dp"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter_display_light"
+            android:includeFontPadding="false"
+            android:text="R"
+            android:textColor="@color/glow_core"
+            android:textSize="84sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:fontFamily="@font/inter_regular"
+            android:text="@string/reverse_check"
+            android:textColor="@color/text_primary"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/reverseSensorNote"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:fontFamily="@font/inter_regular"
+            android:text="@string/reverse_no_sensors"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <!-- Distanța până la obstacol; rămâne goală cât nu avem date reale. -->
+    <TextView
+        android:id="@+id/reverseDistance"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|center_vertical"
+        android:layout_marginEnd="72dp"
+        android:fontFamily="@font/inter_display_light"
+        android:fontFeatureSettings="tnum"
+        android:includeFontPadding="false"
+        android:textColor="@color/text_primary"
+        android:textSize="60sp"
+        android:visibility="gone" />
+</FrameLayout>

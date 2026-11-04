@@ -48,6 +48,8 @@ class FeasyLink(
         fun onLinkOpen()
         fun onLinkClosed(reason: String)
         fun onLine(code: String, data: ByteArray)
+        /** Răspunsul la AT+PROFILE: profilurile active ale stivei. */
+        fun onProfile(value: Int)
     }
 
     private val lock = Any()
@@ -101,6 +103,23 @@ class FeasyLink(
             if (!quiet || !written) {
                 EventLog.log(TAG, "→ AT#$cmd$arg" + if (written) "" else " (legătura e închisă)")
             }
+            if (written) Thread.sleep(SEND_GAP_MS)
+        }
+    }
+
+    /**
+     * Comandă de configurare a stivei (`AT+...`, alt set decât `AT#`). Are lista ei
+     * albă: restul comenzilor de aici pot șterge asocierile sau rupe stiva.
+     */
+    fun sendConfig(cmd: String) {
+        if (CONFIG_ALLOWED.none { cmd.startsWith(it) }) {
+            EventLog.log(TAG, "configurare refuzată: $cmd")
+            return
+        }
+        if (!running) return
+        sender.execute {
+            val written = write("AT+$cmd\r\n".toByteArray(Charsets.UTF_8))
+            EventLog.log(TAG, "→ AT+$cmd" + if (written) "" else " (legătura e închisă)")
             if (written) Thread.sleep(SEND_GAP_MS)
         }
     }
@@ -220,6 +239,15 @@ class FeasyLink(
     }
 
     private fun deliver(raw: ByteArray) {
+        // Răspunsurile la AT+ nu au cod de două litere și nici „+" în față: `PROFILE1192`.
+        val text = String(raw, Charsets.ISO_8859_1)
+        if (text.startsWith(PROFILE_REPLY)) {
+            EventLog.log(TAG, "← $text")
+            text.removePrefix(PROFILE_REPLY).trim().toIntOrNull()?.let { value ->
+                runCatching { listener.onProfile(value) }.onFailure { Log.w(TAG, "profil", it) }
+            }
+            return
+        }
         val code = String(raw, 0, CODE_LENGTH, Charsets.ISO_8859_1)
         val data = raw.copyOfRange(CODE_LENGTH, raw.size)
         // O excepție din logica de stare nu trebuie să închidă legătura cu telefonul.
@@ -241,6 +269,10 @@ class FeasyLink(
             // Conectarea automată a stivei (ea e cea care cheamă HFP).
             "MH", "MF"
         )
+
+        /** `PROFILE` citește, `PROFILE=<n>` scrie, `REBOOT` repornește stiva. */
+        private val CONFIG_ALLOWED = listOf("PROFILE", "REBOOT")
+        private const val PROFILE_REPLY = "PROFILE"
 
         private const val CODE_LENGTH = 2
         private const val LINE_MAX = 2048

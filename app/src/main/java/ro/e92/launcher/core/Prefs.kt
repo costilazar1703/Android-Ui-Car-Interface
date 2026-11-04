@@ -121,6 +121,21 @@ class Prefs(context: Context) {
         get() = sp.getBoolean(KEY_BLOCK_KSW_REOPEN, true)
         set(value) = sp.edit().putBoolean(KEY_BLOCK_KSW_REOPEN, value).apply()
 
+    /** Stiva E92 anunță doar muzică și controale, fără apeluri și agendă. */
+    var btMusicOnly: Boolean
+        get() = sp.getBoolean(KEY_BT_MUSIC_ONLY, true)
+        set(value) = sp.edit().putBoolean(KEY_BT_MUSIC_ONLY, value).apply()
+
+    /** Ultimul profil trimis stivei, ca să nu o repornim în buclă dacă nu-l ține minte. */
+    var btProfileTried: Int
+        get() = sp.getInt(KEY_BT_PROFILE_TRIED, 0)
+        set(value) = sp.edit().putInt(KEY_BT_PROFILE_TRIED, value).apply()
+
+    /** Marșarier: scena noastră în locul ferestrei KSW. */
+    var reverseScene: Boolean
+        get() = sp.getBoolean(KEY_REVERSE_SCENE, false)
+        set(value) = sp.edit().putBoolean(KEY_REVERSE_SCENE, value).apply()
+
     /** La pornire, launcher-ul revine în față dacă îl acoperă ceva neatins de șofer. */
     var startGuard: Boolean
         get() = sp.getBoolean(KEY_START_GUARD, true)
@@ -198,6 +213,9 @@ class Prefs(context: Context) {
         const val BT_ENGINE_E92 = "e92"
         private const val KEY_UNIT_VOLUME = "unit_volume"
         private const val KEY_BLOCK_KSW_REOPEN = "block_ksw_reopen"
+        private const val KEY_BT_MUSIC_ONLY = "bt_music_only"
+        private const val KEY_BT_PROFILE_TRIED = "bt_profile_tried"
+        private const val KEY_REVERSE_SCENE = "reverse_scene"
         private const val KEY_START_GUARD = "start_guard"
         const val DEFAULT_UNIT_VOLUME = 30
         private const val KEY_UPDATE_URL = "update_url"

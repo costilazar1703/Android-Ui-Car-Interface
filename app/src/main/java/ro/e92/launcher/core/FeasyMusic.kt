@@ -34,6 +34,11 @@ class FeasyMusic(
 ) : FeasyLink.Listener {
 
     private val link = FeasyLink(KswBluetooth.GOC_SERIAL, prepareStack, this)
+
+    /** Ultima valoare AT+PROFILE citită din stivă; -1 până răspunde. */
+    @Volatile
+    var profile = -1
+        private set
     private val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
     private val focusListener = AudioManager.OnAudioFocusChangeListener { }
 
@@ -194,7 +199,37 @@ class FeasyMusic(
         link.send("MN")
         link.send("MX")
         link.send("MV")
+        link.sendConfig("PROFILE")
         startLoop()
+    }
+
+    /**
+     * Stiva anunță și apeluri (HFP) și agendă. iPhone-ul ridică apelurile și, la
+     * 15 s după, cade tot, muzica inclusiv. Doar-muzică înseamnă să le scoatem din
+     * profil (setare persistentă în stivă, cere repornirea ei și o reasociere pe
+     * telefon). Biții sunt din documentația Feasycom ținută minte, nu verificați.
+     *
+     * O singură încercare pentru fiecare valoare: dacă stiva nu ține minte setarea,
+     * nu o repornim la nesfârșit.
+     */
+    override fun onProfile(value: Int) {
+        profile = value
+        val wanted = if (Services.prefs.btMusicOnly) {
+            value and (PROFILE_HFP or PROFILE_PBAP).inv()
+        } else {
+            value or PROFILE_HFP or PROFILE_PBAP
+        }
+        if (wanted == value || Services.prefs.btProfileTried == wanted) return
+        Services.prefs.btProfileTried = wanted
+        EventLog.log(TAG, "profil Bluetooth $value → $wanted, repornesc stiva")
+        link.sendConfig("PROFILE=$wanted")
+        link.sendConfig("REBOOT")
+    }
+
+    /** Cere din nou profilul; [onProfile] face schimbarea dacă e nevoie. */
+    fun applyProfile() {
+        Services.prefs.btProfileTried = 0
+        link.sendConfig("PROFILE")
     }
 
     override fun onLinkClosed(reason: String) {
@@ -276,6 +311,7 @@ class FeasyMusic(
     }
 
     private fun onStackInit() {
+        link.sendConfig("PROFILE")
         EventLog.log(TAG, "← IS: stiva s-a inițializat")
         hfp = Link.IDLE
         a2dpConnecting = false
@@ -508,6 +544,8 @@ class FeasyMusic(
     data class Device(val index: Int, val address: String, val name: String)
 
     companion object {
+        private const val PROFILE_HFP = 8
+        private const val PROFILE_PBAP = 1024
         private const val TAG = "FeasyMusic"
         private const val GOC = KswBluetooth.GOC_SERIAL
 

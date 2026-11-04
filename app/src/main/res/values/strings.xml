@@ -99,6 +99,12 @@
     <string name="set_battery">Battery (OBD) – below 12.2 V parked = weak battery</string>
     <string name="set_battery_no_obd">needs the OBD Wi-Fi</string>
     <string name="set_car_type">Car type – restart after change</string>
+    <string name="set_bt_music_only">Bluetooth: music only (no calls)</string>
+    <string name="set_reverse_scene">Reverse screen: E92 instead of KSW</string>
+    <string name="reverse_title">Reverse</string>
+    <string name="reverse_check">Check your surroundings</string>
+    <string name="reverse_no_sensors">Parking sensors: no data</string>
+    <string name="reverse_distance_cm">%1$d cm</string>
     <string name="set_block_ksw_reopen">Stop KSW reopening its screen at start</string>
     <string name="set_start_guard">Keep launcher in front at start</string>
     <string name="set_open_ksw_bt">Open KSW Bluetooth app</string>

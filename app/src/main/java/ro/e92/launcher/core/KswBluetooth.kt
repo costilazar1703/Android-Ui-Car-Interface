@@ -555,6 +555,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         appendLine("apk=${SelfUpdate.installedSha(context)}")
         appendLine("engine=${Services.prefs.btEngine}")
         appendLine("running=${if (music != null) "e92" else if (started) "ksw" else "none"}")
+        appendLine("profile=${music?.profile ?: -1} musicOnly=${Services.prefs.btMusicOnly}")
         appendLine("btType=${KswSettings.read(context, KswSettings.BT_TYPE).orEmpty()}")
         appendLine("modeMemory=${KswSettings.read(context, KswSettings.MODE_MEMORY).orEmpty()}")
         appendLine("btsuite=$bTSuiteInstalled")
@@ -587,6 +588,11 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
     }
 
     /** Reconectează ultimul telefon, doar muzica (A2DP) - vezi startWatchdog. */
+    /** După schimbarea opțiunii doar-muzică. Pe motorul KSW nu are efect. */
+    fun applyProfile() {
+        own?.applyProfile()
+    }
+
     fun reconnectLast() = ownOr({ it.connectLast() }) { call(Tx.CON_LAST_A2DP) }
 
     /**
