@@ -310,6 +310,13 @@ class FeasyMusic(
         }
         hfp = value
         publishLink()
+        // Cu HFP ridicat, legătura cu iPhone-ul cade toată la 15 s, și fără bTSuite
+        // (2026-11-04 12:00:50 -> 12:01:05). Apelurile nu trec prin mașină, așa că
+        // îl închidem imediat și rămâne doar muzica.
+        if (value == Link.CONNECTED) {
+            EventLog.log(TAG, "închid HFP, rămâne doar muzica")
+            link.send("DD")
+        }
     }
 
     private fun onHfpStatus(n: Int) {
