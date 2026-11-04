@@ -456,6 +456,7 @@
         <ImageView
             android:layout_width="30dp"
             android:layout_height="30dp"
+            android:alpha="0.72"
             android:contentDescription="@null"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_menu_bluetooth" />
