@@ -148,11 +148,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             addAction(Intent.ACTION_TIME_CHANGED)
             addAction(Intent.ACTION_TIMEZONE_CHANGED)
         })
-        registerReceiver(btReceiver, IntentFilter().apply {
-            addAction(android.bluetooth.BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
-            addAction(android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED)
-        })
-        updateBluetooth()
         updateClock()
 
         stack.onActivityStart()
@@ -168,7 +163,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     override fun onStop() {
         runCatching { unregisterReceiver(timeTickReceiver) }
-        runCatching { unregisterReceiver(btReceiver) }
         stack.onActivityStop()
         Services.apps.stopWatching()
         Services.net.stop()
@@ -195,6 +189,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     override fun onResume() {
         super.onResume()
+        keepAnimationsOn()
         resumedNow = true
         updateClock()
         if (greetOnResume) {
@@ -934,12 +929,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { Services.media.snapshot.collect { renderMiniPlayer() } }
-                launch {
-                    Services.kswBt.state.collect {
-                        renderPhoneChip(it)
-                        updateBluetooth()
-                    }
-                }
+                launch { Services.kswBt.state.collect { renderPhoneChip(it) } }
             }
         }
     }
@@ -1055,33 +1045,18 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     // --------------------------------------------------------- bluetooth
 
     /**
-     * Iconita Bluetooth din bara de sus: aprinsa cand un telefon e conectat pe
-     * audio (A2DP) sau pe apeluri (HFP).
-     *
-     * Se citeste din adaptorul Android. Daca modulul BC6 al unitatii e legat
-     * direct de MCU si nu trece prin Android, iconita ramane estompata chiar cu
-     * telefonul conectat - asta e o limita a hardware-ului, nu un bug, si se
-     * vede imediat in masina.
+     * Pe unitate „animator duration scale" e 0 din fabrică, deci orice animație
+     * sare direct la capăt: rotița nu se mai rotea, doar își schimba poziția.
+     * Setarea e a sistemului; aici o suprascriem doar pentru procesul nostru, cu
+     * metoda ascunsă din ValueAnimator (disponibilă pe API 27). Android o
+     * rescrie când apare prima fereastră, de aceea e chemată în onResume.
      */
-    private val btReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) = updateBluetooth()
-    }
-
-    private fun updateBluetooth() {
-        val adapter = runCatching {
-            (getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager)?.adapter
-        }.getOrNull()
-        val connected = runCatching {
-            adapter != null && adapter.isEnabled && (
-                adapter.getProfileConnectionState(android.bluetooth.BluetoothProfile.A2DP) ==
-                    android.bluetooth.BluetoothProfile.STATE_CONNECTED ||
-                    adapter.getProfileConnectionState(android.bluetooth.BluetoothProfile.HEADSET) ==
-                    android.bluetooth.BluetoothProfile.STATE_CONNECTED
-                )
-        }.getOrDefault(false)
-        // Pe KSW telefonul e legat prin stiva unității, nu prin Bluetooth-ul Android.
-        val phone = Services.kswBt.state.value.phoneConnected
-        binding.icBt.alpha = if (connected || phone) ICON_ON else ICON_OFF
+    private fun keepAnimationsOn() {
+        runCatching {
+            android.animation.ValueAnimator::class.java
+                .getMethod("setDurationScale", Float::class.javaPrimitiveType)
+                .invoke(null, 1f)
+        }.onFailure { android.util.Log.w("Home", "scara animațiilor", it) }
     }
 
     // ------------------------------------------------------------- helpers

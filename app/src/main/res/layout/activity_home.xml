@@ -86,7 +86,7 @@
     <!--
       Bara de sus, în trei zone:
 
-        [⛽ 512 km]          [ 14:32 | Sun, 1 Nov ]          [14.5°  ᛒ  wifi]
+        [⛽ 512 km]          [ 14:32 | Sun, 1 Nov ]          [14.5°  wifi]
                                      | MENU       ]
 
       Stânga autonomia, cu pompa; la mijloc ceasul mare și subțire (Inter Light),
@@ -251,18 +251,9 @@
             tools:visibility="visible" />
 
         <ImageView
-            android:id="@+id/icBt"
-            android:layout_width="@dimen/topbar_icon"
-            android:layout_height="@dimen/topbar_icon"
-            android:contentDescription="@null"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_menu_bluetooth" />
-
-        <ImageView
             android:id="@+id/icWifi"
             android:layout_width="@dimen/topbar_icon"
             android:layout_height="@dimen/topbar_icon"
-            android:layout_marginStart="12dp"
             android:contentDescription="@null"
             android:src="@drawable/ic_status_wifi" />
     </LinearLayout>
