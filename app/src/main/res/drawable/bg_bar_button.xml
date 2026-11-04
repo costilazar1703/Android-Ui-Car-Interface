@@ -1,19 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home și Back: aceeași sticlă ca chip-urile; apăsat, rama se aprinde. -->
+<!-- Home și Back stau direct pe placa barei; doar apăsat apare o lumină caldă. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
-        <shape android:shape="oval">
-            <solid android:color="@color/tile_idle_top" />
-            <stroke android:width="1.5dp" android:color="@color/glow_core" />
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="90"
+                android:endColor="#00000000"
+                android:startColor="#66E8541A" />
         </shape>
     </item>
     <item>
-        <shape android:shape="oval">
-            <gradient
-                android:angle="270"
-                android:endColor="@color/tile_idle_bottom"
-                android:startColor="@color/tile_idle_top" />
-            <stroke android:width="1dp" android:color="@color/tile_idle_stroke" />
-        </shape>
+        <color android:color="@android:color/transparent" />
     </item>
 </selector>

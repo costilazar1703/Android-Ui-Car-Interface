@@ -98,20 +98,15 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 value = media.title ?: context.getString(R.string.media_no_session),
                 onActivate = { host.push(MediaScreen(host)) }
             ),
-            // Volumul unității, pentru când butoanele de pe volan nu ajung la ea.
+            // Al doilea: bara de volum, pentru când butoanele de pe volan nu ajung la unitate.
             WheelEntry(
-                id = "media_vol_up",
+                id = "media_volume",
                 icon = R.drawable.ic_menu_media,
-                title = context.getString(R.string.media_volume_up),
-                value = volumeLabel(),
-                onActivate = { stepVolume(+VOLUME_STEP, "media_vol_up") }
-            ),
-            WheelEntry(
-                id = "media_vol_down",
-                icon = R.drawable.ic_menu_media,
-                title = context.getString(R.string.media_volume_down),
-                value = volumeLabel(),
-                onActivate = { stepVolume(-VOLUME_STEP, "media_vol_down") }
+                title = context.getString(R.string.media_volume),
+                value = ro.e92.launcher.core.KswVolume.current(context)
+                    ?.let { "$it / ${ro.e92.launcher.core.KswVolume.MAX}" }
+                    .orEmpty(),
+                onActivate = { host.push(VolumeScreen(host)) }
             ),
             WheelEntry(
                 id = "media_bt",
@@ -126,21 +121,6 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 onActivate = { host.dispatch(LauncherAction.RADIO) }
             )
         )
-    }
-
-    private fun volumeLabel(): String =
-        ro.e92.launcher.core.KswVolume.current(context)
-            ?.let { "$it / ${ro.e92.launcher.core.KswVolume.MAX}" }
-            .orEmpty()
-
-    private fun stepVolume(delta: Int, keepId: String) {
-        val now = ro.e92.launcher.core.KswVolume.current(context) ?: return
-        ro.e92.launcher.core.KswVolume.set(context, now + delta)
-        reload(keepId)
-    }
-
-    private companion object {
-        const val VOLUME_STEP = 2
     }
 }
 

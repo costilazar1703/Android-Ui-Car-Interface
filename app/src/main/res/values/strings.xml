@@ -203,8 +203,7 @@
     <string name="cp_launch">Open Apple CarPlay</string>
     <string name="bar_back">Back</string>
     <string name="bar_home">Home</string>
-    <string name="media_volume_up">Volume up</string>
-    <string name="media_volume_down">Volume down</string>
+    <string name="media_volume">Volume</string>
     <string name="nav_this_drive">This drive</string>
     <string name="nav_this_drive_value">%1$d min · %2$.1f km</string>
 
