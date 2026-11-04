@@ -96,6 +96,14 @@ class Prefs(context: Context) {
         get() = sp.getString(KEY_BT_ENGINE, BT_ENGINE_KSW) ?: BT_ENGINE_KSW
         set(value) = sp.edit().putString(KEY_BT_ENGINE, value).apply()
 
+    /**
+     * Piesa care cântă: stiva trimite numele doar când se schimbă melodia, deci
+     * după o repornire a launcher-ului îl luăm de aici până la piesa următoare.
+     */
+    var lastSongTitle: String
+        get() = sp.getString("last_song_title", "").orEmpty()
+        set(value) = sp.edit().putString("last_song_title", value).apply()
+
     /** Motorul nostru: launcher-ul nu mai duce nicăieri spre aplicația KSW. */
     val btOwnEngine: Boolean
         get() = btEngine == BT_ENGINE_E92

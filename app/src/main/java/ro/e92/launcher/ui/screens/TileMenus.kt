@@ -167,7 +167,7 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
     private fun renderNowPlaying() {
         val media = Services.media.snapshot.value
         nowTitle?.text = media.title?.takeIf { media.hasSession }
-            ?: context.getString(R.string.media_no_session)
+            ?: if (Services.kswBt.state.value.phoneConnected) "" else context.getString(R.string.media_no_session)
         nowPlay?.setImageResource(
             if (media.isPlaying) R.drawable.ic_transport_pause else R.drawable.ic_transport_play
         )

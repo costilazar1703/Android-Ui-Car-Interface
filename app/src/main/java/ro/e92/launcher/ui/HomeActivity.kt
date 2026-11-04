@@ -922,7 +922,12 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { Services.media.snapshot.collect { renderMiniPlayer() } }
-                launch { Services.kswBt.state.collect { renderPhoneChip(it) } }
+                launch {
+                    Services.kswBt.state.collect {
+                        renderPhoneChip(it)
+                        renderMiniPlayer()
+                    }
+                }
             }
         }
     }
@@ -940,12 +945,15 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     private fun renderMiniPlayer() {
         val media = Services.media.snapshot.value
-        if (!media.hasSession || media.title.isNullOrBlank()) {
+        // Cu telefonul legat, butoanele sunt mereu aici, chiar dacă stiva n-a trimis
+        // încă numele piesei (îl trimite doar când se schimbă melodia).
+        val titled = media.hasSession && !media.title.isNullOrBlank()
+        if (!titled && !Services.kswBt.state.value.phoneConnected) {
             binding.miniPlayer.visibility = View.GONE
             return
         }
         binding.miniPlayer.visibility = View.VISIBLE
-        binding.miniTitle.text = media.title
+        binding.miniTitle.text = media.title.orEmpty()
         binding.miniArtist.visibility = View.GONE
         binding.miniPlay.setImageResource(
             if (media.isPlaying) R.drawable.ic_transport_pause else R.drawable.ic_transport_play

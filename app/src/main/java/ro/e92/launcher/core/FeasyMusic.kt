@@ -184,7 +184,9 @@ class FeasyMusic(
         lastMg = -1
         attempts = 0
         nextConnectAt = now + FIRST_CONNECT_MS
-        state.update { it.copy(link = Link.IDLE, moduleSilent = false) }
+        state.update {
+            it.copy(link = Link.IDLE, moduleSilent = false, songTitle = Services.prefs.lastSongTitle)
+        }
         // Starea reală, dacă launcher-ul a repornit cu telefonul deja legat.
         link.send("MH")
         link.send("MF")
@@ -428,6 +430,7 @@ class FeasyMusic(
 
     private fun clearAudio() {
         abandonFocus()
+        Services.prefs.lastSongTitle = ""
         state.update {
             it.copy(
                 audioConnected = false,
@@ -455,6 +458,7 @@ class FeasyMusic(
 
     private fun onTrack(data: ByteArray) {
         val track = parseTrack(data) ?: return
+        Services.prefs.lastSongTitle = track.title
         val s = state.value
         if (track.title != s.songTitle || track.artist != s.songArtist) {
             EventLog.log(TAG, "← piesă: ${track.title} / ${track.artist} / ${track.durationMs / 1000}s")
