@@ -26,7 +26,9 @@ class WheelEntry(
     /** Butonul OPTION pe rândul selectat. De obicei „șterge / dezleagă". */
     val onOption: (() -> Unit)? = null,
     /** Bară de reglaj în rând, în locul săgeții de submeniu. */
-    val slider: WheelSlider? = null
+    val slider: WheelSlider? = null,
+    /** Conținut propriu în rând (titlul piesei, butoane), în locul săgeții. */
+    val inline: (() -> View)? = null
 )
 
 /** Reglajul dintr-un rând: se trage cu degetul sau se mișcă din rotiță, vezi [step]. */
@@ -188,6 +190,13 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
                         context.resources.getDimensionPixelSize(R.dimen.menu_row_padding_h)
                     rowBinding.menuSlider.visibility = View.VISIBLE
                     rowBinding.menuSlider.addView(line)
+                }
+                entry.inline?.let { build ->
+                    rowBinding.menuChevron.visibility = View.GONE
+                    (rowBinding.menuValue.layoutParams as ViewGroup.MarginLayoutParams).marginEnd =
+                        context.resources.getDimensionPixelSize(R.dimen.menu_row_padding_h)
+                    rowBinding.menuSlider.visibility = View.VISIBLE
+                    rowBinding.menuSlider.addView(build())
                 }
                 rowBinding.root.setOnClickListener {
                     host.rebuildFocus(entry.id)

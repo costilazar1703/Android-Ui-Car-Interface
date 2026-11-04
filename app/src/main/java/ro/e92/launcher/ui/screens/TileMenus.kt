@@ -1,6 +1,7 @@
 package ro.e92.launcher.ui.screens
 
 import android.provider.Settings
+import kotlinx.coroutines.launch
 import ro.e92.launcher.R
 import ro.e92.launcher.core.AppLaunch
 import ro.e92.launcher.core.Services
@@ -120,15 +121,71 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
         if (root?.removeCallbacks(apply) == true) apply.run()
     }
 
-    override fun entries(): List<WheelEntry> {
+    private var nowTitle: android.widget.TextView? = null
+    private var nowPlay: android.widget.ImageView? = null
+
+    private fun buildNowPlaying(): android.view.View {
+        val density = context.resources.displayMetrics.density
+        val size = (TRANSPORT_DP * density).toInt()
+        fun button(icon: Int, action: () -> Unit) = android.widget.ImageView(context).apply {
+            setImageResource(icon)
+            imageTintList = context.getColorStateList(R.color.menu_title_text)
+            isDuplicateParentStateEnabled = true
+            setPadding(size / 4, size / 4, size / 4, size / 4)
+            contentDescription = null
+            setOnClickListener { action() }
+            isFocusable = false
+            layoutParams = android.widget.LinearLayout.LayoutParams(size, size)
+        }
+        nowTitle = android.widget.TextView(context).apply {
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(context, R.font.inter_regular)
+            textSize = 17f
+            setTextColor(context.getColorStateList(R.color.menu_value_text))
+            isDuplicateParentStateEnabled = true
+            setSingleLine(true)
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding((14 * density).toInt(), 0, (10 * density).toInt(), 0)
+            layoutParams = android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val play = button(R.drawable.ic_transport_play) { Services.media.playPause() }
+        nowPlay = play
+        renderNowPlaying()
+        return android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            isDuplicateParentStateEnabled = true
+            addView(nowTitle)
+            addView(button(R.drawable.ic_transport_prev) { Services.media.previous() })
+            addView(play)
+            addView(button(R.drawable.ic_transport_next) { Services.media.next() })
+        }
+    }
+
+    private fun renderNowPlaying() {
         val media = Services.media.snapshot.value
+        nowTitle?.text = media.title?.takeIf { media.hasSession }
+            ?: context.getString(R.string.media_no_session)
+        nowPlay?.setImageResource(
+            if (media.isPlaying) R.drawable.ic_transport_pause else R.drawable.ic_transport_play
+        )
+    }
+
+    override fun onShow() {
+        super.onShow()
+        screenScope.launch { Services.media.snapshot.collect { renderNowPlaying() } }
+    }
+
+    override fun entries(): List<WheelEntry> {
         return listOf(
+            // Totul aici, fără alt ecran: titlul piesei și butoanele, ca meniul să
+            // poată rămâne deschis la drum. Din rotiță, apăsarea e play/pauză.
             WheelEntry(
                 id = "media_now",
                 icon = R.drawable.ic_menu_media,
                 title = context.getString(R.string.media_now_playing),
-                value = media.title ?: context.getString(R.string.media_no_session),
-                onActivate = { host.push(MediaScreen(host)) }
+                inline = { buildNowPlaying() },
+                onActivate = { Services.media.playPause() }
             ),
             // Al doilea: bara de volum, pentru când butoanele de pe volan nu ajung la
             // unitate. Se trage cu degetul; din rotiță, apeși pe rând și o rotești.
@@ -156,6 +213,7 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 
     private companion object {
         const val APPLY_MS = 120L
+        const val TRANSPORT_DP = 44
     }
 }
 
