@@ -898,7 +898,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     override val barPages: android.view.ViewGroup get() = binding.barPages
 
     private fun setupBottomChips() {
-        binding.miniCover.clipToOutline = true
         binding.barBack.setOnClickListener { stack.pop() }
         binding.barHome.setOnClickListener { goHome() }
         // Fără fundal apăsat: iconița se micșorează puțin, pe placa barei.
@@ -954,17 +953,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             return
         }
         binding.miniPlayer.visibility = View.VISIBLE
-        val art = media.artwork
-        // Fără copertă arătăm nota decupată de pe dala Media, fără ramă.
-        if (art != null) {
-            binding.miniCover.setBackgroundResource(R.drawable.bg_mini_cover)
-            binding.miniCover.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
-            binding.miniCover.setImageBitmap(art)
-        } else {
-            binding.miniCover.background = null
-            binding.miniCover.scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-            binding.miniCover.setImageResource(R.drawable.ic_menu_media)
-        }
         binding.miniTitle.text = media.title
         binding.miniArtist.visibility = View.GONE
         binding.miniPlay.setImageResource(

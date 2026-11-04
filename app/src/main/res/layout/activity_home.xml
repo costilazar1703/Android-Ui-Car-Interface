@@ -373,7 +373,6 @@
     <LinearLayout
         android:id="@+id/miniPlayer"
         android:layout_width="0dp"
-        android:layout_marginStart="56dp"
         android:layout_height="@dimen/mini_player_height"
         android:gravity="center_vertical"
         android:orientation="horizontal"
@@ -383,19 +382,10 @@
         app:layout_constraintStart_toEndOf="@id/chipCenter"
         tools:visibility="visible">
 
-        <ImageView
-            android:id="@+id/miniCover"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:contentDescription="@null"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_menu_media" />
-
         <TextView
             android:id="@+id/miniTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:ellipsize="end"
             android:fontFamily="@font/inter_regular"
