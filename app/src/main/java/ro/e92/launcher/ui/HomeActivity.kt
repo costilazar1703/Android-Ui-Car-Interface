@@ -119,6 +119,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         maybePlayIntro(savedInstanceState)
         observeCalls()
         observeMusicHost()
+        binding.rootLayout.postDelayed(kswScreenGuard, KSW_GUARD_MS)
         registerReceiver(kswKeyReceiver, IntentFilter().apply {
             addAction(KSW_KNOB_ACTION)
             addAction(KSW_CAN_KEY_ACTION)
@@ -174,6 +175,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     }
 
     override fun onDestroy() {
+        binding.rootLayout.removeCallbacks(kswScreenGuard)
         runCatching { unregisterReceiver(wakeReceiver) }
         runCatching { unregisterReceiver(kswKeyReceiver) }
         stack.destroyAll()
@@ -803,6 +805,31 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     private var hostPending = false
     private var hostPendingReason = ""
 
+    /**
+     * Cu motorul E92, ecranul Bluetooth KSW n-are ce căuta în față, dar EventCenter
+     * îl deschide singur la pornire și la unele evenimente, chiar peste Waze. Pe
+     * unitate, `sys.current_app` e aplicația din față: când e bTSuite, revenim.
+     */
+    private val kswScreenGuard = object : Runnable {
+        override fun run() {
+            if (Services.prefs.btOwnEngine && !resumedNow &&
+                Services.kswBt.state.value.call == ro.e92.launcher.core.KswBluetooth.Call.NONE &&
+                Services.vehicle.state.value.reverseGear != true &&
+                foregroundApp() == ro.e92.launcher.core.KswBluetooth.PACKAGE
+            ) {
+                ro.e92.launcher.core.EventLog.log("Home", "ecranul KSW a apărut în față - revin")
+                bringToFront(0)
+            }
+            binding.rootLayout.postDelayed(this, KSW_GUARD_MS)
+        }
+    }
+
+    private fun foregroundApp(): String? = runCatching {
+        Class.forName("android.os.SystemProperties")
+            .getMethod("get", String::class.java)
+            .invoke(null, "sys.current_app") as String
+    }.getOrNull()
+
     private fun observeMusicHost() {
         lifecycleScope.launch {
             Services.kswBt.state.collect { st ->
@@ -945,10 +972,10 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     private fun renderMiniPlayer() {
         val media = Services.media.snapshot.value
-        // Cu telefonul legat, butoanele sunt mereu aici, chiar dacă stiva n-a trimis
-        // încă numele piesei (îl trimite doar când se schimbă melodia).
+        // Doar cu o melodie pusă. Cât cântă, butoanele apar chiar dacă stiva n-a
+        // trimis încă numele piesei (îl trimite doar când se schimbă melodia).
         val titled = media.hasSession && !media.title.isNullOrBlank()
-        if (!titled && !Services.kswBt.state.value.phoneConnected) {
+        if (!titled && !Services.kswBt.state.value.audioStreaming) {
             binding.miniPlayer.visibility = View.GONE
             return
         }
@@ -1199,6 +1226,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         /** Oprirea făcută de BTService vine în ~1 s de la play; peste 4 s e altceva. */
         const val HOST_CUT_SHORT_MS = 4_000L
         const val HOST_DRIVER_PAUSE_MS = 3_000L
+        const val KSW_GUARD_MS = 700L
         const val HOST_COOLDOWN_MS = 20_000L
         const val HOST_ENABLED = false
         /** Pe proces, nu pe instanță: o a doua instanță a activității n-o mai dublează. */

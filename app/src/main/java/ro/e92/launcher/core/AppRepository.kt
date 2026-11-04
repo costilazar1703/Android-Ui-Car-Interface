@@ -69,6 +69,8 @@ class AppRepository(private val context: Context) {
         val list = pm.queryIntentActivities(intent, 0)
             .asSequence()
             .filter { it.activityInfo.packageName != self }
+            // Cu motorul E92 aplicația Bluetooth KSW nu mai are ce căuta în listă.
+            .filter { !(Services.prefs.btOwnEngine && it.activityInfo.packageName == KswBluetooth.PACKAGE) }
             .map {
                 AppEntry(
                     packageName = it.activityInfo.packageName,
