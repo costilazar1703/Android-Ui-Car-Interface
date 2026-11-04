@@ -24,8 +24,35 @@ class WheelEntry(
     val value: String = "",
     val onActivate: () -> Unit = {},
     /** Butonul OPTION pe rândul selectat. De obicei „șterge / dezleagă". */
-    val onOption: (() -> Unit)? = null
+    val onOption: (() -> Unit)? = null,
+    /** Bară de reglaj în rând, în locul săgeții de submeniu. */
+    val slider: WheelSlider? = null
 )
+
+/** Reglajul dintr-un rând: se trage cu degetul sau se mișcă din rotiță, vezi [step]. */
+class WheelSlider(val max: Int, var value: Int, val onChange: (Int) -> Unit) {
+    internal var view: ro.e92.launcher.ui.widget.VolumeLineView? = null
+    internal var label: android.widget.TextView? = null
+
+    internal fun chosen(level: Int) {
+        value = level
+        label?.text = level.toString()
+        onChange(level)
+    }
+
+    fun step(delta: Int) {
+        val next = (value + delta).coerceIn(0, max)
+        if (next == value) return
+        view?.setValue(next)
+        chosen(next)
+    }
+
+    var adjusting: Boolean
+        get() = view?.adjusting == true
+        set(on) {
+            view?.adjusting = on
+        }
+}
 
 /**
  * Al doilea nivel al interfeței: rotița în stânga, rândurile meniului în dreapta.
@@ -147,6 +174,21 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
                 rowBinding.menuIcon.setImageResource(entry.icon)
                 rowBinding.menuTitle.text = entry.title
                 rowBinding.menuValue.text = entry.value
+                entry.slider?.let { slider ->
+                    val line = ro.e92.launcher.ui.widget.VolumeLineView(context, slider.max).apply {
+                        setValue(slider.value)
+                        onChange = { level -> slider.chosen(level) }
+                    }
+                    slider.view = line
+                    slider.label = rowBinding.menuValue
+                    rowBinding.menuValue.text = slider.value.toString()
+                    rowBinding.menuValue.textSize = SLIDER_VALUE_SP
+                    rowBinding.menuChevron.visibility = View.GONE
+                    (rowBinding.menuValue.layoutParams as ViewGroup.MarginLayoutParams).marginEnd =
+                        context.resources.getDimensionPixelSize(R.dimen.menu_row_padding_h)
+                    rowBinding.menuSlider.visibility = View.VISIBLE
+                    rowBinding.menuSlider.addView(line)
+                }
                 rowBinding.root.setOnClickListener {
                     host.rebuildFocus(entry.id)
                     entry.onActivate()
@@ -292,6 +334,7 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
         const val PAGE_SIZE = 3
 
         const val PAGE_ANIM_MS = 180L
+        const val SLIDER_VALUE_SP = 17f
         const val MIN_FLING_VELOCITY = 600f
     }
 }

@@ -35,6 +35,7 @@
     <dimen name="page_indicator_width">376dp</dimen>
     <!-- Cât lasă ecranele (în afară de meniul principal) jos pentru chip-uri. -->
     <dimen name="bottom_chips_space">58dp</dimen>
+    <dimen name="menu_slider_start">180dp</dimen>
     <dimen name="bottom_bar_height">58dp</dimen>
     <!-- Partea de jos a barei, sub treapta din mijloc: aici se centrează tot. -->
     <dimen name="bar_body_height">44dp</dimen>

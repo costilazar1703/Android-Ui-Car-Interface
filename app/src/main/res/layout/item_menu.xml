@@ -53,6 +53,16 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:text="Media / Radio" />
 
+    <!-- Bara de pe rândurile cu reglaj (Volume), de la titlu până la valoare. -->
+    <FrameLayout
+        android:id="@+id/menuSlider"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="@dimen/menu_slider_start"
+        android:visibility="gone"
+        app:layout_constraintEnd_toStartOf="@id/menuValue"
+        app:layout_constraintStart_toStartOf="parent" />
+
     <!-- Valoarea curentă a rândului: numele aplicației atribuite, piesa care
          cântă, starea unei comutări. Goală pentru rândurile care doar deschid
          altceva. -->

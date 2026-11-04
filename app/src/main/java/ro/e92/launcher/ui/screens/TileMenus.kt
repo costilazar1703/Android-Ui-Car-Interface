@@ -88,6 +88,38 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 
     override val menuTitle: String get() = context.getString(R.string.menu_media)
 
+    private val apply: Runnable = Runnable {
+        ro.e92.launcher.core.KswVolume.set(context, volume.value)
+    }
+
+    /** Cel mult o comandă la [APPLY_MS], ca o tragere rapidă să nu trimită zeci. */
+    private val volume: WheelSlider by lazy {
+        WheelSlider(
+            ro.e92.launcher.core.KswVolume.MAX,
+            ro.e92.launcher.core.KswVolume.current(context) ?: 0
+        ) {
+            root?.removeCallbacks(apply)
+            root?.postDelayed(apply, APPLY_MS)
+        }
+    }
+
+    override fun onAction(action: LauncherAction): Boolean {
+        if (!volume.adjusting) return false
+        return when (action) {
+            LauncherAction.ROTARY_CW, LauncherAction.TILT_RIGHT -> { volume.step(+1); true }
+            LauncherAction.ROTARY_CCW, LauncherAction.TILT_LEFT -> { volume.step(-1); true }
+            LauncherAction.SELECT, LauncherAction.BACK -> { volume.adjusting = false; true }
+            else -> false
+        }
+    }
+
+    override fun onHide() {
+        super.onHide()
+        volume.adjusting = false
+        // Ultimul nivel ales pleacă și dacă ai ieșit imediat după ce l-ai tras.
+        if (root?.removeCallbacks(apply) == true) apply.run()
+    }
+
     override fun entries(): List<WheelEntry> {
         val media = Services.media.snapshot.value
         return listOf(
@@ -98,15 +130,14 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 value = media.title ?: context.getString(R.string.media_no_session),
                 onActivate = { host.push(MediaScreen(host)) }
             ),
-            // Al doilea: bara de volum, pentru când butoanele de pe volan nu ajung la unitate.
+            // Al doilea: bara de volum, pentru când butoanele de pe volan nu ajung la
+            // unitate. Se trage cu degetul; din rotiță, apeși pe rând și o rotești.
             WheelEntry(
                 id = "media_volume",
                 icon = R.drawable.ic_menu_media,
                 title = context.getString(R.string.media_volume),
-                value = ro.e92.launcher.core.KswVolume.current(context)
-                    ?.let { "$it / ${ro.e92.launcher.core.KswVolume.MAX}" }
-                    .orEmpty(),
-                onActivate = { host.push(VolumeScreen(host)) }
+                slider = volume,
+                onActivate = { volume.adjusting = !volume.adjusting }
             ),
             WheelEntry(
                 id = "media_bt",
@@ -121,6 +152,10 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 onActivate = { host.dispatch(LauncherAction.RADIO) }
             )
         )
+    }
+
+    private companion object {
+        const val APPLY_MS = 120L
     }
 }
 
