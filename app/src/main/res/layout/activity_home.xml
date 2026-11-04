@@ -373,6 +373,7 @@
     <LinearLayout
         android:id="@+id/miniPlayer"
         android:layout_width="0dp"
+        android:layout_marginStart="56dp"
         android:layout_height="@dimen/mini_player_height"
         android:gravity="center_vertical"
         android:orientation="horizontal"
