@@ -95,7 +95,7 @@ class SettingsScreen(
     private fun carUnitRows(): List<DetailRow> {
         val ksw = Services.kswBt
         val prefs = Services.prefs
-        return listOf(
+        return listOfNotNull(
             DetailRow(
                 id = "car_bt_repair",
                 title = context.getString(R.string.set_bt_repair),
@@ -188,7 +188,7 @@ class SettingsScreen(
                 id = "car_ksw_bt",
                 title = context.getString(R.string.set_open_ksw_bt),
                 onActivate = { AppLaunch.openBluetooth(context) }
-            ),
+            ).takeUnless { prefs.btOwnEngine },
             DetailRow(
                 id = "car_factory",
                 title = context.getString(R.string.set_open_factory),

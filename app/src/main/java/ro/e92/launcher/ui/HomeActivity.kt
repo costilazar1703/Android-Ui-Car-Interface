@@ -833,7 +833,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     private fun hostKswMusic(reason: String, resume: Boolean = false) {
         // Motorul E92 n-are nevoie de ecranul KSW: nimeni nu mai oprește muzica.
-        if (Services.prefs.btEngine == ro.e92.launcher.core.Prefs.BT_ENGINE_E92) return
+        if (Services.prefs.btOwnEngine) return
         // Oprit: ca în sesiunea care a mers (2026-11-03 21:55), launcher-ul nu
         // mai deschide deloc ecranul KSW - orice intent spre el poate prăbuși
         // bTSuite. Ecranul îl deschide șoferul o dată, din meniul KSW, cu HOME.

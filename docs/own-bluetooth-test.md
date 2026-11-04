@@ -58,6 +58,9 @@ If there is no sound but the log shows `← MB`, see *Known unknowns* below.
 ### 6. A real drive
 
 - [ ] One normal drive. Afterwards read `events` and look for `muzica s-a rupt` and `stiva nu mai răspunde`.
+- [ ] On E92 the launcher has no entries that open the KSW Bluetooth app, but the unit can still open
+      it from its own system app (EventCenter). If a KSW screen appears, note what you pressed just
+      before and whether the music kept playing.
 
 ## Go back to KSW
 

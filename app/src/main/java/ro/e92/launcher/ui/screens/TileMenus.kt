@@ -128,7 +128,7 @@ class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
             icon = R.drawable.ic_menu_bluetooth,
             title = context.getString(R.string.set_open_ksw_bt),
             onActivate = { AppLaunch.openBluetooth(context) }
-        ).takeUnless { Services.prefs.btEngine == ro.e92.launcher.core.Prefs.BT_ENGINE_E92 },
+        ).takeUnless { Services.prefs.btOwnEngine },
         WheelEntry(
             id = "bt_pair_new",
             icon = R.drawable.ic_menu_bluetooth,

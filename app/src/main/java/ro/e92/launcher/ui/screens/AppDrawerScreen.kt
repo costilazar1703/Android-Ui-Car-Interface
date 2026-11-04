@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ro.e92.launcher.core.AppEntry
+import ro.e92.launcher.core.KswBluetooth
 import ro.e92.launcher.core.Services
 import ro.e92.launcher.databinding.ScreenAppDrawerBinding
 import ro.e92.launcher.focus.FocusTarget
@@ -56,7 +57,10 @@ class AppDrawerScreen(
                 } else {
                     // Iconițele se citesc de pe disc — niciodată în onBindViewHolder.
                     withContext(Dispatchers.IO) { Services.apps.preloadIconsBlocking(list) }
-                    adapter.submit(list)
+                    adapter.submit(
+                        if (Services.prefs.btOwnEngine) list.filterNot { it.packageName == KswBluetooth.PACKAGE }
+                        else list
+                    )
                 }
             }
         }

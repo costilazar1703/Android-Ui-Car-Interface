@@ -68,6 +68,8 @@ object AppLaunch {
      * rezerva pentru alte unități.
      */
     fun openBluetooth(context: Context) {
+        // Rândurile spre KSW sunt ascunse cu motorul E92; asta prinde ce a scăpat.
+        if (Services.prefs.btOwnEngine) return
         if (isInstalled(context, VENDOR_BT_PACKAGE)) launch(context, VENDOR_BT_PACKAGE, "Bluetooth")
         else openSystem(context, android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
     }

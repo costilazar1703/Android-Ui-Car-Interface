@@ -96,6 +96,10 @@ class Prefs(context: Context) {
         get() = sp.getString(KEY_BT_ENGINE, BT_ENGINE_KSW) ?: BT_ENGINE_KSW
         set(value) = sp.edit().putString(KEY_BT_ENGINE, value).apply()
 
+    /** Motorul nostru: launcher-ul nu mai duce nicăieri spre aplicația KSW. */
+    val btOwnEngine: Boolean
+        get() = btEngine == BT_ENGINE_E92
+
     /**
      * Volumul de bază al unității (volumul principal KSW, 0-40). Volumul real
      * îl dai din butonul radioului; la pornire unitatea e adusă cel puțin aici.

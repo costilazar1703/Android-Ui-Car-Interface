@@ -185,7 +185,7 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
         }
         val unit = st.unitName.ifEmpty { "CAR KIT" }
         val pin = st.pin.ifEmpty { "0000" }
-        return listOf(
+        return listOfNotNull(
             DetailRow(
                 id = "bt_status",
                 title = status,
@@ -239,7 +239,7 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
                 id = "bt_vendor",
                 title = context.getString(R.string.bt_vendor_app),
                 onActivate = { AppLaunch.openBluetooth(context) }
-            )
+            ).takeUnless { Services.prefs.btOwnEngine }
         )
     }
 
@@ -300,13 +300,13 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
 
     // ----------------------------------------------------------------- settings
 
-    private fun settingsRows(): List<DetailRow> = listOf(
+    private fun settingsRows(): List<DetailRow> = listOfNotNull(
         resetRow(),
         DetailRow(
             id = "bt_sys",
             title = context.getString(R.string.set_bluetooth),
             onActivate = { AppLaunch.openBluetooth(context) }
-        ),
+        ).takeUnless { Services.prefs.btOwnEngine },
         DetailRow(
             id = "bt_notif",
             title = context.getString(R.string.set_notification_access),
