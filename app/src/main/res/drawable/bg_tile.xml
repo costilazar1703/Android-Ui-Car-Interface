@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Dala din meniul principal ID6: ramă dublă, corp semi-transparent, halo la focus.
+  Dala din meniul principal ID6: ramă dublă, corp semi-transparent.
 
   **Semi-transparent, nu opac.** Fotografia din spate e subiectul, nu decorul.
   Corpul lasă lumina orașului și reflexiile de pe asfalt să treacă prin el, dar
@@ -13,10 +13,6 @@
   despărțite de un gol arată ca o ramă frezată — diferența dintre un dreptunghi
   desenat și o piesă montată în bord.
 
-  Halo-ul vine din `<layer-list>`, NU din elevation: pe API 27 elevation desenează
-  o umbră neagră, invizibilă pe fundal întunecat, iar peste o fotografie lasă și
-  un dreptunghi mai murdar la colțuri.
-
   Geometria e IDENTICĂ pe cele două stări — se schimbă doar culorile. Altfel dala
   ar tresări la fiecare mutare de focus.
 -->
@@ -25,27 +21,7 @@
     <item android:state_activated="true">
         <layer-list>
 
-            <!-- 1. Difuzia exterioară, cea mai transparentă. -->
-            <item>
-                <shape android:shape="rectangle">
-                    <solid android:color="@color/glow_outer" />
-                    <corners android:radius="@dimen/tile_corner" />
-                </shape>
-            </item>
-
-            <!-- 2. Difuzia intermediară. -->
-            <item
-                android:bottom="@dimen/tile_glow_step"
-                android:left="@dimen/tile_glow_step"
-                android:right="@dimen/tile_glow_step"
-                android:top="@dimen/tile_glow_step">
-                <shape android:shape="rectangle">
-                    <solid android:color="@color/glow_mid" />
-                    <corners android:radius="@dimen/tile_corner" />
-                </shape>
-            </item>
-
-            <!-- 3. Rama EXTERIOARĂ, aprinsă. -->
+            <!-- Rama EXTERIOARĂ, aprinsă. Fără halo în jurul ei: doar rama și interiorul sunt colorate. -->
             <item
                 android:bottom="@dimen/tile_body_inset"
                 android:left="@dimen/tile_body_inset"
@@ -60,7 +36,7 @@
                 </shape>
             </item>
 
-            <!-- 4. Rama INTERIOARĂ + corpul. Gradientul urcă spre portocaliu în
+            <!-- Rama INTERIOARĂ + corpul. Gradientul urcă spre portocaliu în
                  partea de sus, ca reflexia de pe sticlă din mașină. -->
             <item
                 android:bottom="@dimen/tile_frame_inset"

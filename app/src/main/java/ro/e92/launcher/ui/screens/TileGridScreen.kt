@@ -78,7 +78,6 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
         buildDots()
 
         BluetoothPresence.start(context)
-        screenScope.launch { Services.media.snapshot.collect { renderLive() } }
         screenScope.launch { BluetoothPresence.deviceName.collect { renderLive() } }
         screenScope.launch { NavNotificationRelay.guidance.collect { renderLive() } }
 
@@ -469,15 +468,12 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     // ------------------------------------------------------------ dale vii
 
     /**
-     * Media, Bluetooth și Navigație spun ce se întâmplă fără să fie deschise:
-     * piesa care cântă (cu barele animate cât rulează), telefonul conectat,
-     * următoarea manevră. Fără nimic de spus, dala rămâne doar cu iconița.
+     * Bluetooth și Navigație spun ce se întâmplă fără să fie deschise: telefonul
+     * conectat, următoarea manevră. Piesa care cântă stă doar în bara de jos.
+     * Fără nimic de spus, dala rămâne doar cu iconița.
      */
     private fun renderLive() {
         if (!built) return
-        val media = Services.media.snapshot.value
-        setLive("media", media.title.takeIf { media.hasSession })
-        // Animația de redare stă doar în mini-player; pe dală ar fi dublură.
         setLive("bt", BluetoothPresence.deviceName.value)
         val nav = NavNotificationRelay.guidance.value
         setLive("nav", if (nav.isEmpty) null else nav.primary?.takeIf { it.isNotBlank() } ?: nav.secondary)
