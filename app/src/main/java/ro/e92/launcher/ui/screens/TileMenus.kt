@@ -7,6 +7,7 @@ import ro.e92.launcher.core.AppLaunch
 import ro.e92.launcher.core.Services
 import ro.e92.launcher.input.LauncherAction
 import ro.e92.launcher.ui.ScreenHost
+import ro.e92.launcher.ui.widget.scaleOnPress
 
 /**
  * Meniurile de nivel 2 — câte unul pentru fiecare dală din grila ID6.
@@ -135,6 +136,7 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
             contentDescription = null
             setOnClickListener { action() }
             isFocusable = false
+            scaleOnPress()
             layoutParams = android.widget.LinearLayout.LayoutParams(size, size)
         }
         nowTitle = android.widget.TextView(context).apply {

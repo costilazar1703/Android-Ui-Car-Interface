@@ -33,6 +33,7 @@ import ro.e92.launcher.input.RotaryAccelerator
 import ro.e92.launcher.net.ConnectivityMonitor
 import ro.e92.launcher.ui.screens.AppDrawerScreen
 import ro.e92.launcher.ui.widget.BootIntroView
+import ro.e92.launcher.ui.widget.scaleOnPress
 import ro.e92.launcher.ui.screens.BluetoothMenuScreen
 import ro.e92.launcher.ui.screens.CarInfoMenuScreen
 import ro.e92.launcher.ui.screens.CarPlayMenuScreen
@@ -900,17 +901,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     private fun setupBottomChips() {
         binding.barBack.setOnClickListener { stack.pop() }
         binding.barHome.setOnClickListener { goHome() }
-        // Fără fundal apăsat: iconița se micșorează puțin, pe placa barei.
-        for (button in listOf(binding.barBack, binding.barHome)) {
-            button.setOnTouchListener { v, event ->
-                when (event.actionMasked) {
-                    android.view.MotionEvent.ACTION_DOWN ->
-                        v.animate().scaleX(BAR_PRESSED_SCALE).scaleY(BAR_PRESSED_SCALE).setDuration(BAR_PRESS_MS).start()
-                    android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL ->
-                        v.animate().scaleX(1f).scaleY(1f).setDuration(BAR_PRESS_MS).start()
-                }
-                false
-            }
+        for (button in listOf(binding.barBack, binding.barHome, binding.miniPrev, binding.miniPlay, binding.miniNext)) {
+            button.scaleOnPress()
         }
         binding.miniPlay.setOnClickListener { Services.media.playPause() }
         binding.miniPrev.setOnClickListener { Services.media.previous() }
@@ -1190,8 +1182,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         const val ENGINE_RUNNING_RPM = 400
 
         /** Cât după pornire/trezire ne apărăm locul în față. */
-        const val BAR_PRESSED_SCALE = 0.86f
-        const val BAR_PRESS_MS = 90L
         const val GUARD_WINDOW_MS = 40_000L
         const val EXTRA_RECLAIM = "ro.e92.launcher.RECLAIM"
         /** Cât stă ecranul KSW deschis până revenim: destul cât să-și facă onCreate. */
