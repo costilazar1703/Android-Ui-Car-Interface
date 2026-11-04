@@ -26,8 +26,8 @@ import ro.e92.launcher.R
  * starea `activated`, iar drawable-urile își schimbă singure aspectul.
  *
  * Peste oglindă trec benzi orizontale foarte fine, ca suprafața să citească a
- * apă, nu a sticlă lustruită. Sub tot rămâne lumina portocalie (`tile_shadow`),
- * care era deja indicatorul principal al selecției.
+ * apă, nu a sticlă lustruită. Doar rama se oglindește, fără lumina portocalie
+ * de sub dală: lipită de ramă, cele două se citeau ca o bandă groasă.
  *
  * **Strat hardware.** Oglinda cere un saveLayer cu mască. Fără strat propriu,
  * HWUI ar reface masca la fiecare cadru în care se redesenează grila — adică pe
@@ -41,7 +41,6 @@ class TileReflectionView @JvmOverloads constructor(
 ) : View(context, attrs) {
 
     private val frame: Drawable = ContextCompat.getDrawable(context, R.drawable.bg_tile_reflection)!!.mutate()
-    private val spill: Drawable = ContextCompat.getDrawable(context, R.drawable.tile_shadow)!!.mutate()
     private var icon: Drawable? = null
     private var iconSize = 0
     private var bodyHeight = 0
@@ -73,7 +72,6 @@ class TileReflectionView @JvmOverloads constructor(
     override fun drawableStateChanged() {
         super.drawableStateChanged()
         frame.state = drawableState
-        spill.state = drawableState
         icon?.state = drawableState
         invalidate()
     }
@@ -106,10 +104,6 @@ class TileReflectionView @JvmOverloads constructor(
         val w = width
         val h = height
         if (w <= 0 || h <= 0) return
-
-        // Lumina de sub dală, neoglindită: e pe suprafață, nu în reflexie.
-        spill.setBounds(0, 0, w, h)
-        spill.draw(canvas)
 
         val body = if (bodyHeight > 0) bodyHeight else w
         val layer = canvas.saveLayer(0f, 0f, w.toFloat(), h.toFloat(), null)
