@@ -237,7 +237,9 @@ class FeasyLink(
             "MI", "MJ", "MA", "MD", "ME", "MZ", "MV",
             "VA", "VB",
             "MM", "MN", "MX",
-            "DA", "DB", "DV"
+            "DA", "DB", "DV",
+            // Închide HFP-ul ridicat de telefon: cu el sus, legătura cade la 15 s.
+            "DD"
         )
 
         private const val CODE_LENGTH = 2
