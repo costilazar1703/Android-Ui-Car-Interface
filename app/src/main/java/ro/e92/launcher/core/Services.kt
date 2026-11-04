@@ -102,8 +102,6 @@ object Services {
 
     /** Reconstruiește lanțul de surse după ce s-a schimbat modul din Setări. */
     fun rebuildCanSources() {
-        vehicle.stop()
-        vehicle = VehicleRepository(scope, buildSources())
-        vehicle.start()
+        vehicle.replaceSources(buildSources())
     }
 }

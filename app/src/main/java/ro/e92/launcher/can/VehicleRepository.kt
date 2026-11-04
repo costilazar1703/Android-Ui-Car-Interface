@@ -27,8 +27,11 @@ import kotlinx.coroutines.launch
 @OptIn(FlowPreview::class)
 class VehicleRepository(
     private val scope: CoroutineScope,
-    val sources: List<CanDataSource>
+    sources: List<CanDataSource>
 ) {
+
+    var sources: List<CanDataSource> = sources
+        private set
 
     private val _state = MutableStateFlow(VehicleState.EMPTY)
     val state: StateFlow<VehicleState> = _state.asStateFlow()
@@ -55,6 +58,17 @@ class VehicleRepository(
         sources.forEach { it.stop() }
         _state.value = VehicleState.EMPTY
         _activeSourceId.value = NO_SOURCE
+    }
+
+    /**
+     * Schimbă sursele pe același obiect: ecranele care colectează [state] rămân
+     * legate. Cu un depozit nou, bara de sus rămânea pe cel vechi, oprit, și nu
+     * mai arăta autonomia până la următoarea revenire în aplicație.
+     */
+    fun replaceSources(next: List<CanDataSource>) {
+        stop()
+        sources = next
+        start()
     }
 
     private fun mergeByPriority(states: Array<VehicleState>): VehicleState {
