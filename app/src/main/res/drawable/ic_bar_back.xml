@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Butonul Back din bara de jos: săgeată care se întoarce, contur cromat, vârf portocaliu. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="28dp"
+    android:height="28dp"
+    android:viewportWidth="28"
+    android:viewportHeight="28">
+    <path
+        android:pathData="M8,11 L17,11 A6,6 0 0 1 17,23 L9,23"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="14" android:startY="11"
+                android:endX="14" android:endY="23"
+                android:startColor="#FFF4F4F4"
+                android:endColor="#FF7A7A7A"
+                android:type="linear" />
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M12.5,5.5 L7,11 L12.5,16.5"
+        android:strokeColor="@color/glow_core"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

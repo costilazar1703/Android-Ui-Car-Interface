@@ -317,9 +317,10 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     }
 
     private fun buildDots() {
-        binding.tilePageDots.removeAllViews()
+        // Indicatorul stă în bara de jos a shell-ului, nu în ecran.
+        host.barPages.removeAllViews()
         indicator = PageIndicatorView(context, TileCatalog.pageCount).also {
-            binding.tilePageDots.addView(it)
+            host.barPages.addView(it)
         }
     }
 

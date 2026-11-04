@@ -64,6 +64,15 @@
         android:orientation="horizontal"
         app:layout_constraintGuide_percent="0.115" />
 
+    <!-- Placa din spatele autonomiei. -->
+    <ro.e92.launcher.ui.widget.TopPlateView
+        android:id="@+id/topPlate"
+        android:layout_width="400dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/gTopBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <!--
       Bara de sus, în trei zone:
 
@@ -113,7 +122,7 @@
                     style="@style/Text.Body"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/inter_medium"
+                    android:fontFamily="@font/inter_display_light"
                     android:includeFontPadding="false"
                     android:textColor="@color/text_primary"
                     android:textSize="25sp"
@@ -125,7 +134,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:fontFamily="@font/inter_medium"
+                    android:fontFamily="@font/inter_display_light"
                     android:includeFontPadding="false"
                     android:textColor="@color/tile_label_idle"
                     android:textSize="14sp"
@@ -155,7 +164,7 @@
             android:id="@+id/clock"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:fontFamily="@font/inter_semibold"
+            android:fontFamily="@font/inter_display_light"
             android:fontFeatureSettings="tnum"
             android:gravity="center_vertical"
             android:includeFontPadding="false"
@@ -263,11 +272,71 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/topDivider" />
 
-    <!-- Peste ecrane, sub bara de sus: avertismentele mașinii. -->
-    <!-- Chip-urile de jos (telefon, muzică) stau pe orice ecran, nu doar pe
-         meniul principal - ca autonomia din stânga sus. Se așază de o parte și
-         de alta a indicatorului de pagini al meniului; spațiul ăsta invizibil
-         are lățimea lui, ca pe toate ecranele să fie fix în aceleași locuri. -->
+    <!-- Bara de jos, pe toate ecranele: Back și Home, telefonul, pagina curentă,
+         muzica. Celelalte ecrane își lasă jos [bottom_chips_space] liber; dalele
+         meniului principal rămân la locul lor, iar reflexiile intră sub bară. -->
+    <ro.e92.launcher.ui.widget.BottomBarView
+        android:id="@+id/bottomBar"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/bottom_bar_height"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <ImageView
+        android:id="@+id/barBack"
+        android:layout_width="@dimen/bar_button_size"
+        android:layout_height="@dimen/bar_button_size"
+        android:layout_marginStart="14dp"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/bg_bar_button"
+        android:contentDescription="@string/bar_back"
+        android:padding="9dp"
+        android:src="@drawable/ic_bar_back"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <ImageView
+        android:id="@+id/barHome"
+        android:layout_width="@dimen/bar_button_size"
+        android:layout_height="@dimen/bar_button_size"
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/bg_bar_button"
+        android:contentDescription="@string/bar_home"
+        android:padding="9dp"
+        android:src="@drawable/ic_bar_home"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/barBack" />
+
+    <!-- Mijlocul barei: indicatorul de pagini pe meniul principal, numele ecranului în rest. -->
+    <FrameLayout
+        android:id="@+id/barPages"
+        android:layout_width="wrap_content"
+        android:layout_height="16dp"
+        android:layout_marginBottom="20dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/barTitle"
+        style="@style/Text.Label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="19dp"
+        android:letterSpacing="0.14"
+        android:singleLine="true"
+        android:textColor="@color/tile_label_idle"
+        android:textSize="15sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:text="BLUETOOTH" />
+
+    <!-- Spațiul invizibil al mijlocului: chip-urile stau de o parte și de alta,
+         fix în aceleași locuri pe toate ecranele. -->
     <View
         android:id="@+id/chipCenter"
         android:layout_width="@dimen/page_indicator_width"
@@ -295,7 +364,7 @@
         app:layout_constraintStart_toEndOf="@id/chipCenter"
         app:layout_constraintHorizontal_bias="0"
         android:layout_marginStart="24dp"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="6dp"
         tools:visibility="visible">
 
         <ImageView
@@ -308,9 +377,9 @@
 
         <ro.e92.launcher.ui.widget.EqualizerView
             android:id="@+id/miniEq"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:layout_marginStart="16dp" />
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="12dp" />
 
         <TextView
             android:id="@+id/miniTitle"
@@ -322,7 +391,7 @@
             android:maxWidth="@dimen/mini_player_text_max"
             android:singleLine="true"
             android:textColor="@color/tile_label_idle"
-            android:textSize="26sp"
+            android:textSize="21sp"
             tools:text="Midnight City" />
 
         <TextView
@@ -345,7 +414,7 @@
             android:layout_height="@dimen/mini_player_cover"
             android:layout_marginStart="8dp"
             android:contentDescription="@null"
-            android:padding="11dp"
+            android:padding="9dp"
             android:src="@drawable/ic_transport_play"
             android:tint="@color/tile_label_idle" />
     </LinearLayout>
@@ -357,23 +426,23 @@
         android:id="@+id/phoneChip"
         android:layout_width="wrap_content"
         android:layout_height="@dimen/mini_player_height"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="6dp"
         android:background="@drawable/bg_mini_player"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="20dp"
-        android:paddingEnd="34dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="24dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/chipCenter"
         app:layout_constraintHorizontal_bias="1"
         android:layout_marginEnd="24dp"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toEndOf="@id/barHome"
         tools:visibility="visible">
 
         <ImageView
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
             android:contentDescription="@null"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_menu_bluetooth" />
@@ -388,7 +457,7 @@
             android:maxWidth="@dimen/mini_player_text_max"
             android:singleLine="true"
             android:textColor="@color/tile_label_idle"
-            android:textSize="26sp"
+            android:textSize="21sp"
             tools:text="iPhone Costi" />
     </LinearLayout>
 

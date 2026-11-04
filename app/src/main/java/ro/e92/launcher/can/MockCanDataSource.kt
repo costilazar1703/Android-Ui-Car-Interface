@@ -56,6 +56,12 @@ class MockCanDataSource(private val scope: CoroutineScope) : CanDataSource {
                     reverseGear = false,
                     boostBar = computeBoost(),
                     oilTempC = oilTemp.roundToInt(),
+                    // Ca pe unitate: ce vine de la MCU și OBD, ca ecranele să arate la fel.
+                    rangeKm = 246,
+                    fuel = 24,
+                    outsideTempC = 11.5f,
+                    coolantTempC = 90,
+                    batteryV = 14.1f,
                     timestamp = SystemClock.elapsedRealtime()
                 )
                 delay(TICK_MS)

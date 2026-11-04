@@ -39,7 +39,20 @@ class NavigationMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 
     override fun entries(): List<WheelEntry> {
         val prefs = Services.prefs
+        val trip = Services.trip.drive.value
         return listOf(
+            // Drumul de la ultimul contact; detaliile sunt în calculatorul de bord.
+            WheelEntry(
+                id = "nav_trip",
+                icon = R.drawable.ic_menu_navigation,
+                title = context.getString(R.string.nav_this_drive),
+                value = context.getString(
+                    R.string.nav_this_drive_value,
+                    trip.drivingMs / 60_000L,
+                    trip.distanceKm
+                ),
+                onActivate = { host.push(TripScreen(host)) }
+            ),
             WheelEntry(
                 id = "nav_primary",
                 icon = R.drawable.ic_menu_navigation,
@@ -85,6 +98,21 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 value = media.title ?: context.getString(R.string.media_no_session),
                 onActivate = { host.push(MediaScreen(host)) }
             ),
+            // Volumul unității, pentru când butoanele de pe volan nu ajung la ea.
+            WheelEntry(
+                id = "media_vol_up",
+                icon = R.drawable.ic_menu_media,
+                title = context.getString(R.string.media_volume_up),
+                value = volumeLabel(),
+                onActivate = { stepVolume(+VOLUME_STEP, "media_vol_up") }
+            ),
+            WheelEntry(
+                id = "media_vol_down",
+                icon = R.drawable.ic_menu_media,
+                title = context.getString(R.string.media_volume_down),
+                value = volumeLabel(),
+                onActivate = { stepVolume(-VOLUME_STEP, "media_vol_down") }
+            ),
             WheelEntry(
                 id = "media_bt",
                 icon = R.drawable.ic_menu_bluetooth,
@@ -98,6 +126,21 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 onActivate = { host.dispatch(LauncherAction.RADIO) }
             )
         )
+    }
+
+    private fun volumeLabel(): String =
+        ro.e92.launcher.core.KswVolume.current(context)
+            ?.let { "$it / ${ro.e92.launcher.core.KswVolume.MAX}" }
+            .orEmpty()
+
+    private fun stepVolume(delta: Int, keepId: String) {
+        val now = ro.e92.launcher.core.KswVolume.current(context) ?: return
+        ro.e92.launcher.core.KswVolume.set(context, now + delta)
+        reload(keepId)
+    }
+
+    private companion object {
+        const val VOLUME_STEP = 2
     }
 }
 
@@ -120,15 +163,13 @@ class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
     override val menuTitle: String get() = context.getString(R.string.menu_bluetooth)
 
     override fun entries(): List<WheelEntry> = listOfNotNull(
-        // Primul: la fiecare drum se deschide o dată aplicația KSW, play acolo,
-        // apoi HOME - cât ecranul ei există în spate, muzica nu e oprită.
-        // Cu motorul E92 nu mai are ce căuta aici.
+        // Primul: butonul folosit cel mai des, fără să treci prin ecranul split.
         WheelEntry(
-            id = "bt_open_ksw",
+            id = "bt_reconnect",
             icon = R.drawable.ic_menu_bluetooth,
-            title = context.getString(R.string.set_open_ksw_bt),
-            onActivate = { AppLaunch.openBluetooth(context) }
-        ).takeUnless { Services.prefs.btOwnEngine },
+            title = context.getString(R.string.bt_reconnect),
+            onActivate = { Services.kswBt.reconnectLast() }
+        ),
         WheelEntry(
             id = "bt_pair_new",
             icon = R.drawable.ic_menu_bluetooth,
@@ -164,7 +205,14 @@ class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
             title = context.getString(R.string.bt_audio),
             value = Services.media.snapshot.value.title.orEmpty(),
             onActivate = { host.push(MediaScreen(host)) }
-        )
+        ),
+        // Ultimul și doar pe motorul KSW: cu motorul E92 nu mai are ce căuta aici.
+        WheelEntry(
+            id = "bt_open_ksw",
+            icon = R.drawable.ic_menu_bluetooth,
+            title = context.getString(R.string.set_open_ksw_bt),
+            onActivate = { AppLaunch.openBluetooth(context) }
+        ).takeUnless { Services.prefs.btOwnEngine }
     )
 }
 

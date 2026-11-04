@@ -18,6 +18,9 @@ import ro.e92.launcher.input.LauncherAction
  */
 interface ScreenHost {
     val activity: Activity
+
+    /** Locul indicatorului de pagini din bara de jos; se vede doar pe meniul principal. */
+    val barPages: android.view.ViewGroup
     fun push(screen: Screen)
     fun pop(): Boolean
     fun goHome()

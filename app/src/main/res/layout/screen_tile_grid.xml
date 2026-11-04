@@ -37,7 +37,8 @@
         android:layout_height="0dp"
         android:clipChildren="true"
         android:clipToPadding="true"
-        app:layout_constraintBottom_toTopOf="@id/tilePageDots"
+        android:layout_marginBottom="20dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -50,17 +51,5 @@
             android:orientation="horizontal" />
 
     </FrameLayout>
-
-    <LinearLayout
-        android:id="@+id/tilePageDots"
-        android:layout_width="wrap_content"
-        android:layout_height="16dp"
-        android:layout_marginBottom="4dp"
-        android:gravity="center"
-        android:orientation="horizontal"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:ignore="UselessLeaf" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

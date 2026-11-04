@@ -200,7 +200,13 @@
     <string name="car_vendor_app">Vehicle app</string>
     <string name="car_assign_app">Assign application</string>
 
-    <string name="cp_launch">Launch projection</string>
+    <string name="cp_launch">Open Apple CarPlay</string>
+    <string name="bar_back">Back</string>
+    <string name="bar_home">Home</string>
+    <string name="media_volume_up">Volume up</string>
+    <string name="media_volume_down">Volume down</string>
+    <string name="nav_this_drive">This drive</string>
+    <string name="nav_this_drive_value">%1$d min · %2$.1f km</string>
 
     <string name="cd_portal">Open portal</string>
     <string name="cd_choose_browser">Choose browser</string>

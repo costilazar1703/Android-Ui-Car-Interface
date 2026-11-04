@@ -94,8 +94,11 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             inflater = layoutInflater,
             animationsEnabled = { Services.prefs.animationsEnabled }
         ).apply {
-            onTitleChanged = { binding.screenTitle.text = it }
-            onTopChanged = { reserveChipSpace(it !is ro.e92.launcher.ui.screens.TileGridScreen) }
+            onTitleChanged = {
+                binding.screenTitle.text = it
+                binding.barTitle.text = it
+            }
+            onTopChanged = { renderBarFor(it) }
             onBackgroundChanged = ::showBackground
         }
 
@@ -889,13 +892,20 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     // meniul principal stau lângă indicatorul de pagini; celelalte ecrane își
     // lasă jos [R.dimen.bottom_chips_space] liber, ca să nu intre sub ele.
 
-    private fun reserveChipSpace(reserve: Boolean) {
-        val bottom = if (reserve) resources.getDimensionPixelSize(R.dimen.bottom_chips_space) else 0
+    private fun renderBarFor(top: ro.e92.launcher.ui.Screen) {
+        val isMenu = top is ro.e92.launcher.ui.screens.TileGridScreen
+        val bottom = if (isMenu) 0 else resources.getDimensionPixelSize(R.dimen.bottom_chips_space)
         binding.screenContainer.setPadding(0, 0, 0, bottom)
+        binding.barPages.visibility = if (isMenu) View.VISIBLE else View.GONE
+        binding.barTitle.visibility = if (isMenu) View.GONE else View.VISIBLE
     }
+
+    override val barPages: android.view.ViewGroup get() = binding.barPages
 
     private fun setupBottomChips() {
         binding.miniCover.clipToOutline = true
+        binding.barBack.setOnClickListener { stack.pop() }
+        binding.barHome.setOnClickListener { goHome() }
         binding.miniPlay.setOnClickListener { Services.media.playPause() }
         binding.miniPlayer.setOnClickListener {
             pushUnique(ro.e92.launcher.ui.screens.MediaScreen::class.java) { ro.e92.launcher.ui.screens.MediaScreen(this) }
@@ -905,7 +915,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         }
         // Doar de atins: focusabile, ar prinde DPAD_CENTER înaintea FocusEngine
         // și ar desena dreptunghiul gri de focus peste ele.
-        for (v in listOf(binding.miniPlayer, binding.miniPlay, binding.phoneChip)) {
+        for (v in listOf(binding.miniPlayer, binding.miniPlay, binding.phoneChip, binding.barBack, binding.barHome)) {
             v.isFocusable = false
             v.defaultFocusHighlightEnabled = false
         }
