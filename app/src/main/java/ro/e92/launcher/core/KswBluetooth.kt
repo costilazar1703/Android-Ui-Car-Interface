@@ -136,6 +136,8 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         if (value == Services.prefs.btEngine) return
         Services.prefs.btEngine = value
         EventLog.log(TAG, "motor Bluetooth: $value")
+        // Încă nu rulează niciunul: start() îl va porni pe cel ales.
+        if (!started) return
         scope.launch {
             engineLock.withLock {
                 if (value == Prefs.BT_ENGINE_E92) {
@@ -544,6 +546,33 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
             running -> "Stack running · no bridge"
             else -> "Stack stopped"
         }
+    }
+
+    /** Starea, `cheie=valoare`, pentru laptop (DiagServer /bt, scripts/car.ps1). */
+    fun statusReport(): String = buildString {
+        val s = _state.value
+        val music = own
+        appendLine("apk=${SelfUpdate.installedSha(context)}")
+        appendLine("engine=${Services.prefs.btEngine}")
+        appendLine("running=${if (music != null) "e92" else if (started) "ksw" else "none"}")
+        appendLine("btType=${KswSettings.read(context, KswSettings.BT_TYPE).orEmpty()}")
+        appendLine("modeMemory=${KswSettings.read(context, KswSettings.MODE_MEMORY).orEmpty()}")
+        appendLine("btsuite=$bTSuiteInstalled")
+        appendLine("stack=${stackStatus()}")
+        appendLine("pty=${File(GOC_SERIAL).exists()}")
+        appendLine("link=${s.link}")
+        appendLine("unitName=${s.unitName}")
+        appendLine("pin=${s.pin}")
+        appendLine("visible=${s.visible}")
+        appendLine("pairedPhone=${music?.pairedPhone.orEmpty()}")
+        appendLine("phone=${s.phoneName}")
+        appendLine("audioConnected=${s.audioConnected}")
+        appendLine("streaming=${s.audioStreaming}")
+        appendLine("song=${s.songTitle}")
+        appendLine("artist=${s.songArtist}")
+        appendLine("moduleSilent=${s.moduleSilent}")
+        appendLine("restartNeeded=${s.restartNeeded}")
+        appendLine("silentForS=${music?.silentForS ?: -1}")
     }
 
     /** Unitatea devine vizibilă, ca telefonul s-o găsească și să se împerecheze. */

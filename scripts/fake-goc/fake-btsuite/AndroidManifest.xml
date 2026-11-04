@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- bTSuite + SysVarProvider de test: doar ce atinge launcher-ul. Pe unitate sunt două aplicații. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.szchoiceway.btsuite">
+    <application android:label="Fake bTSuite" android:hasCode="true">
+        <provider
+            android:name="com.szchoiceway.btsuite.SysVarProvider"
+            android:authorities="com.szchoiceway.eventcenter.SysVarProvider"
+            android:exported="true" />
+        <service
+            android:name="com.szchoiceway.btsuite.BTService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.szchoiceway.btsuite.BTService" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

@@ -6,7 +6,33 @@ The launcher talks to the Feasycom stack itself, and bTSuite is left out. It is 
 Before you start: laptop and unit on the iPhone hotspot, latest version installed.
 On the iPhone, leave **Calls** off for the car, as in the last good session.
 
+## Car day, from the laptop
+
+Run from the main checkout, on `feat/ios-polish`:
+
+```bash
+powershell -File scripts/car.ps1 prepare
+```
+
+It finds the unit on the hotspot, installs the latest APK if needed (tap **Install** on the unit),
+sets the engine to E92, checks everything and ends with **VERDE** or **ROSU** and the reasons.
+It can be run again at any time.
+
+After VERDE, turn on the iPhone's Bluetooth, then:
+
+```bash
+powershell -File scripts/car.ps1 watch -Minutes 10
+```
+
+`car.ps1 play` is play/pause from the laptop, `car.ps1 status` shows the state, and
+`car.ps1 revert` goes back to KSW.
+
+VERDE means the unit is ready: the stack answers and bTSuite is out of the way. It cannot say
+that you will hear music. That is blocks 3 and 4 below.
+
 ## Switch to E92
+
+The same switch by hand, if the laptop is not there:
 
 **Settings → Car & unit → Bluetooth engine** → tap until it says **E92 (music only)**.
 
@@ -78,8 +104,9 @@ Only the car can answer these. The emulator test uses a fake stack with no real 
 - **Sound without bTSuite.** blueware plays the audio itself through Android media volume, and we
   unmute it with `VB` and take audio focus like bTSuite. bTSuite also tells the MCU the play state
   (`IEventService.sendPlayState`), which we do not do. If there is no sound, this is the first suspect.
-- **Writing type 6 and restarting BTService.** The emulator has no bTSuite, so this path ran only
-  on paper. It uses the same calls as the existing module type switch, and block 1 above checks it.
+- **Writing type 6 and restarting BTService.** Tested only against a fake bTSuite
+  (`scripts/fake-goc/fake-btsuite`). On the unit something else could keep BTService alive;
+  `car.ps1 prepare` shows that as ROSU, and an ignition cycle should clear it.
 - **Stack auto-connect.** The stack's own power-on auto-connect (`MF01`) stays as it is. It could still
   ask the iPhone for HFP by itself. If `IB` or drops appear at start with Calls off, the next thing to
   try is `AT#MH`, which turns it off.
@@ -105,3 +132,8 @@ Tested this way on 2026-11-03: KSW default sends nothing on the pty; connect, pl
 next and previous through the media keys; track info with diacritics and `0xFF` separators;
 reconnect after a drop; launcher restart with the phone linked; pairing and reset; the launcher
 surviving the stack's death and reconnecting when it returns; KSW → E92 → KSW → E92 in Settings.
+
+Rehearsed the same day with `run.ps1 btsuite` (fake bTSuite holding the pty on type 3) and
+`adb forward tcp:8092 tcp:8092`, using `car.ps1 -Ip 127.0.0.1 -Key <key>`: install over the Diag
+server, the permission prompt, type 3 → 6 with BTService restarted and the pty released, VERDE,
+ROSU for a dead stack and for bTSuite still polling, `watch`, `play` and `revert`.

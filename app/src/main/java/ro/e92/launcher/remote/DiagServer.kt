@@ -15,6 +15,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import ro.e92.launcher.core.CrashGuard
+import ro.e92.launcher.core.Prefs
+import ro.e92.launcher.core.Services
 import ro.e92.launcher.core.SelfUpdate
 import ro.e92.launcher.input.KeyEventLog
 import ro.e92.launcher.ui.HomeActivity
@@ -233,6 +235,9 @@ object DiagServer {
             "/", "/help" -> respond(out, 200, HELP)
             "/info" -> respond(out, 200, info())
             "/events" -> respond(out, 200, ro.e92.launcher.core.EventLog.tail(req.query["n"]?.toIntOrNull() ?: 400))
+            "/bt" -> respond(out, 200, Services.kswBt.statusReport())
+            "/bt/engine" -> respond(out, 200, btEngine(req.query["set"].orEmpty()))
+            "/bt/do" -> respond(out, 200, btDo(req.query["c"].orEmpty()))
             "/keys" -> respond(out, 200, KeyEventLog.snapshot().joinToString("\n").ifEmpty { "(nicio tastă)" } + "\n")
             "/logcat" -> {
                 val lines = req.query["n"]?.toIntOrNull() ?: 500
@@ -269,6 +274,26 @@ object DiagServer {
         appendLine()
         append(DiagnosticsReport.build(app, resumed?.get()?.window?.decorView))
         appendLine()
+    }
+
+    private fun btEngine(value: String): String {
+        if (value != Prefs.BT_ENGINE_E92 && value != Prefs.BT_ENGINE_KSW) return "set=e92 sau set=ksw\n"
+        Services.kswBt.setEngine(value)
+        return "motor: $value\n"
+    }
+
+    private fun btDo(command: String): String {
+        val bt = Services.kswBt
+        when (command) {
+            "connect" -> bt.reconnectLast()
+            "repair" -> bt.repair()
+            "pair" -> bt.makeVisible()
+            "playpause" -> bt.playPause()
+            "next" -> bt.next()
+            "previous" -> bt.previous()
+            else -> return "c=connect|repair|pair|playpause|next|previous\n"
+        }
+        return "trimis: $command\n"
     }
 
     private fun shell(cmd: String): String {
@@ -391,6 +416,9 @@ object DiagServer {
     private val HELP = """
         E92 diag - comenzi (toate cer cheia: header X-Key sau ?k=)
           GET  /info                 unitate + tot ce arată ecranul Diagnostic
+          GET  /bt                   starea Bluetooth, cheie=valoare
+          GET  /bt/engine?set=e92    motorul Bluetooth: e92 sau ksw
+          GET  /bt/do?c=playpause    connect, repair, pair, playpause, next, previous
           GET  /keys                 ultimele taste primite
           GET  /logcat?n=500         logcat (doar procesul launcher-ului)
           POST /shell                body = comandă sh, rulată ca aplicația

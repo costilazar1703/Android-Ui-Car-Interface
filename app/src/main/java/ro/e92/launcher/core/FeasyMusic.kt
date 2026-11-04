@@ -71,6 +71,12 @@ class FeasyMusic(
     private var mgFirstAt = 0L
     private var lastMg = -1
 
+    /** Primul telefon din lista stivei; gol = stiva nu are niciunul împerecheat. */
+    val pairedPhone: String get() = pairedName
+
+    /** Secunde de la ultima linie primită de la stivă. */
+    val silentForS: Long get() = (SystemClock.elapsedRealtime() - lastLineAt) / 1000
+
     fun start() = link.start()
 
     fun stop() {

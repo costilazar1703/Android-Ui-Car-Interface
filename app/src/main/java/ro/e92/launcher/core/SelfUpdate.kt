@@ -82,6 +82,9 @@ object SelfUpdate {
         }
     }
 
+    /** Amprenta APK-ului instalat: laptopul vede dacă unitatea are ultima versiune. */
+    fun installedSha(context: Context): String = sha256(File(context.applicationInfo.sourceDir))
+
     private fun sha256(f: File): String {
         val md = MessageDigest.getInstance("SHA-256")
         f.inputStream().use { input ->

@@ -52,6 +52,32 @@ switch ($What) {
         Start-Sleep -Seconds 2
         Adb shell "ls -l /dev/goc_serial; cat $remoteLog"
     }
+    "btsuite" {
+        # bTSuite fals: testeaza scrierea tipului 6 si repornirea BTService.
+        $work = Join-Path ([IO.Path]::GetTempPath()) "fake-btsuite"
+        Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue
+        New-Item -ItemType Directory -Force (Join-Path $work "classes") | Out-Null
+        $src = Join-Path $here "fake-btsuite"
+        $tools = Join-Path $sdk "build-tools\34.0.0"
+        $jar = Join-Path $sdk "platforms\android-34\android.jar"
+        $env:JAVA_HOME = Join-Path $env:USERPROFILE ".jdks\jbr-21.0.11"
+        $java = Join-Path $env:JAVA_HOME "bin\java.exe"
+        & (Join-Path $env:JAVA_HOME "bin\javac.exe") --release 8 -nowarn -cp $jar -d (Join-Path $work "classes") `
+            (Join-Path $src "BTService.java") (Join-Path $src "SysVarProvider.java")
+        if ($LASTEXITCODE) { throw "javac" }
+        $classes = @(Get-ChildItem (Join-Path $work "classes") -Recurse -Filter *.class | ForEach-Object { $_.FullName })
+        & $java -cp (Join-Path $tools "lib\d8.jar") com.android.tools.r8.D8 --min-api 27 --lib $jar --output $work @classes
+        if ($LASTEXITCODE) { throw "d8" }
+        $apk = Join-Path $work "fake-btsuite.apk"
+        & (Join-Path $tools "aapt2.exe") link -o $apk -I $jar --manifest (Join-Path $src "AndroidManifest.xml") --min-sdk-version 27 --target-sdk-version 27
+        if ($LASTEXITCODE) { throw "aapt2" }
+        Push-Location $work
+        & (Join-Path $tools "aapt.exe") add $apk classes.dex | Out-Null
+        Pop-Location
+        & $java -jar (Join-Path $tools "lib\apksigner.jar") sign --ks (Join-Path $env:USERPROFILE ".android\debug.keystore") --ks-pass pass:android $apk
+        if ($LASTEXITCODE) { throw "apksigner" }
+        Adb install -r $apk
+    }
     "log" { Adb shell "cat $remoteLog" }
     "events" { Adb shell "cat /data/data/ro.e92.launcher/files/events.log" }
     "check" {
