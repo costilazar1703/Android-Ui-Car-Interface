@@ -138,7 +138,6 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
 
         val liveTextPx = bodySize * LIVE_TEXT_RATIO
         val liveInset = (bodySize * LIVE_INSET_RATIO).toInt()
-        val eqSize = (bodySize * EQ_RATIO).toInt()
         liveIconShift = bodySize * LIVE_ICON_SHIFT_RATIO
         tileBindings.clear()
 
@@ -179,12 +178,6 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                 tileBinding.tileLive.setPadding(liveInset, 0, liveInset, 0)
                 (tileBinding.tileLive.layoutParams as FrameLayout.LayoutParams).bottomMargin =
                     (bodySize * LIVE_BOTTOM_RATIO).toInt()
-                (tileBinding.tileEq.layoutParams as FrameLayout.LayoutParams).apply {
-                    width = eqSize
-                    height = eqSize
-                    topMargin = liveInset
-                    marginEnd = liveInset
-                }
                 tileBindings[tile.id] = tileBinding
                 tileBinding.tileIcon.layoutParams.also {
                     // Plafonat la corpul dalei minus rama: o iconita cu

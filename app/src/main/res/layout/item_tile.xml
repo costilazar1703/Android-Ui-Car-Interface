@@ -79,13 +79,6 @@
             tools:text="Midnight City"
             tools:visibility="visible" />
 
-        <ro.e92.launcher.ui.widget.EqualizerView
-            android:id="@+id/tileEq"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_gravity="top|end"
-            android:visibility="gone" />
-
     </FrameLayout>
 
     <!-- Reflexia „in apa" de sub dala, plus lumina portocalie scursa sub cea

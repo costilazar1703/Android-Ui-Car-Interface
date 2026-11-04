@@ -390,12 +390,6 @@
             android:scaleType="fitCenter"
             android:src="@drawable/ic_menu_media" />
 
-        <ro.e92.launcher.ui.widget.EqualizerView
-            android:id="@+id/miniEq"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginStart="12dp" />
-
         <TextView
             android:id="@+id/miniTitle"
             android:layout_width="wrap_content"

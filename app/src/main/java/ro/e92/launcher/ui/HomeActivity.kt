@@ -951,7 +951,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         val media = Services.media.snapshot.value
         if (!media.hasSession || media.title.isNullOrBlank()) {
             binding.miniPlayer.visibility = View.GONE
-            binding.miniEq.playing = false
             return
         }
         binding.miniPlayer.visibility = View.VISIBLE
@@ -968,7 +967,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         }
         binding.miniTitle.text = media.title
         binding.miniArtist.visibility = View.GONE
-        binding.miniEq.playing = media.isPlaying
         binding.miniPlay.setImageResource(
             if (media.isPlaying) R.drawable.ic_transport_pause else R.drawable.ic_transport_play
         )

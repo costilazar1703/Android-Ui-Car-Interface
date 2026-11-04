@@ -41,6 +41,7 @@ public class FakeGoc {
 
     /** Titluri cu diacritice și cu apostrof, ca să se vadă UTF-8 și 0xFF. */
     private static final String[][] TRACKS = {
+        {"Dance Monkey (Extended Club Mix Remastered Version)", "Tones and I", "The Kids Are Coming", "209000"},
         {"Acele", "Carla's Dreams", "Antiexemplu", "206756"},
         {"Timpul", "Feli", "Antiexemplu", "206755"},
         {"Powerful", "Major Lazer, Ellie Goulding, Tarrus Riley", "Peace Is The Mission", "215000"},
