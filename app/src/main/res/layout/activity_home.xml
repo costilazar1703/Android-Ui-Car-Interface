@@ -275,23 +275,25 @@
     <!-- Bara de jos, pe toate ecranele: Back și Home, telefonul, pagina curentă,
          muzica. Celelalte ecrane își lasă jos [bottom_chips_space] liber; dalele
          meniului principal rămân la locul lor, iar reflexiile intră sub bară. -->
-    <ro.e92.launcher.ui.widget.BottomBarView
+    <ImageView
         android:id="@+id/bottomBar"
         android:layout_width="0dp"
         android:layout_height="@dimen/bottom_bar_height"
+        android:contentDescription="@null"
+        android:scaleType="fitXY"
+        android:src="@drawable/bg_bottom_bar"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <!-- Home în placa din stânga, Back în cea din dreapta (vezi BottomBarView). -->
+    <!-- Home în placa din stânga, Back în cea din dreapta (desenate în bg_bottom_bar). -->
     <ImageView
         android:id="@+id/barHome"
         android:layout_width="@dimen/bar_plate_button"
         android:layout_height="@dimen/bar_button_height"
-        android:background="@drawable/bg_bar_button"
         android:contentDescription="@string/bar_home"
-        android:paddingTop="9dp"
-        android:paddingBottom="9dp"
+        android:paddingTop="15dp"
+        android:paddingBottom="8dp"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_bar_home"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -301,10 +303,9 @@
         android:id="@+id/barBack"
         android:layout_width="@dimen/bar_plate_button"
         android:layout_height="@dimen/bar_button_height"
-        android:background="@drawable/bg_bar_button"
         android:contentDescription="@string/bar_back"
-        android:paddingTop="9dp"
-        android:paddingBottom="9dp"
+        android:paddingTop="15dp"
+        android:paddingBottom="8dp"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_bar_back"
         app:layout_constraintBottom_toBottomOf="parent"
