@@ -85,7 +85,8 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
     private lateinit var binding: ScreenHomeBinding
 
     private var rows: List<WheelEntry> = emptyList()
-    private val rowViews = ArrayList<View>(PAGE_SIZE * 2)
+    private val rowViews = ArrayList<View>(MAX_ON_PAGE)
+    private var pageSize = MIN_ON_PAGE
     private val dotViews = ArrayList<View>(2)
 
     private var currentPage = 0
@@ -147,7 +148,12 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
         if (viewportWidth <= 0) return
 
         rows = entries()
-        pageCount = maxOf(1, (rows.size + PAGE_SIZE - 1) / PAGE_SIZE)
+        // Rândurile au mărimea din vechiul meniu de trei, în toate meniurile, și stau jos;
+        // un meniu cu mai multe rânduri crește în sus, spre locul liber de sub bara de stare.
+        binding.gContentTop.setGuidelinePercent(TOP_MIN)
+        val rowHeight = rowHeightPx()
+        pageSize = rowsThatFit(rowHeight)
+        pageCount = maxOf(1, (rows.size + pageSize - 1) / pageSize)
         pageWidth = viewportWidth
 
         val inflater = LayoutInflater.from(context)
@@ -157,18 +163,17 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
         currentPage = 0
 
         for (page in 0 until pageCount) {
-            // Rândurile împart înălțimea cu weight: intră exact PAGE_SIZE
-            // indiferent ce densitate raportează unitatea.
             val column = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
+                gravity = android.view.Gravity.BOTTOM
                 layoutParams = LinearLayout.LayoutParams(
                     pageWidth,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
             }
 
-            val first = page * PAGE_SIZE
-            val last = minOf(first + PAGE_SIZE, rows.size)
+            val first = page * pageSize
+            val last = minOf(first + pageSize, rows.size)
 
             for (index in first until last) {
                 val entry = rows[index]
@@ -210,18 +215,10 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
                     false
                 }
 
-                val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+                val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, rowHeight)
                     .apply { topMargin = if (index == first) 0 else rowGapPx() }
                 column.addView(rowBinding.root, lp)
                 rowViews.add(rowBinding.root)
-            }
-
-            // Pagină incompletă: umplem cu spațiu, ca rândurile să nu se întindă.
-            repeat(PAGE_SIZE - (last - first)) {
-                column.addView(
-                    View(context),
-                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
-                )
             }
 
             binding.pageStrip.addView(column)
@@ -258,6 +255,22 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
         }
     }
 
+    /** Înălțimea unui rând: cea din vechiul meniu de trei (lista pornea de la [TOP_FOR_THREE]). */
+    private fun rowHeightPx(): Int {
+        val parentHeight = binding.root.height
+        val bottom = binding.pageDots.top
+        val gap = rowGapPx()
+        return ((bottom - parentHeight * TOP_FOR_THREE - (MIN_ON_PAGE - 1) * gap) / MIN_ON_PAGE)
+            .toInt().coerceAtLeast(1)
+    }
+
+    /** Câte rânduri de [rowHeight] încap până sus; mai multe trec pe pagina următoare. */
+    private fun rowsThatFit(rowHeight: Int): Int {
+        val space = binding.pageDots.top - binding.root.height * TOP_MIN
+        val gap = rowGapPx()
+        return ((space + gap) / (rowHeight + gap)).toInt().coerceIn(MIN_ON_PAGE, MAX_ON_PAGE)
+    }
+
     private fun rowGapPx(): Int =
         context.resources.getDimensionPixelSize(R.dimen.menu_row_gap)
 
@@ -275,7 +288,7 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
                 if (abs(velocityX) < MIN_FLING_VELOCITY) return false
                 val next = if (velocityX < 0) currentPage + 1 else currentPage - 1
                 if (next < 0 || next >= pageCount) return false
-                val entry = rows.getOrNull(next * PAGE_SIZE) ?: return false
+                val entry = rows.getOrNull(next * pageSize) ?: return false
                 host.rebuildFocus(entry.id)
                 return true
             }
@@ -291,7 +304,7 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
         binding.wheelLabel.text = entry.title
         binding.wheel.setSelection(index, rows.size)
 
-        goToPage(index / PAGE_SIZE)
+        goToPage(index / pageSize)
         updateConnector(index)
     }
 
@@ -329,18 +342,13 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
     }
 
     protected companion object {
-        /**
-         * Trei rânduri pe pagină.
-         *
-         * Nu e o limită tehnică, e una de compoziție: toate meniurile au acum
-         * exact trei categorii, deci oricare ai deschide arată la fel. Un meniu
-         * cu două rânduri lângă unul cu cinci făcea interfața să pară că se
-         * rearanjează singură la fiecare apăsare.
-         *
-         * Ce nu încape în trei coboară un nivel — vezi rândurile care duc în
-         * Setări sau într-un ecran split.
-         */
-        const val PAGE_SIZE = 3
+        /** Cel mult cinci rânduri pe pagină, cât încap, de jos în sus. */
+        const val MAX_ON_PAGE = 5
+        const val MIN_ON_PAGE = 3
+        /** Unde începea lista de trei rânduri: de acolo vine înălțimea unui rând. */
+        const val TOP_FOR_THREE = 0.36f
+        /** Cât de sus poate urca lista, sub bara de stare. */
+        const val TOP_MIN = 0.02f
 
         const val PAGE_ANIM_MS = 180L
         const val SLIDER_VALUE_SP = 17f

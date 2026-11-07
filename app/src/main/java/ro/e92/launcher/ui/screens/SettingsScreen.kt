@@ -36,6 +36,7 @@ class SettingsScreen(
     /** Categoria pe care se deschide, ceruta de randul din meniul cu rotita. */
     override val initialNavId: String? = null
 ) : SplitScreen(host) {
+    override val singleSection: Boolean get() = initialNavId != null
     override val backgroundRes: Int get() = R.drawable.bg_menu_tech
 
 
@@ -59,7 +60,6 @@ class SettingsScreen(
         NavEntry(NAV_CAR, context.getString(R.string.set_nav_car)),
         NavEntry(NAV_APPS, context.getString(R.string.set_nav_assigned)),
         NavEntry(NAV_BUTTONS, context.getString(R.string.set_nav_buttons)),
-        NavEntry(NAV_LAUNCHER, context.getString(R.string.set_nav_launcher)),
         NavEntry(NAV_SYSTEM, context.getString(R.string.set_nav_system))
     )
 
@@ -80,7 +80,11 @@ class SettingsScreen(
     }
 
     override fun detailRows(navId: String): List<DetailRow> = when (navId) {
-        NAV_CAR -> carUnitRows()
+        // Setările launcher-ului stau sub cele ale unității, cu titlul lor: meniul cu rotița
+        // rămâne la patru rânduri de mărimea normală.
+        NAV_CAR -> carUnitRows() +
+            DetailRow(id = "hdr_launcher", title = context.getString(R.string.set_nav_launcher), header = true) +
+            launcherRows()
         NAV_APPS -> assignedAppRows()
         NAV_BUTTONS -> keymapRows()
         NAV_LAUNCHER -> launcherRows()
@@ -172,6 +176,36 @@ class SettingsScreen(
                     prefs.btMusicOnly = !prefs.btMusicOnly
                     Services.kswBt.applyProfile()
                     reloadDetail("car_bt_music_only")
+                }
+            ),
+            DetailRow(
+                id = "car_drift_mode",
+                title = context.getString(R.string.set_drift_mode),
+                value = context.getString(if (prefs.driftMode) R.string.on else R.string.off),
+                onActivate = {
+                    prefs.driftMode = !prefs.driftMode
+                    Services.kswCar?.updateCanForwarding()
+                    reloadDetail("car_drift_mode")
+                }
+            ),
+            DetailRow(
+                id = "car_time_source",
+                title = context.getString(R.string.set_time_source),
+                value = context.getString(
+                    when (KswSettings.read(context, KswSettings.TIME_SOURCE)) {
+                        KswSettings.TIME_FROM_MCU -> R.string.time_source_mcu
+                        KswSettings.TIME_FROM_GPS -> R.string.time_source_gps
+                        else -> R.string.time_source_network
+                    }
+                ),
+                onActivate = {
+                    val next = when (KswSettings.read(context, KswSettings.TIME_SOURCE)) {
+                        KswSettings.TIME_FROM_MCU -> KswSettings.TIME_FROM_GPS
+                        KswSettings.TIME_FROM_GPS -> KswSettings.TIME_FROM_NETWORK
+                        else -> KswSettings.TIME_FROM_MCU
+                    }
+                    KswSettings.write(context, KswSettings.TIME_SOURCE, next)
+                    reloadDetail("car_time_source")
                 }
             ),
             DetailRow(
@@ -307,7 +341,8 @@ class SettingsScreen(
 
     private fun keymapRows(): List<DetailRow> {
         val learning = Services.keys.pendingLearn
-        return LauncherAction.entries.map { action ->
+        // Consola nu are înclinare: rândurile de tilt doar ocupau loc.
+        return LauncherAction.entries.filter { it !in TILT_ACTIONS }.map { action ->
             val keys = Services.keys.keysFor(action)
             DetailRow(
                 id = "key_${action.name}",
@@ -542,6 +577,9 @@ class SettingsScreen(
     }
 
     companion object {
+        val TILT_ACTIONS = setOf(
+            LauncherAction.TILT_UP, LauncherAction.TILT_DOWN, LauncherAction.TILT_LEFT, LauncherAction.TILT_RIGHT
+        )
         const val NAV_CAR = "nav_car"
         const val FACTORY_PACKAGE = "com.szchoiceway.fatset"
         const val NAV_APPS = "nav_apps"

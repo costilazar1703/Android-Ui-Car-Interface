@@ -132,6 +132,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         requestRuntimePermissionsIfNeeded()
         observeStatusBar()
         observeDriveMode()
+        observeDriftMode()
     }
 
     override fun onStart() {
@@ -381,6 +382,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             LauncherAction.MEDIA_PREV -> { Services.media.previous(); true }
             LauncherAction.MEDIA_PLAY_PAUSE -> { Services.media.playPause(); true }
             LauncherAction.VOICE -> { launchAssistant(); true }
+            LauncherAction.VOLUME_UP -> { ro.e92.launcher.core.KswVolume.step(this, +1); true }
+            LauncherAction.VOLUME_DOWN -> { ro.e92.launcher.core.KswVolume.step(this, -1); true }
         }
     }
 
@@ -819,12 +822,20 @@ class HomeActivity : ComponentActivity(), ScreenHost {
      */
     private val kswScreenGuard = object : Runnable {
         override fun run() {
-            if (Services.prefs.btOwnEngine && !resumedNow &&
-                Services.kswBt.state.value.call == ro.e92.launcher.core.KswBluetooth.Call.NONE &&
-                Services.vehicle.state.value.reverseGear != true &&
-                foregroundApp() == ro.e92.launcher.core.KswBluetooth.PACKAGE
+            val app = foregroundApp()
+            val noCall = Services.kswBt.state.value.call == ro.e92.launcher.core.KswBluetooth.Call.NONE
+            val reverse = Services.vehicle.state.value.reverseGear == true
+            if (Services.prefs.btOwnEngine && !resumedNow && noCall && !reverse &&
+                app == ro.e92.launcher.core.KswBluetooth.PACKAGE
             ) {
                 ro.e92.launcher.core.EventLog.log("Home", "ecranul KSW a apărut în față - revin")
+                bringToFront(0)
+            } else if (Services.prefs.reverseScene && !resumedNow && noCall && app != null &&
+                app.startsWith(KSW_PREFIX) &&
+                (reverse || android.os.SystemClock.elapsedRealtime() - reverseEndedAt < AFTER_REVERSE_MS)
+            ) {
+                // După marșarier EventCenter redeschide ultima sursă KSW (media), peste noi.
+                ro.e92.launcher.core.EventLog.log("Home", "$app a apărut după marșarier - revin")
                 bringToFront(0)
             }
             binding.rootLayout.postDelayed(this, KSW_GUARD_MS)
@@ -935,11 +946,13 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             }
             return
         }
+        reverseEndedAt = android.os.SystemClock.elapsedRealtime()
         if (stack.current is ro.e92.launcher.ui.screens.ReverseScreen) stack.pop()
         if (reverseFromOutside) moveTaskToBack(true)
         reverseFromOutside = false
     }
 
+    private var reverseEndedAt = 0L
     private var reverseShown = false
     private var reverseFromOutside = false
 
@@ -988,11 +1001,11 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     }
 
     private fun renderPhoneChip(st: ro.e92.launcher.core.KswBluetooth.State) {
-        val connected = st.phoneConnected && st.phoneName.isNotBlank()
+        val connected = st.phoneConnected
         binding.phoneName.text = when {
             st.restartNeeded -> getString(R.string.bt_status_restart_short)
             st.moduleSilent -> getString(R.string.bt_status_silent_short)
-            else -> st.phoneName
+            else -> st.phoneName.ifBlank { getString(R.string.bt_phone_connected) }
         }
         binding.phoneChip.visibility =
             if (connected || st.moduleSilent || st.restartNeeded) View.VISIBLE else View.GONE
@@ -1050,6 +1063,24 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                 Services.vehicle.state.collect { state ->
                     val now = state.sportMode
                     if (now == true && previous == false) showDriveMode()
+                    if (now != null) previous = now
+                }
+            }
+        }
+    }
+
+    /** DSC oprit sau repornit: apare doar la schimbare, nu și cu marșarierul băgat. */
+    private fun observeDriftMode() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                var previous: Boolean? = Services.reverse.driftMode.value
+                Services.reverse.driftMode.collect { now ->
+                    if (now != null && previous != null && now != previous && Services.prefs.driftMode &&
+                        Services.vehicle.state.value.reverseGear != true
+                    ) {
+                        if (stack.current is ro.e92.launcher.ui.screens.DriftScreen) stack.pop()
+                        stack.push(ro.e92.launcher.ui.screens.DriftScreen(this@HomeActivity, now))
+                    }
                     if (now != null) previous = now
                 }
             }
@@ -1251,6 +1282,9 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         const val HOST_CUT_SHORT_MS = 4_000L
         const val HOST_DRIVER_PAUSE_MS = 3_000L
         const val KSW_GUARD_MS = 700L
+        /** Aplicațiile KSW care pot sări în față după marșarier. */
+        const val KSW_PREFIX = "com.szchoiceway."
+        const val AFTER_REVERSE_MS = 8_000L
         const val HOST_COOLDOWN_MS = 20_000L
         const val HOST_ENABLED = false
         /** Pe proces, nu pe instanță: o a doua instanță a activității n-o mai dublează. */

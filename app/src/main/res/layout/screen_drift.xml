@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:clickable="true"
+    android:focusable="false">
+
+    <ImageView
+        android:id="@+id/driftPhoto"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/scrim_drift" />
+
+    <!-- Mesajul e o singură imagine: text, linie și fum sunt desenate în ea. -->
+    <ImageView
+        android:id="@+id/driftMessage"
+        android:layout_width="620dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:layout_marginStart="44dp"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/drift_title"
+        android:scaleType="fitStart" />
+</FrameLayout>

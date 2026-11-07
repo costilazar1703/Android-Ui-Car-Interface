@@ -47,6 +47,15 @@
         android:orientation="horizontal"
         app:layout_constraintGuide_percent="0.36" />
 
+    <!-- Rotița e mai mică decât coloana ei: lățimea de la gWheelStart la gWheelEnd
+         îi dă mărimea (aprox. 85% din cea veche), marginea dreaptă rămâne la conector. -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/gWheelStart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.035" />
+
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/gWheelEnd"
         android:layout_width="wrap_content"
@@ -74,7 +83,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toStartOf="@id/gWheelEnd"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toStartOf="@id/gWheelStart"
         app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Iconița rândului focusat, în centrul rotiței. Se schimbă instantaneu la
@@ -92,7 +101,7 @@
         app:layout_constraintTop_toTopOf="@id/wheel"
         app:layout_constraintVertical_bias="0.42"
         app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="0.062"
+        app:layout_constraintWidth_percent="0.053"
         tools:src="@drawable/ic_menu_media" />
 
     <TextView
@@ -100,8 +109,10 @@
         style="@style/Text.Label"
         android:layout_width="@dimen/wheel_label_width"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
+        android:layout_marginTop="2dp"
         android:gravity="center"
+        android:scaleX="0.86"
+        android:scaleY="0.86"
         android:lineSpacingExtra="2dp"
         android:maxLines="2"
         android:singleLine="false"

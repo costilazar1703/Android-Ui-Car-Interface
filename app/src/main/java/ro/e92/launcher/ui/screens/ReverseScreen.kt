@@ -6,10 +6,12 @@ import android.view.ViewGroup
 import android.widget.TextView
 import kotlinx.coroutines.launch
 import ro.e92.launcher.R
+import ro.e92.launcher.can.NO_OBSTACLE_CM
 import ro.e92.launcher.core.Services
 import ro.e92.launcher.ui.Screen
 import ro.e92.launcher.ui.ScreenHost
 import ro.e92.launcher.ui.widget.ParkSensorView
+import ro.e92.launcher.ui.widget.SteeringGuideView
 
 /**
  * Scena de marșarier: mașina la mijloc, cu spatele în jos, între barele launcher-ului.
@@ -26,16 +28,20 @@ class ReverseScreen(host: ScreenHost) : Screen(host) {
     override fun onShow() {
         val view = root ?: return
         val sensors = view.findViewById<ParkSensorView>(R.id.reverseSensors)
+        val guide = view.findViewById<SteeringGuideView>(R.id.reverseGuide)
         val distance = view.findViewById<TextView>(R.id.reverseDistance)
         val note = view.findViewById<TextView>(R.id.reverseSensorNote)
         screenScope.launch {
             Services.reverse.sensorCm.collect { cm ->
                 sensors.distancesCm = cm
                 note.visibility = if (cm == null) View.VISIBLE else View.INVISIBLE
-                val closest = cm?.minOrNull()
+                val closest = cm?.filter { it < NO_OBSTACLE_CM }?.minOrNull()
                 distance.visibility = if (closest == null) View.GONE else View.VISIBLE
                 if (closest != null) distance.text = context.getString(R.string.reverse_distance_cm, closest)
             }
+        }
+        screenScope.launch {
+            Services.reverse.steering.collect { guide.steering = it }
         }
     }
 }

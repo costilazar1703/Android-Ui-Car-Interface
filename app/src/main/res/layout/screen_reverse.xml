@@ -10,6 +10,11 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <ro.e92.launcher.ui.widget.SteeringGuideView
+        android:id="@+id/reverseGuide"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
     <ImageView
         android:layout_width="170dp"
         android:layout_height="253dp"
@@ -65,7 +70,7 @@
         android:fontFamily="@font/inter_display_light"
         android:fontFeatureSettings="tnum"
         android:includeFontPadding="false"
-        android:textColor="@color/text_primary"
+        android:textColor="@color/data_accent"
         android:textSize="60sp"
         android:visibility="gone" />
 </FrameLayout>

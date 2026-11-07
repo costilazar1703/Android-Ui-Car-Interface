@@ -204,12 +204,6 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 title = context.getString(R.string.menu_bluetooth),
                 onActivate = { host.push(BluetoothMenuScreen(host)) }
             ),
-            WheelEntry(
-                id = "media_radio",
-                icon = R.drawable.ic_menu_media,
-                title = context.getString(R.string.media_oem_radio),
-                onActivate = { host.dispatch(LauncherAction.RADIO) }
-            )
         )
     }
 
@@ -237,14 +231,10 @@ class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 
     override val menuTitle: String get() = context.getString(R.string.menu_bluetooth)
 
+    private val resetGuard = ResetGuard { reload("bt_reset") }
+
     override fun entries(): List<WheelEntry> = listOfNotNull(
-        // Primul: butonul folosit cel mai des, fără să treci prin ecranul split.
-        WheelEntry(
-            id = "bt_reconnect",
-            icon = R.drawable.ic_menu_bluetooth,
-            title = context.getString(R.string.bt_reconnect),
-            onActivate = { Services.kswBt.reconnectLast() }
-        ),
+        // Reconectarea și lista de telefoane au plecat: reconectarea e în Bluetooth settings.
         WheelEntry(
             id = "bt_pair_new",
             icon = R.drawable.ic_menu_bluetooth,
@@ -254,25 +244,17 @@ class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
                 // pe ecranul care arată starea împerecherii.
                 if (Services.kswBt.isInstalled) {
                     Services.kswBt.makeVisible()
-                    host.push(BluetoothScreen(host))
+                    host.push(BluetoothScreen(host, BluetoothScreen.NAV_DEVICES))
                 } else {
                     AppLaunch.openBluetooth(context)
                 }
             }
         ),
-        // Al doilea, la un pas de rotiță: e butonul de folosit când telefonul
-        // nu vede unitatea.
         WheelEntry(
-            id = "bt_reset",
-            icon = R.drawable.ic_menu_bluetooth,
-            title = context.getString(R.string.bt_reset),
-            onActivate = { AppLaunch.resetBluetooth(context) }
-        ),
-        WheelEntry(
-            id = "bt_paired",
-            icon = R.drawable.ic_menu_bluetooth,
-            title = context.getString(R.string.bt_paired),
-            onActivate = { host.push(BluetoothScreen(host)) }
+            id = "bt_settings",
+            icon = R.drawable.ic_menu_settings,
+            title = context.getString(R.string.bt_settings),
+            onActivate = { host.push(BluetoothScreen(host, BluetoothScreen.NAV_SETTINGS)) }
         ),
         WheelEntry(
             id = "bt_music",
@@ -281,13 +263,15 @@ class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
             value = Services.media.snapshot.value.title.orEmpty(),
             onActivate = { host.push(MediaScreen(host)) }
         ),
-        // Ultimul și doar pe motorul KSW: cu motorul E92 nu mai are ce căuta aici.
+        // Cere a doua apăsare: un reset din greșeală rupe muzica și legătura.
         WheelEntry(
-            id = "bt_open_ksw",
+            id = "bt_reset",
             icon = R.drawable.ic_menu_bluetooth,
-            title = context.getString(R.string.set_open_ksw_bt),
-            onActivate = { AppLaunch.openBluetooth(context) }
-        ).takeUnless { Services.prefs.btOwnEngine }
+            title = context.getString(R.string.bt_reset),
+            value = if (resetGuard.armed) context.getString(R.string.bt_reset_confirm) else "",
+            onActivate = { if (resetGuard.press()) AppLaunch.resetBluetooth(context) }
+        )
+        // Aplicația Bluetooth KSW e în Bluetooth settings: aici ar fi fost al cincilea rând.
     )
 }
 
@@ -474,7 +458,7 @@ class SettingsMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
         ),
         WheelEntry(
             id = "set_apps",
-            icon = R.drawable.ic_menu_apps,
+            icon = R.drawable.ic_menu_car_info,
             title = context.getString(R.string.set_nav_assigned),
             onActivate = { host.push(SettingsScreen(host, SettingsScreen.NAV_APPS)) }
         ),
@@ -494,6 +478,41 @@ class SettingsMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 }
 
 // ------------------------------------------------------------------ comun ---
+
+/**
+ * Confirmare la acțiunile care strică ceva dacă sunt apăsate din greșeală: prima apăsare
+ * doar armează (rândul cere confirmare), a doua în [WINDOW_MS] execută. După fereastră
+ * se dezarmează singur. [onChange] redesenează rândul.
+ */
+class ResetGuard(private val onChange: () -> Unit) {
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val disarm = Runnable {
+        armedAt = 0L
+        onChange()
+    }
+    private var armedAt = 0L
+
+    val armed: Boolean
+        get() = armedAt != 0L && android.os.SystemClock.elapsedRealtime() - armedAt < WINDOW_MS
+
+    /** true = confirmat, execută acum. */
+    fun press(): Boolean {
+        handler.removeCallbacks(disarm)
+        if (armed) {
+            armedAt = 0L
+            onChange()
+            return true
+        }
+        armedAt = android.os.SystemClock.elapsedRealtime()
+        onChange()
+        handler.postDelayed(disarm, WINDOW_MS)
+        return false
+    }
+
+    companion object {
+        const val WINDOW_MS = 4000L
+    }
+}
 
 /**
  * Al treilea rând al majorității meniurilor: poarta spre Setări, deschise fix pe

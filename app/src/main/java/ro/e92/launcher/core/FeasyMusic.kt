@@ -16,10 +16,9 @@ import ro.e92.launcher.core.KswBluetooth.State
 /**
  * Motorul Bluetooth „E92": doar muzică (A2DP + AVRCP), fără bTSuite.
  *
- * bTSuite a fost problema, nu stiva: crapă la orice intent spre ecranul lui,
- * oprește muzica la fiecare secundă dacă ecranul nu există și cere agenda după
- * fiecare HFP, iar iPhone-ul rupe tot la 15 s (docs/feasycom-protocol.md). Aici
- * vorbim direct cu stiva prin [FeasyLink] și publicăm în același
+ * bTSuite crapă la orice intent spre ecranul lui și oprește muzica la fiecare
+ * secundă dacă ecranul nu există (docs/feasycom-protocol.md). Aici vorbim direct
+ * cu stiva prin [FeasyLink] și publicăm în același
  * [KswBluetooth.State] ca bTSuite, deci chip-ul, mini-player-ul, ecranele și
  * butoanele de volan nu știu care motor rulează.
  *
@@ -30,7 +29,8 @@ class FeasyMusic(
     context: Context,
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<State>,
-    prepareStack: () -> Unit
+    prepareStack: () -> Unit,
+    private val restartStack: suspend () -> Unit
 ) : FeasyLink.Listener {
 
     private val link = FeasyLink(KswBluetooth.GOC_SERIAL, prepareStack, this)
@@ -39,6 +39,12 @@ class FeasyMusic(
     @Volatile
     var profile = -1
         private set
+
+    /** Profilul scris și momentul de la care un răspuns îl poate confirma; 0 = nimic în curs. */
+    @Volatile
+    private var profileSent = 0
+    @Volatile
+    private var profileCheckAt = 0L
     private val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
     private val focusListener = AudioManager.OnAudioFocusChangeListener { }
 
@@ -69,6 +75,8 @@ class FeasyMusic(
     @Volatile
     private var lastLineAt = 0L
     private var lastPingAt = 0L
+    private var lastNameAskAt = 0L
+    private var nameAsks = 0
     private var lastHfpLog = -1
 
     /** Repetările lui MG: noi nu trimitem DY, deci le poate cere doar bTSuite. */
@@ -204,16 +212,34 @@ class FeasyMusic(
     }
 
     /**
-     * Stiva anunță și apeluri (HFP) și agendă. iPhone-ul ridică apelurile și, la
-     * 15 s după, cade tot, muzica inclusiv. Doar-muzică înseamnă să le scoatem din
-     * profil (setare persistentă în stivă, cere repornirea ei și o reasociere pe
-     * telefon). Biții sunt din documentația Feasycom ținută minte, nu verificați.
+     * Cu licența stivei picată („auth failed"), blueware programează deconectarea
+     * tuturor profilurilor la 15 s după fiecare HFP ridicat. Fără bitul HFP nu se
+     * înregistrează serviciul, deci telefonul nu-l mai ridică și nu pornește nici
+     * temporizatorul. Vezi docs/feasycom-protocol.md.
+     *
+     * Ce am citit din binar: valoarea se scrie fără „=" (`AT+PROFILE160`), schimbarea
+     * șterge asocierea, se salvează după 200 ms și se aplică abia la următoarea
+     * pornire a procesului, iar AT+REBOOT doar răspunde OK. De aceea recitim valoarea
+     * și abia apoi repornim serviciul.
      *
      * O singură încercare pentru fiecare valoare: dacă stiva nu ține minte setarea,
      * nu o repornim la nesfârșit.
      */
     override fun onProfile(value: Int) {
         profile = value
+        val sent = profileSent
+        if (sent != 0) {
+            // Un răspuns mai vechi poate sosi înainte să se execute scrierea.
+            if (SystemClock.elapsedRealtime() < profileCheckAt) return
+            profileSent = 0
+            if (value == sent) {
+                EventLog.log(TAG, "profil Bluetooth salvat: $value, repornesc stiva")
+                scope.launch { restartStack() }
+            } else {
+                EventLog.log(TAG, "stiva a refuzat profilul $sent, a rămas $value")
+            }
+            return
+        }
         val wanted = if (Services.prefs.btMusicOnly) {
             value and (PROFILE_HFP or PROFILE_PBAP).inv()
         } else {
@@ -221,9 +247,15 @@ class FeasyMusic(
         }
         if (wanted == value || Services.prefs.btProfileTried == wanted) return
         Services.prefs.btProfileTried = wanted
-        EventLog.log(TAG, "profil Bluetooth $value → $wanted, repornesc stiva")
-        link.sendConfig("PROFILE=$wanted")
-        link.sendConfig("REBOOT")
+        EventLog.log(TAG, "profil Bluetooth $value → $wanted (șterge asocierea)")
+        pairedName = ""
+        profileCheckAt = SystemClock.elapsedRealtime() + PROFILE_SAVE_MS
+        profileSent = wanted
+        link.sendConfig("PROFILE$wanted")
+        scope.launch {
+            delay(PROFILE_SAVE_MS)
+            link.sendConfig("PROFILE")
+        }
     }
 
     /** Cere din nou profilul; [onProfile] face schimbarea dacă e nevoie. */
@@ -276,6 +308,15 @@ class FeasyMusic(
                     sendConnect()
                 }
                 if (now - lastPingAt >= PING_MS) ping()
+                // Stiva află numele doar când HFP urcă, deci cu profilul 160 poate rămâne
+                // gol (MX1 fără nume, 2026-11-07). Întrebăm de câteva ori, nu la nesfârșit.
+                if (s.audioConnected && s.phoneName.isBlank() && nameAsks < NAME_ASKS &&
+                    now - lastNameAskAt >= NAME_ASK_MS
+                ) {
+                    nameAsks++
+                    lastNameAskAt = now
+                    link.send("MX", quiet = true)
+                }
                 val silent = now - lastLineAt > SILENT_MS
                 if (silent != s.moduleSilent) {
                     EventLog.log(TAG, if (silent) "stiva nu mai răspunde" else "stiva răspunde din nou")
@@ -427,6 +468,7 @@ class FeasyMusic(
         pairingUntil = 0L
         if (!before.audioConnected) {
             EventLog.log(TAG, "muzica e legată")
+            nameAsks = 0
             // Numele vine în MX; pe un link doar A2DP stiva nu-l trimite singură.
             link.send("MX")
         }
@@ -546,6 +588,8 @@ class FeasyMusic(
     companion object {
         private const val PROFILE_HFP = 8
         private const val PROFILE_PBAP = 1024
+        /** Stiva salvează după 200 ms; lăsăm loc și pentru deconectarea de dinainte. */
+        private const val PROFILE_SAVE_MS = 1_500L
         private const val TAG = "FeasyMusic"
         private const val GOC = KswBluetooth.GOC_SERIAL
 
@@ -593,6 +637,8 @@ class FeasyMusic(
         private const val CONNECTING_STUCK_MS = 30_000L
         private const val PAIRING_MS = 3 * 60_000L
         private const val PING_MS = 30_000L
+        private const val NAME_ASK_MS = 10_000L
+        private const val NAME_ASKS = 6
         private const val SILENT_MS = 95_000L
         private const val FOREIGN_WINDOW_MS = 30_000L
         private const val FOREIGN_REPEATS = 4

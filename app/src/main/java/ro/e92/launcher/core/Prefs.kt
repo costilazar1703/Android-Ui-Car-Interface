@@ -126,6 +126,14 @@ class Prefs(context: Context) {
         get() = sp.getBoolean(KEY_BT_MUSIC_ONLY, true)
         set(value) = sp.edit().putBoolean(KEY_BT_MUSIC_ONLY, value).apply()
 
+    /**
+     * Scena Drift Mode. Butonul DSC vine doar prin cadrele CAN, deci cere cadrele pornite
+     * tot timpul cât merge motorul, nu doar în marșarier. Oprită implicit: costă.
+     */
+    var driftMode: Boolean
+        get() = sp.getBoolean(KEY_DRIFT_MODE, false)
+        set(value) = sp.edit().putBoolean(KEY_DRIFT_MODE, value).apply()
+
     /** Ultimul profil trimis stivei, ca să nu o repornim în buclă dacă nu-l ține minte. */
     var btProfileTried: Int
         get() = sp.getInt(KEY_BT_PROFILE_TRIED, 0)
@@ -214,7 +222,9 @@ class Prefs(context: Context) {
         private const val KEY_UNIT_VOLUME = "unit_volume"
         private const val KEY_BLOCK_KSW_REOPEN = "block_ksw_reopen"
         private const val KEY_BT_MUSIC_ONLY = "bt_music_only"
-        private const val KEY_BT_PROFILE_TRIED = "bt_profile_tried"
+        // Cheie nouă: încercările vechi au trimis `PROFILE=`, pe care stiva îl refuză.
+        private const val KEY_BT_PROFILE_TRIED = "bt_profile_tried_v2"
+        private const val KEY_DRIFT_MODE = "drift_mode"
         private const val KEY_REVERSE_SCENE = "reverse_scene"
         private const val KEY_START_GUARD = "start_guard"
         const val DEFAULT_UNIT_VOLUME = 30

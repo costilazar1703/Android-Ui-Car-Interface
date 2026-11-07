@@ -8,6 +8,10 @@
     .\scripts\car.ps1 watch -Minutes 10    urmareste muzica si numara caderile
     .\scripts\car.ps1 play                 play/pauza de pe laptop
     .\scripts\car.ps1 revert               inapoi pe motorul KSW
+    .\scripts\car.ps1 btcapture -Minutes 3 -Label idle-fara-telefon
+                                           jurnalul stivei, restarturi, UART (deschide adb cat ruleaza)
+    .\scripts\car.ps1 rprobe -Minutes 3 -Label ksw-tip6
+                                           toate cadrele MCU in marsarier (deschide adb cat ruleaza)
     .\scripts\car.ps1 grant                permisiunea pentru marsarier, o data, prin adb
     .\scripts\car.ps1 reverse -Minutes 5   arata marsarierul si datele de la senzori
     .\scripts\car.ps1 scene-on             scena E92 in marsarier (tip camera KSW = 0)
@@ -20,7 +24,8 @@ param(
     [string] $Ip = "",
     [string] $Key = "6543",
     [string] $Apk = "",
-    [int] $Minutes = 10
+    [int] $Minutes = 10,
+    [string] $Label = "test"
 )
 
 $configFile = Join-Path $env:LOCALAPPDATA "e92diag.json"
@@ -104,6 +109,92 @@ Write-Output "Unitatea: $base"
 switch ($Command) {
     "status" { Call $base "/bt" }
     "play" { Call $base "/bt/do?c=playpause" }
+    "btcapture" {
+        # Raspunde la o singura intrebare: stiva chiar se reseteaza, sau doar pica legatura?
+        $adb = Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.exe"
+        $target = "$(([uri]$base).Host):5555"
+        $out = Join-Path $PSScriptRoot "..\.unit-dump\bt-$(Get-Date -Format yyyyMMdd-HHmm)-$Label"
+        New-Item -ItemType Directory -Force $out | Out-Null
+        curl.exe -s --max-time 10 -H "X-Key: $Key" --data-binary "setprop service.adb.tcp.port 5555; setprop ctl.restart adbd" "$base/shell" | Out-Null
+        Start-Sleep 4
+        cmd /c "`"$adb`" connect $target" | Out-Null
+        $jobs = @()
+        try {
+            cmd /c "`"$adb`" -s $target shell getprop > `"$out\getprop.txt`""
+            cmd /c "`"$adb`" -s $target shell su 0 dmesg > `"$out\dmesg-start.txt`""
+            cmd /c "`"$adb`" -s $target shell su 0 lsof > `"$out\lsof.txt`" 2>&1"
+            cmd /c "`"$adb`" -s $target logcat -c"
+            $jobs += Start-Process cmd -WindowStyle Hidden -PassThru -ArgumentList "/c `"`"$adb`" -s $target logcat -v time > `"$out\logcat.txt`"`""
+            $jobs += Start-Process cmd -WindowStyle Hidden -PassThru -ArgumentList "/c `"`"$adb`" -s $target shell su 0 tail -n 0 -f /data/feasycom/log > `"$out\feasycom.txt`"`""
+            Start-Sleep 2
+            # Doar interogari: VER, PROFILE si FEATURE nu schimba nimic in stiva.
+            foreach ($q in "VER", "PROFILE", "FEATURE", "AUTOCONN") {
+                cmd /c "`"$adb`" -s $target shell `"printf 'AT+$q\r\n' > /dev/goc_serial`""
+                Start-Sleep 1
+            }
+            $end = (Get-Date).AddMinutes($Minutes)
+            $lastPid = ""
+            $restarts = -1
+            Write-Output "Inregistrez $Minutes minute in $out"
+            while ((Get-Date) -lt $end) {
+                $stackPid = "$(cmd /c "`"$adb`" -s $target shell pidof blueware")".Trim()
+                if ($stackPid -ne $lastPid) {
+                    $restarts++
+                    $line = "$(Get-Date -Format HH:mm:ss) blueware pid='$stackPid'"
+                    Write-Output $line
+                    $line | Out-File -Append -Encoding ascii (Join-Path $out "stack-pid.txt")
+                    $lastPid = $stackPid
+                }
+                Start-Sleep 3
+            }
+            cmd /c "`"$adb`" -s $target shell su 0 dmesg > `"$out\dmesg-end.txt`""
+            cmd /c "`"$adb`" -s $target shell su 0 cat /data/feasycom/log > `"$out\feasycom-full.txt`""
+        } finally {
+            $jobs | ForEach-Object { taskkill /PID $_.Id /T /F 2>$null | Out-Null }
+            cmd /c "`"$adb`" -s $target shell `"setprop service.adb.tcp.port -1; setprop ctl.restart adbd`"" 2>$null
+            cmd /c "`"$adb`" disconnect $target" | Out-Null
+        }
+        Call $base "/events?n=400" | Out-File -Encoding utf8 (Join-Path $out "events.txt")
+        $f = Join-Path $out "feasycom.txt"
+        function Count([string] $pattern) { (Select-String -Path $f -Pattern $pattern -ErrorAction SilentlyContinue | Measure-Object).Count }
+        Write-Output ""
+        Write-Output "Procesul stivei s-a schimbat: $restarts ori"
+        Write-Output "Stiva reinitializata (HCI stare 2): $(Count 'HCI_STATE_CHANGED_IND:2')"
+        Write-Output "HFP ridicat: $(Count '>>:IB')   HFP cazut: $(Count 'HFP_SLC_DISCONNECTED')   A2DP cazut: $(Count 'A2DP_CLOSED')"
+        Write-Output "Erori UART (h5): $(Count 'h5 bad')"
+        Select-String -Path (Join-Path $out "feasycom-full.txt") -Pattern '^auth ' -ErrorAction SilentlyContinue | Select-Object -Last 1 | ForEach-Object { Write-Output "Licenta stivei: $($_.Line)" }
+        Select-String -Path $f -Pattern '>>:(VER|PROFILE|FEATURE|AUTOCONN)' -ErrorAction SilentlyContinue | ForEach-Object { $_.Line }
+        Select-String -Path (Join-Path $out "lsof.txt") -Pattern 'ttyS|goc_serial' -ErrorAction SilentlyContinue | Select-Object -First 8 | ForEach-Object { $_.Line }
+    }
+    "rprobe" {
+        # Toate cadrele MCU pe care le vede EventCenter, cu logcat continuu, ca sa nu se piarda.
+        $adb = Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.exe"
+        $target = "$(([uri]$base).Host):5555"
+        $out = Join-Path $PSScriptRoot "..\.unit-dump\rprobe-$(Get-Date -Format yyyyMMdd-HHmm)-$Label"
+        New-Item -ItemType Directory -Force $out | Out-Null
+        curl.exe -s --max-time 10 -H "X-Key: $Key" --data-binary "setprop service.adb.tcp.port 5555; setprop ctl.restart adbd" "$base/shell" | Out-Null
+        Start-Sleep 4
+        cmd /c "`"$adb`" connect $target" | Out-Null
+        $log = Join-Path $out "logcat.txt"
+        $job = $null
+        try {
+            cmd /c "`"$adb`" -s $target logcat -c"
+            $job = Start-Process cmd -WindowStyle Hidden -PassThru -ArgumentList "/c `"`"$adb`" -s $target logcat -v time > `"$log`"`""
+            Write-Output "Inregistrez $Minutes minute in $out. Baga in R, misca volanul, apropie-te de un obstacol."
+            Start-Sleep ($Minutes * 60)
+        } finally {
+            if ($job) { taskkill /PID $job.Id /T /F 2>$null | Out-Null }
+            cmd /c "`"$adb`" -s $target shell `"setprop service.adb.tcp.port -1; setprop ctl.restart adbd`"" 2>$null
+            cmd /c "`"$adb`" disconnect $target" | Out-Null
+        }
+        Call $base "/events?n=200" | Out-File -Encoding utf8 (Join-Path $out "events.txt")
+        Write-Output "Tipuri de cadre MCU:"
+        Select-String -Path $log -Pattern 'DataType0x\w+: bydata = (0xf2 0x\w+ 0x\w+ 0x\w+ 0x\w+|0xf2 0x\w+ 0x\w+ 0x\w+)' -ErrorAction SilentlyContinue |
+            ForEach-Object { $_.Matches[0].Groups[1].Value } | Group-Object | Sort-Object Count -Descending |
+            ForEach-Object { "  $($_.Count)  $($_.Name)" }
+        Write-Output "Linii radar sau traseu:"
+        Select-String -Path $log -Pattern 'setTrackData|radar KSW|RadarInfo|updateBackRadar' -ErrorAction SilentlyContinue | Select-Object -Last 10 | ForEach-Object { $_.Line }
+    }
     "scene-on" { Call $base "/sim?scene=1"; Start-Sleep 2; Call $base "/events?n=5" }
     "scene-off" { Call $base "/sim?scene=0"; Start-Sleep 2; Call $base "/events?n=5" }
     "grant" {
@@ -200,6 +291,12 @@ switch ($Command) {
             $s = Read-Status $base
             if ($s.running -eq "e92" -and $s.unitName) { break }
         }
+        # Prima pornire scrie profilul si reporneste stiva; asteptam sa revina.
+        for ($i = 0; $i -lt 15; $i++) {
+            if ($s.profile -match '^160\b' -and $s.unitName) { break }
+            Start-Sleep 3
+            $s = Read-Status $base
+        }
 
         $red = @()
         $yellow = @()
@@ -222,6 +319,7 @@ switch ($Command) {
         Check ([bool]$s.unitName) "stiva raspunde, unitatea se numeste '$($s.unitName)', PIN $($s.pin)" "stiva nu raspunde la comenzi"
         Check ($s.moduleSilent -ne "true") "stiva nu tace" "stiva a tacut"
         Check ($s.restartNeeded -ne "true") "bTSuite nu mai tine portul" "bTSuite inca tine portul: contact OPRIT si PORNIT, apoi ruleaza din nou"
+        Check ($s.profile -match '^160\b') "stiva e doar pe muzica (profil 160)" "profilul stivei e '$($s.profile)', trebuia 160"
         Note ($s.modeMemory -eq "0") "reluarea ecranului KSW la pornire e oprita" "Sys_Mode_Memory=$($s.modeMemory)"
         Note ([bool]$s.pairedPhone) "telefon memorat: $($s.pairedPhone)" "stiva nu raporteaza niciun telefon memorat; poate fi nevoie de 'Connect new mobile'"
 
@@ -241,5 +339,5 @@ switch ($Command) {
         if ($s.audioConnected -eq "true") { Write-Output "Telefonul e deja legat: $($s.phone). Apasa play." }
         if ($yellow.Count -gt 0) { $yellow | ForEach-Object { Write-Output "  de retinut: $_" } }
     }
-    default { Write-Output "prepare | status | watch | play | revert | grant | reverse | scene-on | scene-off" }
+    default { Write-Output "prepare | status | watch | play | revert | btcapture | rprobe | grant | reverse | scene-on | scene-off" }
 }

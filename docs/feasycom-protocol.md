@@ -84,7 +84,30 @@ Details seen in the logs, used by the launcher's own engine (`core/FeasyLink.kt`
 1. bTSuite crash: any intent to an existing `BTMainActivity` -> NPE in
    `FragmentBase.refreshFocusView_KSW` -> process dies -> BTService restarts ->
    sends MY, MM, MN, MG, **DC**, MQ while the phone is connected -> link drops;
-   blueware's worker can SIGSEGV and lose the new link key ("auth failed").
-2. iPhone drops A2DP + HFP ~15 s after HFP SLC, right after bTSuite's `PA`
-   (phonebook) request. With HFP gone and only A2DP up, music stayed stable.
+   blueware's worker can SIGSEGV and lose the new link key.
+2. A2DP + HFP drop exactly 15 s after HFP SLC. See "The 15 second drop". With HFP gone and
+   only A2DP up, music stayed stable.
 3. BTService stops A2DP every second while `BTMainActivity` does not exist (btMode).
+
+## The 15 second drop (disassembly of `/oem/bin/blueware`, 2026-11-07)
+
+Static analysis; the runtime proof is the car test in `CAR-CHECKLIST.md`.
+
+- At boot the stack checks a licence bound to the module address. A failure logs `auth failed`
+  and leaves `app+0x3e` at 0. Every saved boot shows it.
+- `hfp_sink_set_state`, HFP going up with that flag at 0: `MessageSendLater(2, 0, 15000)`.
+  Message 2 is `app_disconnect_all_profiles`, which drops the whole link. Nothing cancels it, so
+  closing HFP with `AT+HFPDISC` or `AT#DD` does not stop it.
+- Without the HFP bit in the profile, `hfp_sink_set_state` returns early: no SDP record, no timer.
+
+`AT+PROFILE`, from `cmdProfilesToggle`:
+
+- Bits: HFP 8, A2DP sink 32, AVRCP controller 128, PBAP 1024. Supported mask and default: 1192.
+- Write is `AT+PROFILE160`. The form with `=` is refused, because the argument must be digits.
+- A change disconnects everything, calls `app_delete_paired_device_of_index(0)` and saves after
+  200 ms. It takes effect at the next start of the process.
+- `AT+REBOOT` only answers OK. Restart with `setprop ctl.restart feasycom`.
+
+`bw_conf0.db` and `bw_conf1.db` are not SQLite: 536 bytes, profile at 0xA0, CRC16-CCITT-FALSE of
+the first 0x214 bytes at 0x214. If both copies are invalid the stack restores defaults, which
+loses the pairings.

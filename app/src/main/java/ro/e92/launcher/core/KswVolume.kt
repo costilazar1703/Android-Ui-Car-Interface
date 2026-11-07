@@ -67,6 +67,13 @@ object KswVolume {
         sendNow(context, v)
     }
 
+    /** Butoanele + și - din Button mapping. */
+    fun step(context: Context, delta: Int) {
+        val now = current(context) ?: return
+        val next = (now + delta).coerceIn(0, MAX)
+        if (next != now) set(context, next)
+    }
+
     private fun sendNow(context: Context, value: Int) {
         val connection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {

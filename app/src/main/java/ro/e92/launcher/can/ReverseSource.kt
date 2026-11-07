@@ -23,6 +23,9 @@ import ro.e92.launcher.core.KswSettings
 import ro.e92.launcher.core.Services
 import ro.e92.launcher.ui.HomeActivity
 
+/** Senzorul nu vede nimic. Mai mare decât orice prag din ParkSensorView. */
+const val NO_OBSTACLE_CM = 999
+
 /** Launcher-ul adus în față de marșarier, nu de șofer: la ieșire revine unde era. */
 const val EXTRA_REVERSE = "ro.e92.launcher.REVERSE"
 
@@ -55,9 +58,31 @@ class ReverseSource(
 
     override val isAvailable: Boolean get() = job?.isActive == true
 
-    /** Distanțele în cm, câte una pe senzor. Azi vin doar din /sim: unitatea nu le primește. */
+    /**
+     * Distanțele estimate în cm, câte una pe senzor; [NO_OBSTACLE_CM] = nu vede nimic.
+     * Null = n-am primit cadrul 0x1C2. Vine doar cu motorul pornit, în marșarier.
+     */
     private val _sensorCm = MutableStateFlow<List<Int>?>(null)
     val sensorCm: StateFlow<List<Int>?> = _sensorCm.asStateFlow()
+
+    /** Unghiul volanului din 0x0C4: -1 dreapta ... 1 stânga, null = necunoscut. */
+    private val _steering = MutableStateFlow<Float?>(null)
+    val steering: StateFlow<Float?> = _steering.asStateFlow()
+
+    /**
+     * Sistemele oprite (DSC sau DTC). La fiecare contact pornesc activate, deci starea
+     * începe ca false. Se schimbă la fiecare apăsare a butonului (0x316, o rafală de
+     * cadre cât e ținut apăsat); mesajul de pe bord (0x338, cod B8) confirmă doar
+     * oprirea. Ștergerea mesajului NU înseamnă repornire: bordul îl ascunde singur după
+     * câteva secunde, iar asta dădea „Drift mode off" fals (2026-11-07).
+     */
+    private val _driftMode = MutableStateFlow<Boolean?>(false)
+    private var lastButtonAt = 0L
+    private var lastGear = -1
+    val driftMode: StateFlow<Boolean?> = _driftMode.asStateFlow()
+
+    private var lastRawLogAt = 0L
+    private val seenMessages = HashSet<Int>()
 
     /**
      * EventCenter are o fereastră de radar alimentată de acest broadcast, dar în
@@ -114,23 +139,99 @@ class ReverseSource(
 
     private fun follow() {
         val started = ProcessBuilder(
-            "logcat", "-v", "brief", "-T", "1", "-e", "0xf2 0x00 0x11 0x02", "EventService:I", "*:S"
+            "logcat", "-v", "brief", "-T", "1", "-e", LOG_FILTER, "EventService:I", "*:S"
         ).redirectErrorStream(true).start()
         process = started
         EventLog.log(TAG, "urmăresc marșarierul")
         try {
             started.inputStream.bufferedReader().forEachLine { line ->
                 FRAME.find(line)?.let { publish(it.groupValues[1] == "1") }
+                CAN_FRAME.find(line)?.let { match ->
+                    val id = match.groupValues[1].toInt(16)
+                    val bytes = BYTE.findAll(match.groupValues[2]).map { it.groupValues[1].toInt(16) }.toList()
+                    onCan(id, bytes)
+                }
             }
         } finally {
             started.destroy()
         }
     }
 
+    private fun onCan(id: Int, b: List<Int>) {
+        when (id) {
+            ID_SENSORS -> if (b.size >= SENSORS) onSensors(b.take(SENSORS))
+            ID_STEERING -> if (b.size >= 2) {
+                val raw = ((b[1] shl 8) or b[0]).toShort().toInt()
+                _steering.value = (raw / STEERING_FULL).coerceIn(-1f, 1f)
+            }
+            ID_GEAR -> if (b.isNotEmpty()) onGear(b[0])
+            ID_MESSAGE -> if (b.size >= 3) onCarMessage(b[0], b[1], b[2])
+            ID_DSC_BUTTON -> onDscButton(b)
+        }
+    }
+
+    private fun onSensors(raw: List<Int>) {
+        _sensorCm.value = raw.map { value ->
+            if (value >= RAW_NOTHING) NO_OBSTACLE_CM else (value - SENSOR_MARGIN_CM).coerceAtLeast(0)
+        }
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastRawLogAt >= RAW_LOG_MS) {
+            lastRawLogAt = now
+            EventLog.log(TAG, "senzori brut: " + raw.joinToString(" "))
+        }
+    }
+
+    /**
+     * Doar jurnal: valoarea se schimbă și cu treapta de viteză din mers (C6 în D), iar
+     * salutul Sport pornea singur. Îl legăm din nou după ce decodăm cadrul.
+     */
+    private fun onGear(value: Int) {
+        if (value == lastGear) return
+        lastGear = value
+        EventLog.log(TAG, "treaptă brut: %02x".format(value))
+    }
+
+    private fun onDscButton(b: List<Int>) {
+        val now = SystemClock.elapsedRealtime()
+        val newPress = now - lastButtonAt > BUTTON_GAP_MS
+        lastButtonAt = now
+        if (!newPress) return
+        EventLog.log(TAG, "buton DSC: " + b.joinToString(" ") { "%02x".format(it) })
+        setDrift(_driftMode.value != true)
+    }
+
+    private fun onCarMessage(code: Int, group: Int, status: Int) {
+        val message = (group shl 8) or code
+        if (seenMessages.add(message)) EventLog.log(TAG, "mesaj bord: cod %02x %02x".format(group, code))
+        if (code != CODE_DSC_OFF || group != 0) return
+        if (status == STATUS_SHOWN) setDrift(true)
+    }
+
+    private fun setDrift(on: Boolean) {
+        if (_driftMode.value == on) return
+        EventLog.log(TAG, "DSC " + if (on) "oprit" else "pornit")
+        _driftMode.value = on
+    }
+
+    /** Pentru probe fără mașină, din DiagServer: valorile brute ale cadrelor. */
+    fun simulateCan(raw: List<Int>?, steer: Int?, gear: Int?, drift: Boolean?, button: Boolean = false) {
+        raw?.let { onSensors(it) }
+        steer?.let { onCan(ID_STEERING, listOf(it and 0xFF, (it shr 8) and 0xFF)) }
+        gear?.let { onGear(it) }
+        drift?.let { setDrift(it) }
+        if (button) onDscButton(listOf(0xFD, 0xFF))
+    }
+
     private fun publish(on: Boolean) {
         val value = if (on) true else null
         if (_state.value.reverseGear == value && _state.value.timestamp != 0L) return
-        if (on) EventLog.log(TAG, "marșarier") else if (_state.value.reverseGear == true) EventLog.log(TAG, "ieșit din marșarier")
+        if (on) {
+            val camera = KswSettings.read(context, CAMERA_SELECTION)
+            EventLog.log(TAG, "marșarier (tip cameră KSW $camera)")
+        } else if (_state.value.reverseGear == true) {
+            EventLog.log(TAG, "ieșit din marșarier")
+        }
+        if (!on) _sensorCm.value = null
         _state.value = _state.value.copy(reverseGear = value, timestamp = SystemClock.elapsedRealtime())
     }
 
@@ -172,23 +273,42 @@ class ReverseSource(
             // Oprită, opțiunea nu atinge nimic decât dacă noi am pus 0 mai devreme.
             if (current == wanted || (!Services.prefs.reverseScene && current != CAMERA_NONE)) return@launch
             KswSettings.write(context, CAMERA_SELECTION, wanted)
-            context.sendBroadcast(Intent(APPLY_ACTION).putExtra(APPLY_EXTRA, APPLY_CAMERA))
-            EventLog.log(TAG, "tip cameră KSW $current → $wanted")
+            // Acțiunea e protejată: de la o aplicație obișnuită aruncă SecurityException și
+            // omoară launcher-ul (2026-11-07). EventCenter citește valoarea la pornire.
+            EventLog.log(TAG, "tip cameră KSW $current → $wanted, se aplică la următoarea pornire")
         }
     }
 
     private companion object {
         const val TAG = "Reverse"
         val FRAME = Regex("""0xf2 0x00 0x11 0x02 0x0[123] 0x0([01])""")
+        const val LOG_FILTER =
+            "0xf2 0x00 0x11 0x02|0xA1_0x1DEvent: stringBuilder.toString\\(\\) = 0x(01c2|00c4|0304|0316|0338) "
+        val CAN_FRAME = Regex("""0xA1_0x1DEvent: .*= 0x([0-9a-f]{4}) \S+ \S+ 0x[0-9a-f]+ ((?:0x[0-9a-f]{2} ?)+)""")
+        val BYTE = Regex("""0x([0-9a-f]{2})""")
+
+        const val ID_SENSORS = 0x1C2
+        const val ID_STEERING = 0x0C4
+        const val ID_GEAR = 0x304
+        const val ID_MESSAGE = 0x338
+        const val SENSORS = 4
+        const val RAW_NOTHING = 0xFE
+        /** Ce ține minte șoferul la ultimul roșu: 8 cm reali arătați ca 4, de siguranță. */
+        const val SENSOR_MARGIN_CM = 4
+        const val RAW_LOG_MS = 2_000L
+        /** Volanul la capăt (2026-11-07); semnul pozitiv = stânga, de confirmat în mașină. */
+        const val STEERING_FULL = 10_400f
+        const val ID_DSC_BUTTON = 0x316
+        /** Cadrele butonului vin în rafală cât e apăsat; o pauză mai lungă = apăsare nouă. */
+        const val BUTTON_GAP_MS = 1_200L
+        const val CODE_DSC_OFF = 0xB8
+        const val STATUS_SHOWN = 2
 
         const val RADAR_ACTION = "com.szchoiceway.eventcenter.MCU_CAR_CAN_RADAR_INFO"
         const val RADAR_DATA = "com.szchoiceway.eventcenter.CAR_CAN_DATA"
         const val CAMERA_SELECTION = "KESAIWEI_SYS_CAMERA_SELECTION"
         const val CAMERA_NONE = "0"
         const val CAMERA_AFTERMARKET = "1"
-        const val APPLY_ACTION = "com.szchoiceway.eventcenter.EventUtils.ZXW_SENDBROADCAST8902MOD"
-        const val APPLY_EXTRA = "com.szchoiceway.eventcenter.EventUtils.ZXW_SENDBROADCAST8902MOD_EXTRA"
-        const val APPLY_CAMERA = 4
 
         const val PERMISSION_RECHECK_MS = 30_000L
         const val RESTART_MS = 3_000L

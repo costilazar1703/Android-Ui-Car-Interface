@@ -29,6 +29,8 @@ enum class LauncherAction(val label: String) {
     MEDIA_PREV("Steering — previous track"),
     MEDIA_PLAY_PAUSE("Steering — play/pause"),
     VOICE("Steering — voice"),
+    VOLUME_UP("Music volume +"),
+    VOLUME_DOWN("Music volume -"),
 
     APPS("App drawer"),
     DIAGNOSTICS("Diagnostics");

@@ -14,10 +14,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import ro.e92.launcher.core.EventLog
 import ro.e92.launcher.core.KswSettings
+import ro.e92.launcher.core.Services
 
 /**
  * Datele mașinii exact cum le ia aplicația „Dashboard" a unității KSW
@@ -32,7 +35,8 @@ import ro.e92.launcher.core.KswSettings
  *
  * Cadrul 90 (octeți, big-endian):
  *   5-6   autonomie km (cu modul de sistem 1/3: 20-22, pe trei octeți)
- *   9-10  viteză medie · 11-12 viteză · 13-14 turații
+ *   7-8   consum mediu din bord ×10 · 9-10 viteză medie din bord ×10
+ *   11-12 viteză · 13-14 turații
  *   15-16 combustibil, litri · 17-18 temperatura de afară ×10, cu semn
  *   19    bit 2 = grade Fahrenheit
  */
@@ -56,8 +60,17 @@ class KswCarDataSource(
     private var bound = false
     private var loggedFirstFrame = false
     private var systemMode = 0
+    private var canForwarding: Boolean? = null
+    private var lastRpm = 0
 
     override fun start() {
+        // Marșarierul vine pe alt canal (cadrul 0x11), deci îl putem urmări fără CAN.
+        scope.launch {
+            Services.reverse.vehicleState
+                .map { it.reverseGear == true }
+                .distinctUntilChanged()
+                .collect { updateCanForwarding() }
+        }
         if (bound) return
         bound = runCatching {
             context.bindService(Intent(EVENT_SERVICE).setPackage(EVENT_PACKAGE), connection, Context.BIND_AUTO_CREATE)
@@ -68,7 +81,11 @@ class KswCarDataSource(
     override fun stop() {
         poller?.cancel()
         poller = null
-        service?.let { register(it, null) }
+        service?.let { binder ->
+            transact(binder, TX_SEND_MCU) { it.writeByteArray(CAN_OFF) }
+            register(binder, null)
+        }
+        canForwarding = null
         if (bound) runCatching { context.unbindService(connection) }
         bound = false
         service = null
@@ -77,6 +94,7 @@ class KswCarDataSource(
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             service = binder ?: return
+            canForwarding = null
             systemMode = KswSettings.read(context, "KESAIWEI_SYS_MODE_SELECTION")?.toIntOrNull() ?: 0
             register(binder, callback)
             readHandbrake()
@@ -133,18 +151,41 @@ class KswCarDataSource(
         val speed = u16(11)
         val rpm = u16(13)
         val fuel = u16(15)
+        updateCanForwarding(rpm)
         if (!loggedFirstFrame) {
             loggedFirstFrame = true
             EventLog.log(TAG, "date de bord KSW: autonomie $range km, combustibil $fuel l, afară $outside, $speed km/h, $rpm rpm")
         }
         _state.value = _state.value.copy(
             rangeKm = range.takeIf { it in 1..2000 },
+            avgConsumption = (u16(7) / 10f).takeIf { it > 0f && it < 100f },
+            avgSpeedKmh = (u16(9) / 10f).takeIf { it > 0f && it < 300f },
             fuel = fuel.takeIf { it in 0..100 },
             outsideTempC = outside?.takeIf { it in -40f..60f },
             speedKmh = speed.takeIf { it in 0..300 },
             rpm = rpm.takeIf { it in 0..8000 },
             timestamp = SystemClock.elapsedRealtime()
         )
+    }
+
+    /**
+     * Cadrele CAN brute (A1 1D) încarcă legătura cu MCU-ul cu până la ~240 de cadre pe
+     * secundă, așa că le cerem doar când chiar trebuie: în marșarier, cu scena noastră
+     * pornită (senzori, volan), și, dacă e aleasă, pentru Drift Mode cât merge motorul.
+     * Aceeași comandă ca butonul din Factory.
+     */
+    fun updateCanForwarding(rpm: Int = lastRpm) {
+        lastRpm = rpm
+        val reverse = Services.reverse.vehicleState.value.reverseGear == true && Services.prefs.reverseScene
+        val drift = Services.prefs.driftMode && rpm >= ENGINE_ON_RPM
+        val wanted = reverse || drift
+        if (wanted == canForwarding) return
+        canForwarding = wanted
+        val binder = service ?: return
+        EventLog.log(TAG, "cadre CAN: " + if (wanted) "pornite" else "oprite")
+        scope.launch {
+            transact(binder, TX_SEND_MCU) { it.writeByteArray(if (wanted) CAN_ON else CAN_OFF) }
+        }
     }
 
     private fun readHandbrake() {
@@ -202,6 +243,9 @@ class KswCarDataSource(
         const val POLL_MS = 500L
 
         val MCU_REQUEST = byteArrayOf(0xF2.toByte(), 0x00, 0x68, 0x02, 0x05, 0x00)
+        val CAN_ON = byteArrayOf(0xF2.toByte(), 0x00, 0x70, 0x02, 0x0F, 0x01)
+        val CAN_OFF = byteArrayOf(0xF2.toByte(), 0x00, 0x70, 0x02, 0x0F, 0x00)
+        const val ENGINE_ON_RPM = 300
         val START_CMDS = listOf(
             byteArrayOf(0x89.toByte(), 0x01, 0x10),
             byteArrayOf(0x8A.toByte(), 0x01, 0x10),

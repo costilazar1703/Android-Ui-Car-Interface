@@ -57,6 +57,17 @@ object KswSettings {
     const val MODE_MEMORY = "Sys_Mode_Memory"
 
     /**
+     * De unde ia EventCenter ora (cod decompilat, EventService). 0: din cadrul MCU
+     * F2 00 A1 .. 18, fără internet. 1: din GPS după fix, și o trimite la MCU. Altă
+     * valoare: doar o trimite la MCU, iar ora vine din rețea. Unitatea avea 2.
+     * Cadrul 18 nu apare în capturile de până acum, deci 0 trebuie probat.
+     */
+    const val TIME_SOURCE = "KESAIWEI_SYS_USER_TIME_TYPE"
+    const val TIME_FROM_MCU = "0"
+    const val TIME_FROM_GPS = "1"
+    const val TIME_FROM_NETWORK = "2"
+
+    /**
      * Tipul mașinii din Factory → Car Type (/oem/app/CarType.xml). EventCenter
      * îl spune MCU-ului; de el depinde cum sunt citite butoanele de volan și
      * datele mașinii. Se aplică după o repornire.

@@ -127,10 +127,14 @@ public class FakeGoc {
         if (raw.startsWith("AT+")) {
             clientSeen = true;
             note("<< " + raw);
-            if (raw.startsWith("AT+PROFILE=")) {
-                profile = Integer.parseInt(raw.substring(11).trim());
-            } else if (raw.startsWith("AT+PROFILE")) {
-                send("PROFILE" + profile);
+            if (raw.startsWith("AT+PROFILE")) {
+                profileCommand(raw.substring(10));
+            } else if (raw.equals("AT+REBOOT")) {
+                // cmdReboot din blueware: doar răspunde OK, de două ori.
+                send("OK");
+                send("OK");
+            } else {
+                send("OK");
             }
             return;
         }
@@ -162,6 +166,11 @@ public class FakeGoc {
                 break;
             case "MX":
                 send("MX1" + ADDR + PHONE);
+                send("OK");
+                break;
+            case "MH":
+            case "MF":
+                send("MF00");
                 send("OK");
                 break;
             case "MZ":
@@ -205,6 +214,22 @@ public class FakeGoc {
                 send("ERROR");
                 break;
         }
+    }
+
+    /** Ca cmdProfilesToggle: doar cifre, fără „=", iar o schimbare rupe legătura. */
+    private static void profileCommand(String arg) {
+        if (arg.isEmpty()) {
+            send("PROFILE" + profile);
+            send("OK");
+            return;
+        }
+        if (!arg.matches("\\d+") || Integer.parseInt(arg) == profile) {
+            send("ERROR");
+            return;
+        }
+        profile = Integer.parseInt(arg) & 1192;
+        if (av != 1) drop();
+        send("OK");
     }
 
     private static void connect() {

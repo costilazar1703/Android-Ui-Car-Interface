@@ -29,6 +29,7 @@
          straturile se suprapun, iar un halo prea opac arată ca un chenar, nu ca lumină. -->
     <color name="glow_outer">#1FCC2204</color>
     <color name="glow_mid">#4DD22D06</color>
+    <color name="data_accent">#F04A12</color>
     <color name="glow_core">#D8380A</color>
 
     <!-- Rotița iDrive din stânga -->

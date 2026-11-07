@@ -270,8 +270,8 @@ class FeasyLink(
             "MH", "MF"
         )
 
-        /** `PROFILE` citește, `PROFILE=<n>` scrie, `REBOOT` repornește stiva. */
-        private val CONFIG_ALLOWED = listOf("PROFILE", "REBOOT")
+        /** `PROFILE` citește, `PROFILE<n>` scrie. */
+        private val CONFIG_ALLOWED = listOf("PROFILE")
         private const val PROFILE_REPLY = "PROFILE"
 
         private const val CODE_LENGTH = 2

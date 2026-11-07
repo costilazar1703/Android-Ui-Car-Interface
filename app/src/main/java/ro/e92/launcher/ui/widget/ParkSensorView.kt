@@ -127,7 +127,9 @@ class ParkSensorView @JvmOverloads constructor(
         var moving = false
         val current = distancesCm
         for (zone in 0 until ZONES) {
-            val target = (current?.getOrNull(zone) ?: FAR_CM).toFloat()
+            // „Nimic" vine ca 999 cm: plafonat, altfel linia ar porni de acolo spre un
+            // obstacol apropiat și ar ajunge la el abia după câteva secunde.
+            val target = (current?.getOrNull(zone) ?: FAR_CM).coerceAtMost(FAR_CM).toFloat()
             val gap = target - shown[zone]
             if (abs(gap) <= step) {
                 shown[zone] = target
@@ -163,7 +165,8 @@ class ParkSensorView @JvmOverloads constructor(
         const val GLOW_SCALE = 3f
         const val GLOW_OPACITY = 0.22f
 
-        const val SPEED_CM_PER_MS = 0.12f
+        /** Destul de repede ca de la „liber" la ultimul roșu să treacă sub o secundă. */
+        const val SPEED_CM_PER_MS = 0.3f
         const val MAX_FRAME_MS = 50L
 
         /** Centrul e în mașină; raza trece de colțurile barei, ca zonele să iasă întregi. */

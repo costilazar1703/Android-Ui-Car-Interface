@@ -86,6 +86,8 @@ class VehicleRepository(
         var fuel: Int? = null
         var range: Int? = null
         var outside: Float? = null
+        var avgConsumption: Float? = null
+        var avgSpeed: Float? = null
         var doors: Set<Door> = emptySet()
         var doorsSet = false
         var newest = 0L
@@ -105,6 +107,9 @@ class VehicleRepository(
             if (fuel == null) fuel = s.fuel
             if (range == null) range = s.rangeKm
             if (outside == null) outside = s.outsideTempC
+            if (avgConsumption == null) avgConsumption = s.avgConsumption
+            if (avgSpeed == null) avgSpeed = s.avgSpeedKmh
+            if (sport == null) sport = s.sportMode
 
             if (now - s.timestamp > CanDataSource.STALE_AFTER_MS) continue
 
@@ -113,7 +118,6 @@ class VehicleRepository(
                 speedFrom = sources[i].id
             }
             if (rpm == null) rpm = s.rpm
-            if (sport == null) sport = s.sportMode
             if (boost == null) boost = s.boostBar
             if (oilTemp == null) oilTemp = s.oilTempC
             if (coolant == null) coolant = s.coolantTempC
@@ -141,6 +145,8 @@ class VehicleRepository(
             fuel = fuel,
             rangeKm = range,
             outsideTempC = outside,
+            avgConsumption = avgConsumption,
+            avgSpeedKmh = avgSpeed,
             timestamp = newest
         )
     }

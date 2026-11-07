@@ -293,6 +293,13 @@ object DiagServer {
             Services.prefs.reverseScene = it == "1"
             Services.reverse.applyCameraMode()
         }
+        Services.reverse.simulateCan(
+            raw = query["raw"]?.split(",")?.mapNotNull { it.toIntOrNull() },
+            steer = query["steer"]?.toIntOrNull(),
+            gear = query["gear"]?.toIntOrNull(16),
+            drift = query["drift"]?.let { it == "1" },
+            button = query["dscbutton"] == "1"
+        )
         query["reverse"]?.let { on ->
             val cm = query["cm"]?.split(",")?.mapNotNull { it.toIntOrNull() }
             Services.reverse.simulate(on == "1", cm)

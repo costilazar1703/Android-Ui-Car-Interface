@@ -32,6 +32,10 @@ data class VehicleState(
     val rangeKm: Int? = null,
     /** Temperatura exterioară, °C. */
     val outsideTempC: Float? = null,
+    /** Consumul mediu arătat de bordul mașinii, l/100 km. */
+    val avgConsumption: Float? = null,
+    /** Viteza medie arătată de bordul mașinii, km/h. */
+    val avgSpeedKmh: Float? = null,
     /** SystemClock.elapsedRealtime() al ultimei actualizări reale. 0 = niciodată. */
     val timestamp: Long = 0L
 ) {

@@ -53,6 +53,11 @@ object Services {
     lateinit var reverse: ro.e92.launcher.can.ReverseSource
         private set
 
+    /** Datele de bord KSW; pornește și oprește cadrele CAN. Null cu alte surse alese. */
+    @Volatile
+    var kswCar: ro.e92.launcher.can.KswCarDataSource? = null
+        private set
+
     @Volatile
     private var initialized = false
 
@@ -89,7 +94,7 @@ object Services {
             broadcastCan,
             // Datele de bord pe care le arată aplicația Dashboard a unității:
             // autonomie, combustibil, temperatură, frână de mână.
-            ro.e92.launcher.can.KswCarDataSource(appContext, scope),
+            ro.e92.launcher.can.KswCarDataSource(appContext, scope).also { kswCar = it },
             // Înaintea GPS-ului: viteza din OBD e fără întârziere.
             ro.e92.launcher.can.ObdDataSource(
                 scope,

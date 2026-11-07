@@ -162,7 +162,7 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         keepModeMemoryOff()
         KswVolume.apply(context)
         _state.value = State(unitName = _state.value.unitName, pin = _state.value.pin)
-        val music = FeasyMusic(context, scope, _state) { ensureBridge() }
+        val music = FeasyMusic(context, scope, _state, { ensureBridge() }, { restartBridge() })
         own = music
         if (bTSuiteInstalled && !freePty()) {
             EventLog.log(TAG, "nu pot scrie tipul modulului - pty-ul rămâne al lui bTSuite")
@@ -320,6 +320,19 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         // Fără punte, repornirea BTService n-ar schimba nimic; o lăsăm în pace.
         EventLog.log(TAG, "$GOC_SERIAL tot lipsește după pornirea $BRIDGE_SERVICE")
         return false
+    }
+
+    /**
+     * Stiva citește profilul doar la pornirea procesului. Pe 2026-11-03, după o
+     * repornire peste cipul deja inițializat, asocierea nu s-a mai terminat; dacă
+     * se repetă, ajută un ciclu de contact.
+     */
+    private suspend fun restartBridge() = withContext(Dispatchers.IO) {
+        EventLog.log(TAG, "repornesc serviciul $BRIDGE_SERVICE")
+        runCatching {
+            Runtime.getRuntime().exec(arrayOf("setprop", "ctl.restart", BRIDGE_SERVICE)).waitFor()
+        }.onFailure { Log.w(TAG, "nu pot reporni $BRIDGE_SERVICE", it) }
+        Unit
     }
 
     /**
@@ -558,6 +571,8 @@ class KswBluetooth(private val context: Context, private val scope: CoroutineSco
         appendLine("profile=${music?.profile ?: -1} musicOnly=${Services.prefs.btMusicOnly}")
         appendLine("btType=${KswSettings.read(context, KswSettings.BT_TYPE).orEmpty()}")
         appendLine("modeMemory=${KswSettings.read(context, KswSettings.MODE_MEMORY).orEmpty()}")
+        appendLine("timeSource=${KswSettings.read(context, KswSettings.TIME_SOURCE).orEmpty()}")
+        appendLine("driftMode=${Services.prefs.driftMode}")
         appendLine("btsuite=$bTSuiteInstalled")
         appendLine("stack=${stackStatus()}")
         appendLine("pty=${File(GOC_SERIAL).exists()}")

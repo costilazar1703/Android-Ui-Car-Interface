@@ -23,7 +23,13 @@ import ro.e92.launcher.ui.ScreenHost
  * și aplicația KSW, deci cele două nu se pot contrazice. Pe o unitate fără
  * KSW rămâne vechiul comportament (lista Android + setările de sistem).
  */
-class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
+class BluetoothScreen(
+    host: ScreenHost,
+    /** Doar o categorie, deschisă din meniul cu rotița; null = toate, cu coloana din stânga. */
+    private val section: String? = null
+) : SplitScreen(host) {
+    override val initialNavId: String? get() = section
+    override val singleSection: Boolean get() = section != null
     override val backgroundRes: Int get() = R.drawable.bg_menu_phone
 
 
@@ -301,7 +307,12 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
     // ----------------------------------------------------------------- settings
 
     private fun settingsRows(): List<DetailRow> = listOfNotNull(
-        resetRow(),
+        // Mutat aici din meniul cu rotița: reconectarea se face singură acum.
+        DetailRow(
+            id = "bt_reconnect_set",
+            title = context.getString(R.string.bt_reconnect),
+            onActivate = { ksw.reconnectLast() }
+        ).takeIf { useKsw },
         DetailRow(
             id = "bt_sys",
             title = context.getString(R.string.set_bluetooth),
@@ -318,11 +329,16 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
         )
     )
 
+    /** Prima apăsare doar armează; resetul pornește la a doua, în [ResetGuard.WINDOW_MS]. */
+    private val resetGuard = ResetGuard { reloadDetail() }
+
     private fun resetRow() = DetailRow(
         id = "bt_reset",
         title = context.getString(R.string.bt_reset),
-        value = context.getString(R.string.bt_reset_hint),
-        onActivate = { AppLaunch.resetBluetooth(context) }
+        value = context.getString(
+            if (resetGuard.armed) R.string.bt_reset_confirm else R.string.bt_reset_hint
+        ),
+        onActivate = { if (resetGuard.press()) AppLaunch.resetBluetooth(context) }
     )
 
     private fun openSystem(action: String) {
@@ -330,7 +346,7 @@ class BluetoothScreen(host: ScreenHost) : SplitScreen(host) {
         runCatching { context.startActivity(intent) }
     }
 
-    private companion object {
+    companion object {
         const val NAV_AUDIO = "bt_audio"
         const val NAV_DEVICES = "bt_devices"
         const val NAV_SETTINGS = "bt_settings"

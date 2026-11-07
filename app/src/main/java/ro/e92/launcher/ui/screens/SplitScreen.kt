@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import ro.e92.launcher.R
 import ro.e92.launcher.databinding.ItemSettingRowBinding
 import ro.e92.launcher.databinding.ItemSplitNavBinding
 import ro.e92.launcher.databinding.ScreenSplitBinding
@@ -27,7 +28,9 @@ data class DetailRow(
     val title: String,
     val value: String = "",
     val onActivate: (() -> Unit)? = null,
-    val onOption: (() -> Unit)? = null
+    val onOption: (() -> Unit)? = null,
+    /** Mic titlu de grup în listă: nu se selectează, rotița trece peste el. */
+    val header: Boolean = false
 )
 
 /**
@@ -62,6 +65,12 @@ abstract class SplitScreen(host: ScreenHost) : Screen(host) {
      * nu in „Assigned apps" de fiecare data, urmat de o cautare.
      */
     protected open val initialNavId: String? = null
+
+    /**
+     * Doar categoria [initialNavId], pe toată lățimea, fără coloana din stânga: fiecare
+     * rând din meniul cu rotița deschide meniul lui, nu toate setările laolaltă.
+     */
+    protected open val singleSection: Boolean = false
 
     protected abstract fun detailRows(navId: String): List<DetailRow>
 
@@ -109,6 +118,13 @@ abstract class SplitScreen(host: ScreenHost) : Screen(host) {
         }
 
         buildNav()
+        if (singleSection) {
+            binding.navBackground.visibility = View.GONE
+            binding.navHeader.visibility = View.GONE
+            binding.navList.visibility = View.GONE
+            binding.splitDivider.visibility = View.GONE
+            binding.gSplit.setGuidelinePercent(SINGLE_START)
+        }
     }
 
     override fun onDestroy() {
@@ -179,7 +195,7 @@ abstract class SplitScreen(host: ScreenHost) : Screen(host) {
 
         val targets = ArrayList<FocusTarget>(entries.size + 1)
 
-        entries.forEachIndexed { index, entry ->
+        if (!singleSection) entries.forEachIndexed { index, entry ->
             val view = navRows.getOrNull(index) ?: return@forEachIndexed
             targets.add(
                 FocusTarget(
@@ -215,7 +231,7 @@ abstract class SplitScreen(host: ScreenHost) : Screen(host) {
                     if (moved) binding.detailList.scrollToPosition(adapter.selectedIndex)
                     moved
                 },
-                left = navFocusId(selectedNavId)
+                left = if (singleSection) null else navFocusId(selectedNavId)
             )
         )
 
@@ -235,10 +251,12 @@ abstract class SplitScreen(host: ScreenHost) : Screen(host) {
      * Selecția e ținută aici, nu în view-uri: view-urile se reciclează, indexul
      * selectat nu. Același model ca [RowAdapter] și [AppGridAdapter].
      */
-    private inner class DetailAdapter : RecyclerView.Adapter<DetailAdapter.VH>() {
+    private inner class DetailAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
         inner class VH(val binding: ItemSettingRowBinding) :
             RecyclerView.ViewHolder(binding.root)
+
+        inner class HeaderVH(val text: android.widget.TextView) : RecyclerView.ViewHolder(text)
 
         private var rows: List<DetailRow> = emptyList()
 
@@ -249,22 +267,28 @@ abstract class SplitScreen(host: ScreenHost) : Screen(host) {
             val wantedId = keepId ?: rows.getOrNull(selectedIndex)?.id
             rows = newRows
             selectedIndex = newRows
-                .indexOfFirst { it.id == wantedId }
-                .coerceAtLeast(0)
+                .indexOfFirst { it.id == wantedId && !it.header }
+                .takeIf { it >= 0 }
+                ?: newRows.indexOfFirst { !it.header }.coerceAtLeast(0)
             notifyDataSetChanged()
         }
 
         fun selected(): DetailRow? = rows.getOrNull(selectedIndex)
 
         /**
-         * Fără wrap: la capătul listei rotația NU e consumată, iar FocusEngine
-         * mută focusul înapoi în coloana de categorii. Așa se iese din listă fără
-         * BACK, exact ca la iDrive.
+         * Fără wrap, iar la capăt rotația e consumată: rămâi în meniul deschis până
+         * apeși BACK. Înainte trecea singură în categoria următoare, la ultimul rând.
          */
         fun moveSelection(delta: Int): Boolean {
             if (rows.isEmpty()) return false
-            val next = selectedIndex + delta
-            if (next < 0 || next >= rows.size) return false
+            var next = (selectedIndex + delta).coerceIn(0, rows.size - 1)
+            // Peste titlurile de grup; dacă după titlu nu mai e nimic, rămâi pe loc.
+            val step = if (delta > 0) 1 else -1
+            while (rows[next].header) {
+                next += step
+                if (next !in rows.indices) return true
+            }
+            if (next == selectedIndex) return true
             val old = selectedIndex
             selectedIndex = next
             notifyItemChanged(old)
@@ -282,11 +306,35 @@ abstract class SplitScreen(host: ScreenHost) : Screen(host) {
 
         override fun getItemCount(): Int = rows.size
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH =
-            VH(ItemSettingRowBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+        override fun getItemViewType(position: Int): Int =
+            if (rows[position].header) TYPE_HEADER else TYPE_ROW
 
-        override fun onBindViewHolder(holder: VH, position: Int) {
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            if (viewType == TYPE_HEADER) {
+                val res = parent.context.resources
+                // Arată ca titlul secțiunii de sus (detailTitle), doar mai jos în listă.
+                val text = android.widget.TextView(parent.context, null, 0, R.style.Text_Label).apply {
+                    setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.text_primary))
+                    val top = (HEADER_TOP_DP * res.displayMetrics.density).toInt()
+                    val bottom = (HEADER_BOTTOM_DP * res.displayMetrics.density).toInt()
+                    setPadding(res.getDimensionPixelSize(R.dimen.row_padding_h), top, 0, bottom)
+                    layoutParams = RecyclerView.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+                }
+                return HeaderVH(text)
+            }
+            return VH(ItemSettingRowBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+        }
+
+        override fun onBindViewHolder(vh: RecyclerView.ViewHolder, position: Int) {
             val row = rows[position]
+            if (vh is HeaderVH) {
+                vh.text.text = row.title.uppercase()
+                return
+            }
+            val holder = vh as VH
             holder.binding.rowTitle.text = row.title
             holder.binding.rowValue.text = row.value
             // Rândul e evidențiat doar dacă lista e și cea focusată: altfel ar
@@ -306,5 +354,10 @@ abstract class SplitScreen(host: ScreenHost) : Screen(host) {
 
     private companion object {
         const val DETAIL_ID = "detail"
+        const val SINGLE_START = 0.04f
+        const val TYPE_ROW = 0
+        const val TYPE_HEADER = 1
+        const val HEADER_TOP_DP = 18f
+        const val HEADER_BOTTOM_DP = 6f
     }
 }

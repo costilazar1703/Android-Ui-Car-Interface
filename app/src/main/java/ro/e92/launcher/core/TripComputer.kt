@@ -24,8 +24,9 @@ import ro.e92.launcher.can.VehicleState
  *    și unei porniri la rece.
  *
  * Distanța e integrală vitezei (mașina nu trimite kilometrajul). Combustibilul
- * consumat e scăderea nivelului din rezervor; o creștere bruscă înseamnă că ai
- * alimentat, iar nivelul nou devine punctul de plecare.
+ * consumat e scăderea față de cel mai mic nivel văzut: nivelul din rezervor se
+ * clatină cu 1-2 l în viraje, iar dacă am aduna fiecare scădere ar ieși zeci de
+ * litri pe un drum scurt. La o creștere clară ai alimentat și se pornește de la el.
  */
 class TripComputer(private val context: Context, private val scope: CoroutineScope) {
 
@@ -37,10 +38,6 @@ class TripComputer(private val context: Context, private val scope: CoroutineSco
     ) {
         val avgSpeedKmh: Int?
             get() = if (drivingMs < MIN_AVG_MS) null else (distanceKm / (drivingMs / 3_600_000.0)).toInt()
-
-        /** l/100 km, doar când e destul drum ca cifra să însemne ceva. */
-        val consumption: Double?
-            get() = if (distanceKm < MIN_CONSUMPTION_KM || fuelUsedL <= 0) null else fuelUsedL * 100.0 / distanceKm
     }
 
     private val _drive = MutableStateFlow(Trip())
@@ -88,9 +85,14 @@ class TripComputer(private val context: Context, private val scope: CoroutineSco
 
         var fuelDelta = 0
         state.fuel?.let { fuel ->
-            val prev = lastFuel
-            if (prev != null && fuel < prev && prev - fuel <= MAX_FUEL_STEP) fuelDelta = prev - fuel
-            lastFuel = fuel
+            val low = lastFuel
+            when {
+                low == null || fuel >= low + REFUEL_L -> lastFuel = fuel
+                fuel < low -> {
+                    if (low - fuel <= MAX_FUEL_STEP) fuelDelta = low - fuel
+                    lastFuel = fuel
+                }
+            }
         }
 
         if (km == 0.0 && !driving && fuelDelta == 0) return
@@ -162,8 +164,8 @@ class TripComputer(private val context: Context, private val scope: CoroutineSco
         const val MAX_STEP_MS = 1_000L
         /** O scădere mai mare dintr-odată e zgomot de senzor, nu consum. */
         const val MAX_FUEL_STEP = 3
+        const val REFUEL_L = 5
         const val SAVE_EVERY_MS = 30_000L
         const val MIN_AVG_MS = 60_000L
-        const val MIN_CONSUMPTION_KM = 20.0
     }
 }
