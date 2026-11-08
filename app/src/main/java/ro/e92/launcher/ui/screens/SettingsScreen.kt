@@ -232,9 +232,11 @@ class SettingsScreen(
                 id = "car_park_beep_test",
                 title = context.getString(R.string.set_park_beep_test),
                 onActivate = {
-                    val beeper = ro.e92.launcher.media.ParkBeeper()
-                    beeper.testBeep()
-                    root?.postDelayed({ beeper.release() }, 600L)
+                    runCatching {
+                        val beeper = ro.e92.launcher.media.ParkBeeper()
+                        beeper.testBeep()
+                        root?.postDelayed({ beeper.release() }, 600L)
+                    }.onFailure { ro.e92.launcher.core.EventLog.log("Reverse", "bip de test: ${it.message}") }
                 }
             ),
             DetailRow(

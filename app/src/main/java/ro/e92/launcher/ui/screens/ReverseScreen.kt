@@ -44,18 +44,27 @@ class ReverseScreen(host: ScreenHost) : Screen(host) {
             Services.reverse.steering.collect { guide.steering = it }
         }
         // Muzica mai încet cât ești în marșarier, ca să se audă bipurile.
-        if (Services.prefs.parkBeeps) ro.e92.launcher.media.ReverseDuck.duck(context)
+        if (Services.prefs.parkBeeps) {
+            runCatching { ro.e92.launcher.media.ReverseDuck.duck(context) }
+        }
         // Bipurile: doar cu distanțe reale de la senzori; se opresc odată cu scena.
+        // Orice eroare de sunet rămâne aici: scena trebuie să meargă și fără bipuri.
         screenScope.launch(kotlinx.coroutines.Dispatchers.Default) {
-            ro.e92.launcher.media.ParkBeeper().run(
-                closestCm = { Services.reverse.sensorCm.value?.filter { it < NO_OBSTACLE_CM }?.minOrNull() },
-                enabled = { Services.prefs.parkBeeps }
-            )
+            try {
+                ro.e92.launcher.media.ParkBeeper().run(
+                    closestCm = { Services.reverse.sensorCm.value?.filter { it < NO_OBSTACLE_CM }?.minOrNull() },
+                    enabled = { Services.prefs.parkBeeps }
+                )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                ro.e92.launcher.core.EventLog.log("Reverse", "bipuri indisponibile: ${e.message}")
+            }
         }
     }
 
     override fun onHide() {
         super.onHide()
-        ro.e92.launcher.media.ReverseDuck.restore(context)
+        runCatching { ro.e92.launcher.media.ReverseDuck.restore(context) }
     }
 }
