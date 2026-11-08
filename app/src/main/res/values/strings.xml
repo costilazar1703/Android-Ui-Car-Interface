@@ -51,6 +51,10 @@
     <string name="pops_title">Pops &amp; Bangs</string>
     <string name="pops_enabled">Pops &amp; Bangs (radio must be on)</string>
     <string name="pops_style">Style</string>
+    <string name="pops_style_deep">Video, deep (from behind)</string>
+    <string name="pops_style_video">Video (as recorded)</string>
+    <string name="pops_volume">Pops volume</string>
+    <string name="pops_shift_pops">From pops</string>
     <string name="pops_style_fin">Fine crackle</string>
     <string name="pops_style_burble">Deep burble</string>
     <string name="pops_style_sec">Sharp pops</string>
@@ -63,7 +67,7 @@
     <string name="pops_time_mid">Medium (1.2 s)</string>
     <string name="pops_time_long">Long (2 s)</string>
     <string name="pops_from_rpm">Start above</string>
-    <string name="pops_shift">Gear shift sound</string>
+    <string name="pops_shift">Upshift sound</string>
     <string name="pops_shift_soft">Soft</string>
     <string name="pops_shift_short">Short</string>
     <string name="pops_test">Test pops</string>

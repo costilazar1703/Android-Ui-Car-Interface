@@ -253,7 +253,16 @@ class SettingsScreen(
                 }
             ),
             cycleRow("pops_style", R.string.pops_style, POPS_STYLES, { prefs.popsStyle }, { prefs.popsStyle = it }),
-            cycleRow("pops_level", R.string.pops_intensity, POPS_LEVELS, { prefs.popsIntensity }, { prefs.popsIntensity = it }),
+            // Volum fix, doar al pops-urilor; radioul le schimbă pe toate, restul se reglează aici.
+            DetailRow(
+                id = "pops_volume",
+                title = context.getString(R.string.pops_volume),
+                value = "${prefs.popsVolume * 10} %",
+                onActivate = {
+                    prefs.popsVolume = if (prefs.popsVolume >= 10) 1 else prefs.popsVolume + 1
+                    reloadDetail("pops_volume")
+                }
+            ),
             cycleRow("pops_time", R.string.pops_duration, POPS_TIMES, { prefs.popsDuration }, { prefs.popsDuration = it }),
             DetailRow(
                 id = "pops_rpm",
@@ -673,10 +682,13 @@ class SettingsScreen(
         const val NAV_BUTTONS = "nav_buttons"
         const val NAV_LAUNCHER = "nav_launcher"
         private const val THEME_COUNT = 3
-        private val POPS_STYLES = intArrayOf(R.string.pops_style_fin, R.string.pops_style_burble, R.string.pops_style_sec)
-        private val POPS_LEVELS = intArrayOf(R.string.pops_level_low, R.string.pops_level_mid, R.string.pops_level_high)
+        private val POPS_STYLES = intArrayOf(
+            R.string.pops_style_deep, R.string.pops_style_video, R.string.pops_style_fin, R.string.pops_style_burble, R.string.pops_style_sec
+        )
         private val POPS_TIMES = intArrayOf(R.string.pops_time_short, R.string.pops_time_mid, R.string.pops_time_long)
-        private val SHIFT_SOUNDS = intArrayOf(R.string.off, R.string.pops_shift_soft, R.string.pops_shift_short)
+        private val SHIFT_SOUNDS = intArrayOf(
+            R.string.off, R.string.pops_shift_pops, R.string.pops_shift_soft, R.string.pops_shift_short
+        )
         const val NAV_SYSTEM = "nav_system"
     }
 }
