@@ -937,7 +937,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     /** Pe tranziții: BACK trebuie să poată închide scena cât timp treapta e încă băgată. */
     private fun renderReverse(state: ro.e92.launcher.can.VehicleState) {
         val on = state.reverseGear == true && Services.prefs.reverseScene &&
-            (state.speedKmh ?: 0) <= REVERSE_CLOSE_ABOVE_KMH
+            ((state.speedKmh ?: 0) <= REVERSE_CLOSE_ABOVE_KMH || Services.reverse.isSimulated)
         if (on == reverseShown) return
         reverseShown = on
         ro.e92.launcher.core.EventLog.log("Home", "scena de marșarier: $on, sus e ${stack.current?.javaClass?.simpleName}")
@@ -959,8 +959,28 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     private fun renderBarFor(top: ro.e92.launcher.ui.Screen) {
         val isMenu = top is ro.e92.launcher.ui.screens.TileGridScreen
-        val bottom = if (isMenu) 0 else resources.getDimensionPixelSize(R.dimen.bottom_chips_space)
+        // Marșarierul pe tot ecranul, fără nicio bară. Prin alpha, nu visibility: unele
+        // bucăți ale barei de sus își comandă singure vizibilitatea (autonomia, temperatura).
+        val reverse = top is ro.e92.launcher.ui.screens.ReverseScreen
+        val bars = listOf(
+            binding.topBarScrim, binding.topPlate, binding.topPlateRight, binding.rangeBlock,
+            binding.centerBlock, binding.statusIcons, binding.topDivider,
+            binding.bottomBar, binding.barTitle, binding.miniPlayer
+        )
+        for (v in bars) v.alpha = if (reverse) 0f else 1f
+        binding.miniPlayer.isEnabled = !reverse
+        val lp = binding.screenContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+        if (reverse) {
+            lp.topToBottom = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
+            lp.topToTop = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+        } else {
+            lp.topToTop = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
+            lp.topToBottom = R.id.topDivider
+        }
+        binding.screenContainer.layoutParams = lp
+        val bottom = if (isMenu || reverse) 0 else resources.getDimensionPixelSize(R.dimen.bottom_chips_space)
         binding.screenContainer.setPadding(0, 0, 0, bottom)
+        // Pe dale: indicatorul de pagini; în orice meniu deschis: numele lui.
         binding.barPages.visibility = if (isMenu) View.VISIBLE else View.GONE
         binding.barTitle.visibility = if (isMenu) View.GONE else View.VISIBLE
     }
@@ -968,48 +988,29 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     override val barPages: android.view.ViewGroup get() = binding.barPages
 
     private fun setupBottomChips() {
-        binding.barBack.setOnClickListener { stack.pop() }
-        binding.barHome.setOnClickListener { goHome() }
-        for (button in listOf(binding.barBack, binding.barHome, binding.miniPrev, binding.miniPlay, binding.miniNext)) {
+        // Fără Home / Back pe ecran (le fac butoanele consolei) și fără chip-ul de telefon:
+        // dacă cântă o piesă, e clar că telefonul e conectat.
+        for (button in listOf(binding.miniPrev, binding.miniPlay, binding.miniNext)) {
             button.scaleOnPress()
         }
-        binding.miniPlay.setOnClickListener { Services.media.playPause() }
         binding.miniPrev.setOnClickListener { Services.media.previous() }
+        binding.miniPlay.setOnClickListener { Services.media.playPause() }
         binding.miniNext.setOnClickListener { Services.media.next() }
-        binding.miniPlayer.setOnClickListener {
+        binding.miniTitle.setOnClickListener {
             pushUnique(ro.e92.launcher.ui.screens.MediaScreen::class.java) { ro.e92.launcher.ui.screens.MediaScreen(this) }
-        }
-        binding.phoneChip.setOnClickListener {
-            pushUnique(ro.e92.launcher.ui.screens.BluetoothScreen::class.java) { ro.e92.launcher.ui.screens.BluetoothScreen(this) }
         }
         // Doar de atins: focusabile, ar prinde DPAD_CENTER înaintea FocusEngine
         // și ar desena dreptunghiul gri de focus peste ele.
-        for (v in listOf(binding.miniPlayer, binding.miniPrev, binding.miniPlay, binding.miniNext, binding.phoneChip, binding.barBack, binding.barHome)) {
+        for (v in listOf(binding.miniPlayer, binding.miniPrev, binding.miniPlay, binding.miniNext, binding.miniTitle)) {
             v.isFocusable = false
             v.defaultFocusHighlightEnabled = false
         }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { Services.media.snapshot.collect { renderMiniPlayer() } }
-                launch {
-                    Services.kswBt.state.collect {
-                        renderPhoneChip(it)
-                        renderMiniPlayer()
-                    }
-                }
+                launch { Services.kswBt.state.collect { renderMiniPlayer() } }
             }
         }
-    }
-
-    private fun renderPhoneChip(st: ro.e92.launcher.core.KswBluetooth.State) {
-        val connected = st.phoneConnected
-        binding.phoneName.text = when {
-            st.restartNeeded -> getString(R.string.bt_status_restart_short)
-            st.moduleSilent -> getString(R.string.bt_status_silent_short)
-            else -> st.phoneName.ifBlank { getString(R.string.bt_phone_connected) }
-        }
-        binding.phoneChip.visibility =
-            if (connected || st.moduleSilent || st.restartNeeded) View.VISIBLE else View.GONE
     }
 
     private fun renderMiniPlayer() {
@@ -1023,7 +1024,6 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         }
         binding.miniPlayer.visibility = View.VISIBLE
         binding.miniTitle.text = media.title.orEmpty()
-        binding.miniArtist.visibility = View.GONE
         binding.miniPlay.setImageResource(
             if (media.isPlaying) R.drawable.ic_transport_pause else R.drawable.ic_transport_play
         )

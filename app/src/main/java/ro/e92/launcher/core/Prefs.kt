@@ -160,6 +160,11 @@ class Prefs(context: Context) {
         set(value) = sp.edit().putString(KEY_CAN_MODE, value).apply()
 
     /** Dezactivabil dacă tranzițiile costă frame-uri pe unitatea reală. */
+    /** Aplicația din care cântă telefonul (Bluetooth nu o spune): 0 notă, 1 Spotify, 2 YT Music, 3 YouTube. */
+    var phoneMusicApp: Int
+        get() = sp.getInt(KEY_PHONE_MUSIC_APP, 0)
+        set(value) = sp.edit().putInt(KEY_PHONE_MUSIC_APP, value).apply()
+
     var theme: Int
         get() = sp.getInt(KEY_THEME, THEME_ORANGE)
         set(value) = sp.edit().putInt(KEY_THEME, value).apply()
@@ -230,6 +235,7 @@ class Prefs(context: Context) {
         private const val KEY_BT_PROFILE_TRIED = "bt_profile_tried_v2"
         private const val KEY_DRIFT_MODE = "drift_mode"
         private const val KEY_THEME = "ui_theme"
+        private const val KEY_PHONE_MUSIC_APP = "phone_music_app"
 
         /** Tema interfeței: portocaliu (originalul), roșu, alb-negru. */
         const val THEME_ORANGE = 0

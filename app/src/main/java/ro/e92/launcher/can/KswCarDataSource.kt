@@ -179,14 +179,27 @@ class KswCarDataSource(
         val reverse = Services.reverse.vehicleState.value.reverseGear == true && Services.prefs.reverseScene
         val drift = Services.prefs.driftMode && rpm >= ENGINE_ON_RPM
         val wanted = reverse || drift
-        if (wanted == canForwarding) return
-        canForwarding = wanted
+        // Fără legătura cu EventCenter nu trimitem nimic și nu ținem minte nimic: altfel
+        // „pornite" rămânea notat fără să fi plecat comanda (marșarier imediat după pornire).
         val binder = service ?: return
-        EventLog.log(TAG, "cadre CAN: " + if (wanted) "pornite" else "oprite")
+        val now = SystemClock.elapsedRealtime()
+        if (wanted == canForwarding) {
+            // Comanda se poate pierde pe legătura cu MCU-ul: dacă vrem cadre și de
+            // [CAN_RETRY_MS] n-a venit niciunul, o trimitem din nou (e aceeași comandă ca
+            // butonul din Factory, repetată nu strică nimic).
+            if (!wanted || now - Services.reverse.lastCanAt < CAN_RETRY_MS || now - canSentAt < CAN_RETRY_MS) return
+            EventLog.log(TAG, "cadre CAN: nu vin, retrimit pornirea")
+        } else {
+            EventLog.log(TAG, "cadre CAN: " + if (wanted) "pornite" else "oprite")
+        }
+        canForwarding = wanted
+        canSentAt = now
         scope.launch {
             transact(binder, TX_SEND_MCU) { it.writeByteArray(if (wanted) CAN_ON else CAN_OFF) }
         }
     }
+
+    private var canSentAt = 0L
 
     private fun readHandbrake() {
         val park = KswSettings.read(context, "KESAIWEI_RECORD_PARK")?.toIntOrNull() ?: return
@@ -246,6 +259,7 @@ class KswCarDataSource(
         val CAN_ON = byteArrayOf(0xF2.toByte(), 0x00, 0x70, 0x02, 0x0F, 0x01)
         val CAN_OFF = byteArrayOf(0xF2.toByte(), 0x00, 0x70, 0x02, 0x0F, 0x00)
         const val ENGINE_ON_RPM = 300
+        const val CAN_RETRY_MS = 3_000L
         val START_CMDS = listOf(
             byteArrayOf(0x89.toByte(), 0x01, 0x10),
             byteArrayOf(0x8A.toByte(), 0x01, 0x10),

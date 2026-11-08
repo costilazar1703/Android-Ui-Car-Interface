@@ -100,6 +100,9 @@ class ReverseSource(
 
     private val simulated = MutableStateFlow(false)
 
+    /** Marșarier pornit din /sim: viteza inventată a emulatorului nu trebuie să închidă scena. */
+    val isSimulated: Boolean get() = simulated.value
+
     /** Din [HomeActivity]: dacă launcher-ul e deja în față, nu e nimic de adus. */
     @Volatile
     var launcherInFront = false
@@ -157,7 +160,13 @@ class ReverseSource(
         }
     }
 
+    /** Ultimul cadru CAN văzut în jurnal; [KswCarDataSource] retrimite pornirea dacă nu vin. */
+    @Volatile
+    var lastCanAt = 0L
+        private set
+
     private fun onCan(id: Int, b: List<Int>) {
+        lastCanAt = SystemClock.elapsedRealtime()
         when (id) {
             ID_SENSORS -> if (b.size >= SENSORS) onSensors(b.take(SENSORS))
             ID_STEERING -> if (b.size >= 2) {

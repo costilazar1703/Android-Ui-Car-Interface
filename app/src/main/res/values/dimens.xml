@@ -46,6 +46,11 @@
     <dimen name="bar_plate_button">84dp</dimen>
     <!-- Butoanele media ajung până la placa din dreapta. -->
     <dimen name="bar_media_end">84dp</dimen>
+    <!-- Spațiul dintre liniile argintii ale barei (y ~17..57 din 62): piesa și
+         butoanele stau aici fără să atingă rama. -->
+    <dimen name="bar_inner_height">36dp</dimen>
+    <dimen name="bar_inner_bottom">6dp</dimen>
+    <dimen name="bar_song_text">22sp</dimen>
     <dimen name="mini_player_height">48dp</dimen>
     <dimen name="mini_player_cover">50dp</dimen>
     <dimen name="mini_player_text_max">210dp</dimen>

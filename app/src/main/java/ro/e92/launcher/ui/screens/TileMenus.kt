@@ -173,18 +173,29 @@ class MediaMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
         )
     }
 
+    /** Logo-ul din rândul „Now playing"; rândurile se refac doar când se schimbă aplicația. */
+    private var shownLogo = 0
+
     override fun onShow() {
         super.onShow()
-        screenScope.launch { Services.media.snapshot.collect { renderNowPlaying() } }
+        screenScope.launch {
+            Services.media.snapshot.collect {
+                renderNowPlaying()
+                val logo = ro.e92.launcher.media.MediaLogo.current()
+                if (shownLogo != 0 && logo != shownLogo) reload()
+            }
+        }
     }
 
     override fun entries(): List<WheelEntry> {
+        shownLogo = ro.e92.launcher.media.MediaLogo.current()
         return listOf(
             // Totul aici, fără alt ecran: titlul piesei și butoanele, ca meniul să
             // poată rămâne deschis la drum. Din rotiță, apăsarea e play/pauză.
+            // Iconița e logo-ul aplicației din care cântă (Spotify, YouTube Music, YouTube).
             WheelEntry(
                 id = "media_now",
-                icon = R.drawable.ic_menu_media,
+                icon = shownLogo,
                 title = context.getString(R.string.media_now_playing),
                 inline = { buildNowPlaying() },
                 onActivate = { Services.media.playPause() }

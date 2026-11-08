@@ -19,7 +19,8 @@ import ro.e92.launcher.ui.ScreenHost
 class DashboardScreen(host: ScreenHost) : Screen(host) {
     // Fundal simplu, nu fotografia cu bordul: cadranele din poză concurau cu
     // cele adevărate, chiar lângă ele.
-    override val backgroundRes: Int get() = R.drawable.bg_menu
+    /** Fără fotografie: ceasurile pe negru simplu, mai curat și mai ușor de citit. */
+    override val backgroundRes: Int get() = 0
 
     override val title: String get() = "DASHBOARD"
 
