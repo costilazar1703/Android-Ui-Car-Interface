@@ -165,6 +165,16 @@ class Prefs(context: Context) {
         get() = sp.getInt(KEY_PHONE_MUSIC_APP, 0)
         set(value) = sp.edit().putInt(KEY_PHONE_MUSIC_APP, value).apply()
 
+    /** Bipurile senzorilor în scena de marșarier. Se aud doar cu radioul mașinii pornit. */
+    var parkBeeps: Boolean
+        get() = sp.getBoolean(KEY_PARK_BEEPS, true)
+        set(value) = sp.edit().putBoolean(KEY_PARK_BEEPS, value).apply()
+
+    /** Volumul unității de dinainte de marșarier, cât e scăzut; -1 = nu e scăzut. */
+    var duckedFromVolume: Int
+        get() = sp.getInt(KEY_DUCKED_FROM, -1)
+        set(value) = sp.edit().putInt(KEY_DUCKED_FROM, value).apply()
+
     var theme: Int
         get() = sp.getInt(KEY_THEME, THEME_ORANGE)
         set(value) = sp.edit().putInt(KEY_THEME, value).apply()
@@ -236,6 +246,8 @@ class Prefs(context: Context) {
         private const val KEY_DRIFT_MODE = "drift_mode"
         private const val KEY_THEME = "ui_theme"
         private const val KEY_PHONE_MUSIC_APP = "phone_music_app"
+        private const val KEY_PARK_BEEPS = "park_beeps"
+        private const val KEY_DUCKED_FROM = "ducked_from_volume"
 
         /** Tema interfeței: portocaliu (originalul), roșu, alb-negru. */
         const val THEME_ORANGE = 0

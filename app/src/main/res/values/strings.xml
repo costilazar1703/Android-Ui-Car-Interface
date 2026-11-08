@@ -46,6 +46,8 @@
     <string name="bt_reset">Reset Bluetooth</string>
     <string name="bt_reset_hint">Unit becomes visible again</string>
     <string name="bt_reset_confirm">Press again to confirm</string>
+    <string name="set_park_beeps">Parking sensor beeps (radio must be on)</string>
+    <string name="set_park_beep_test">Test parking beep</string>
     <string name="set_theme">Interface theme</string>
     <string name="theme_orange">Orange</string>
     <string name="theme_red">Red</string>

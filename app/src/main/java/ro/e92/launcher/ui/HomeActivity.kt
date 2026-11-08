@@ -89,6 +89,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         setContentView(binding.root)
         setupImmersive()
         ThemeFilter.apply(window.decorView, Services.prefs.theme)
+        // Un marșarier întrerupt (launcher repornit în R) nu lasă muzica la volum scăzut.
+        ro.e92.launcher.media.ReverseDuck.restoreIfLeft(this)
 
         stack = ScreenStack(
             container = binding.screenContainer,

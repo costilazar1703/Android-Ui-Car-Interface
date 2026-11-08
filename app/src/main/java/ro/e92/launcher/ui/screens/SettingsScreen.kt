@@ -218,6 +218,25 @@ class SettingsScreen(
                     reloadDetail("car_reverse_scene")
                 }
             ),
+            // Bipurile senzorilor în scena noastră; se aud doar cu radioul mașinii pornit.
+            DetailRow(
+                id = "car_park_beeps",
+                title = context.getString(R.string.set_park_beeps),
+                value = context.getString(if (prefs.parkBeeps) R.string.on else R.string.off),
+                onActivate = {
+                    prefs.parkBeeps = !prefs.parkBeeps
+                    reloadDetail("car_park_beeps")
+                }
+            ),
+            DetailRow(
+                id = "car_park_beep_test",
+                title = context.getString(R.string.set_park_beep_test),
+                onActivate = {
+                    val beeper = ro.e92.launcher.media.ParkBeeper()
+                    beeper.testBeep()
+                    root?.postDelayed({ beeper.release() }, 600L)
+                }
+            ),
             DetailRow(
                 id = "car_block_reopen",
                 title = context.getString(R.string.set_block_ksw_reopen),
