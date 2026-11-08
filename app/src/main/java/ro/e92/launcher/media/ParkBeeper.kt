@@ -1,26 +1,29 @@
 package ro.e92.launcher.media
 
+import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import androidx.annotation.RawRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import ro.e92.launcher.R
 import kotlin.coroutines.coroutineContext
-import kotlin.math.PI
-import kotlin.math.min
-import kotlin.math.sin
 
 /**
- * Bipurile senzorilor de parcare, generate în cod (fără fișiere audio).
+ * Bipurile senzorilor de parcare: varianta B (gong moale), aleasă de șofer pe
+ * 2026-11-08 din previzualizări. Fișierele din res/raw sunt exact cele ascultate pe laptop.
  *
- * Mai des pe măsură ce obstacolul se apropie, ton continuu sub [CONTINUOUS_CM], tăcere
- * peste [SILENT_CM] sau fără date. Sunetul iese pe calea muzicii (USAGE_MEDIA): în mașină
- * se aude doar cu radioul pornit, ca orice sunet din unitate.
+ * Mai des pe măsură ce obstacolul se apropie, ton continuu (mai încet, fără armonica
+ * înaltă) la [CONTINUOUS_CM] sau mai puțin, tăcere peste [SILENT_CM] sau fără date.
+ * Sunetul iese pe calea muzicii: în mașină se aude doar cu radioul pornit.
  */
-class ParkBeeper {
+class ParkBeeper(context: Context) {
 
-    private val beep: AudioTrack = staticTrack(tone(BEEP_MS), loop = false)
-    private val continuous: AudioTrack = staticTrack(tone(LOOP_MS, smoothEnds = false), loop = true)
+    private val beepPcm = readWav(context, R.raw.park_beep)
+    private val beepMs = beepPcm.size * 1000L / RATE
+    private val beep: AudioTrack = staticTrack(beepPcm, loop = false)
+    private val continuous: AudioTrack = staticTrack(readWav(context, R.raw.park_beep_loop), loop = true)
     private var continuousOn = false
 
     /** Bucla de bipuri; rulează cât trăiește corutina (scena de marșarier), apoi eliberează tot. */
@@ -40,7 +43,9 @@ class ParkBeeper {
                     else -> {
                         setContinuous(false)
                         playBeep()
-                        delay(gapFor(cm))
+                        // Bipul se termină întâi, apoi pauza: altfel bipurile rapide se suprapun
+                        // și sună ascuțit.
+                        delay(beepMs + gapFor(cm))
                     }
                 }
             }
@@ -85,17 +90,6 @@ class ParkBeeper {
         return (MIN_GAP_MS + t * (MAX_GAP_MS - MIN_GAP_MS)).toLong()
     }
 
-    private fun tone(ms: Int, smoothEnds: Boolean = true): ShortArray {
-        val n = RATE * ms / 1000
-        val fade = RATE * FADE_MS / 1000
-        return ShortArray(n) { i ->
-            // Capete netede: fără ele bipul pocnește în difuzoare. Bucla continuă nu le
-            // are, altfel tonul ar pulsa la fiecare reluare.
-            val env = if (smoothEnds) min(1f, min(i, n - 1 - i).toFloat() / fade) else 1f
-            (sin(2 * PI * FREQ_HZ * i / RATE) * env * AMPLITUDE).toInt().toShort()
-        }
-    }
-
     private fun staticTrack(samples: ShortArray, loop: Boolean): AudioTrack {
         val track = AudioTrack.Builder()
             .setAudioAttributes(
@@ -123,16 +117,30 @@ class ParkBeeper {
         const val SILENT_CM = 150
         /** Ton continuu doar foarte aproape (cerut 2026-11-08: 30 cm era prea devreme). */
         const val CONTINUOUS_CM = 10
-        private const val MIN_GAP_MS = 70L
+        private const val MIN_GAP_MS = 110L
         private const val MAX_GAP_MS = 650L
         private const val IDLE_MS = 100L
-        private const val BEEP_MS = 90
-        /** Bucla tonului continuu: un număr întreg de perioade, ca să nu se audă cusătura. */
-        private const val LOOP_MS = 500
-        private const val FADE_MS = 6
-        private const val RATE = 44_100
-        /** 1800 Hz: înalt și clar ca la senzorii de parcare, fără să fie strident. */
-        private const val FREQ_HZ = 1800.0
-        private const val AMPLITUDE = 0.6f * Short.MAX_VALUE
+        const val RATE = 44_100
+
+        /** PCM 16 biți mono dintr-un WAV din res/raw (fișierele generate de noi: 44,1 kHz). */
+        fun readWav(context: Context, @RawRes id: Int): ShortArray {
+            val bytes = context.resources.openRawResource(id).use { it.readBytes() }
+            // Caută bucata "data"; antetul are 44 de octeți la fișierele noastre, dar nu ne bazăm pe asta.
+            var i = 12
+            while (i + 8 <= bytes.size) {
+                val tag = String(bytes, i, 4, Charsets.US_ASCII)
+                val len = (bytes[i + 4].toInt() and 0xFF) or ((bytes[i + 5].toInt() and 0xFF) shl 8) or
+                    ((bytes[i + 6].toInt() and 0xFF) shl 16) or ((bytes[i + 7].toInt() and 0xFF) shl 24)
+                if (tag == "data") {
+                    val start = i + 8
+                    val count = minOf(len, bytes.size - start) / 2
+                    return ShortArray(count) { k ->
+                        ((bytes[start + 2 * k].toInt() and 0xFF) or (bytes[start + 2 * k + 1].toInt() shl 8)).toShort()
+                    }
+                }
+                i += 8 + len
+            }
+            return ShortArray(0)
+        }
     }
 }

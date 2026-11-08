@@ -69,7 +69,10 @@ class KswCarDataSource(
             Services.reverse.vehicleState
                 .map { it.reverseGear == true }
                 .distinctUntilChanged()
-                .collect { updateCanForwarding() }
+                .collect { reverse ->
+                    if (reverse) tellMcuNoCamera()
+                    updateCanForwarding()
+                }
         }
         if (bound) return
         bound = runCatching {
@@ -104,7 +107,8 @@ class KswCarDataSource(
             poller = scope.launch {
                 while (isActive) {
                     transact(binder, TX_SEND_MCU) { it.writeByteArray(MCU_REQUEST) }
-                    delay(POLL_MS)
+                    // Pops & Bangs au nevoie de turație de 10 ori pe secundă; altfel ajung 2.
+                    delay(if (Services.prefs.popsEnabled) POLL_FAST_MS else POLL_MS)
                 }
             }
         }
@@ -152,6 +156,7 @@ class KswCarDataSource(
         val rpm = u16(13)
         val fuel = u16(15)
         updateCanForwarding(rpm)
+        if (rpm in 0..8000) ro.e92.launcher.media.PopsEngine.onRpm(rpm)
         if (!loggedFirstFrame) {
             loggedFirstFrame = true
             EventLog.log(TAG, "date de bord KSW: autonomie $range km, combustibil $fuel l, afară $outside, $speed km/h, $rpm rpm")
@@ -197,6 +202,21 @@ class KswCarDataSource(
         scope.launch {
             transact(binder, TX_SEND_MCU) { it.writeByteArray(if (wanted) CAN_ON else CAN_OFF) }
         }
+        // Și după comanda CAN (o setare din Factory), ca tipul camerei să fie ultimul primit.
+        if (reverse) tellMcuNoCamera()
+    }
+
+    /**
+     * Ecranul KSW „No Signal" apărea la al doilea R deși tipul de cameră din SysVar era 0
+     * (2026-11-08). EventCenter nu-l deschide cu 0 (onCmdKSW0x00_0x11_0x01Event verifică
+     * tipul 1), deci îl comută MCU-ul, care primește tipul doar la pornire, prin 0x6A 0x0B.
+     * Îl repetăm la fiecare intrare în R: aceeași comandă pe care EventCenter o trimite la boot.
+     */
+    private fun tellMcuNoCamera() {
+        if (!Services.prefs.reverseScene) return
+        val binder = service ?: return
+        scope.launch { transact(binder, TX_SEND_MCU) { it.writeByteArray(MCU_CAMERA_NONE) } }
+        EventLog.log(TAG, "MCU: tip cameră 0")
     }
 
     private var canSentAt = 0L
@@ -254,12 +274,15 @@ class KswCarDataSource(
         const val EVT_BELT_BRAKE = 91
 
         const val POLL_MS = 500L
+        const val POLL_FAST_MS = 100L
 
         val MCU_REQUEST = byteArrayOf(0xF2.toByte(), 0x00, 0x68, 0x02, 0x05, 0x00)
         val CAN_ON = byteArrayOf(0xF2.toByte(), 0x00, 0x70, 0x02, 0x0F, 0x01)
         val CAN_OFF = byteArrayOf(0xF2.toByte(), 0x00, 0x70, 0x02, 0x0F, 0x00)
         const val ENGINE_ON_RPM = 300
         const val CAN_RETRY_MS = 3_000L
+        /** sendKSW_0x00_0x6A(11, 0) din EventCenter: tipul camerei pentru MCU = niciuna. */
+        val MCU_CAMERA_NONE = byteArrayOf(0xF2.toByte(), 0x00, 0x6A, 0x02, 0x0B, 0x00)
         val START_CMDS = listOf(
             byteArrayOf(0x89.toByte(), 0x01, 0x10),
             byteArrayOf(0x8A.toByte(), 0x01, 0x10),

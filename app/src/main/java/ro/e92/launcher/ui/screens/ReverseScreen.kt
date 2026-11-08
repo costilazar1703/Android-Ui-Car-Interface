@@ -51,7 +51,7 @@ class ReverseScreen(host: ScreenHost) : Screen(host) {
         // Orice eroare de sunet rămâne aici: scena trebuie să meargă și fără bipuri.
         screenScope.launch(kotlinx.coroutines.Dispatchers.Default) {
             try {
-                ro.e92.launcher.media.ParkBeeper().run(
+                ro.e92.launcher.media.ParkBeeper(context).run(
                     closestCm = { Services.reverse.sensorCm.value?.filter { it < NO_OBSTACLE_CM }?.minOrNull() },
                     enabled = { Services.prefs.parkBeeps }
                 )

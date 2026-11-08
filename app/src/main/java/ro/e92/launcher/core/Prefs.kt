@@ -175,6 +175,37 @@ class Prefs(context: Context) {
         get() = sp.getInt(KEY_DUCKED_FROM, -1)
         set(value) = sp.edit().putInt(KEY_DUCKED_FROM, value).apply()
 
+    // ------------------------------------------------------------ Pops & Bangs
+    /** Oprit implicit. */
+    var popsEnabled: Boolean
+        get() = sp.getBoolean(KEY_POPS_ON, false)
+        set(value) = sp.edit().putBoolean(KEY_POPS_ON, value).apply()
+
+    /** 0 Fin, 1 Burble, 2 Sec. */
+    var popsStyle: Int
+        get() = sp.getInt(KEY_POPS_STYLE, 0)
+        set(value) = sp.edit().putInt(KEY_POPS_STYLE, value).apply()
+
+    /** 0 mică, 1 medie, 2 mare. */
+    var popsIntensity: Int
+        get() = sp.getInt(KEY_POPS_LEVEL, 0)
+        set(value) = sp.edit().putInt(KEY_POPS_LEVEL, value).apply()
+
+    /** 0 scurtă, 1 medie, 2 lungă. */
+    var popsDuration: Int
+        get() = sp.getInt(KEY_POPS_TIME, 1)
+        set(value) = sp.edit().putInt(KEY_POPS_TIME, value).apply()
+
+    /** Turația peste care încep pops-urile, în rpm. */
+    var popsRpm: Int
+        get() = sp.getInt(KEY_POPS_RPM, 4000)
+        set(value) = sp.edit().putInt(KEY_POPS_RPM, value).apply()
+
+    /** Sunetul la schimbarea treptei: 0 oprit, 1 Moale, 2 Scurt. Merge doar cu Pops & Bangs pornit. */
+    var shiftSound: Int
+        get() = sp.getInt(KEY_SHIFT_SOUND, 1)
+        set(value) = sp.edit().putInt(KEY_SHIFT_SOUND, value).apply()
+
     var theme: Int
         get() = sp.getInt(KEY_THEME, THEME_ORANGE)
         set(value) = sp.edit().putInt(KEY_THEME, value).apply()
@@ -248,6 +279,12 @@ class Prefs(context: Context) {
         private const val KEY_PHONE_MUSIC_APP = "phone_music_app"
         private const val KEY_PARK_BEEPS = "park_beeps"
         private const val KEY_DUCKED_FROM = "ducked_from_volume"
+        private const val KEY_POPS_ON = "pops_on"
+        private const val KEY_POPS_STYLE = "pops_style"
+        private const val KEY_POPS_LEVEL = "pops_level"
+        private const val KEY_POPS_TIME = "pops_time"
+        private const val KEY_POPS_RPM = "pops_rpm"
+        private const val KEY_SHIFT_SOUND = "shift_sound"
 
         /** Tema interfeței: portocaliu (originalul), roșu, alb-negru. */
         const val THEME_ORANGE = 0

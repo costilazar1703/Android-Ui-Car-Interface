@@ -233,11 +233,49 @@ class SettingsScreen(
                 title = context.getString(R.string.set_park_beep_test),
                 onActivate = {
                     runCatching {
-                        val beeper = ro.e92.launcher.media.ParkBeeper()
+                        val beeper = ro.e92.launcher.media.ParkBeeper(context)
                         beeper.testBeep()
-                        root?.postDelayed({ beeper.release() }, 600L)
+                        root?.postDelayed({ beeper.release() }, 800L)
                     }.onFailure { ro.e92.launcher.core.EventLog.log("Reverse", "bip de test: ${it.message}") }
                 }
+            ),
+            // ---------------------------------------------------------- Pops & Bangs
+            // Doar din turometru; se aude cu radioul pornit. Oprit implicit.
+            DetailRow(id = "hdr_pops", title = context.getString(R.string.pops_title), header = true),
+            DetailRow(
+                id = "pops_on",
+                title = context.getString(R.string.pops_enabled),
+                value = context.getString(if (prefs.popsEnabled) R.string.on else R.string.off),
+                onActivate = {
+                    prefs.popsEnabled = !prefs.popsEnabled
+                    if (prefs.popsEnabled) ro.e92.launcher.media.PopsEngine.preload()
+                    reloadDetail("pops_on")
+                }
+            ),
+            cycleRow("pops_style", R.string.pops_style, POPS_STYLES, { prefs.popsStyle }, { prefs.popsStyle = it }),
+            cycleRow("pops_level", R.string.pops_intensity, POPS_LEVELS, { prefs.popsIntensity }, { prefs.popsIntensity = it }),
+            cycleRow("pops_time", R.string.pops_duration, POPS_TIMES, { prefs.popsDuration }, { prefs.popsDuration = it }),
+            DetailRow(
+                id = "pops_rpm",
+                title = context.getString(R.string.pops_from_rpm),
+                value = "${prefs.popsRpm} rpm",
+                onActivate = {
+                    val steps = ro.e92.launcher.media.PopsEngine.RPM_STEPS
+                    val next = steps.indexOfFirst { it > prefs.popsRpm }.let { if (it < 0) 0 else it }
+                    prefs.popsRpm = steps[next]
+                    reloadDetail("pops_rpm")
+                }
+            ),
+            cycleRow("pops_shift", R.string.pops_shift, SHIFT_SOUNDS, { prefs.shiftSound }, { prefs.shiftSound = it }),
+            DetailRow(
+                id = "pops_test",
+                title = context.getString(R.string.pops_test),
+                onActivate = { ro.e92.launcher.media.PopsEngine.testPops() }
+            ),
+            DetailRow(
+                id = "pops_test_shift",
+                title = context.getString(R.string.pops_test_shift),
+                onActivate = { ro.e92.launcher.media.PopsEngine.testShift() }
             ),
             DetailRow(
                 id = "car_block_reopen",
@@ -609,6 +647,17 @@ class SettingsScreen(
         else -> Prefs.CAN_AUTO
     }
 
+    /** Un rând care trece prin [options] (texte din resurse) la fiecare apăsare. */
+    private fun cycleRow(id: String, title: Int, options: IntArray, get: () -> Int, set: (Int) -> Unit) = DetailRow(
+        id = id,
+        title = context.getString(title),
+        value = context.getString(options[get().coerceIn(0, options.size - 1)]),
+        onActivate = {
+            set((get() + 1) % options.size)
+            reloadDetail(id)
+        }
+    )
+
     private fun openSystem(action: String) {
         val intent = Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         runCatching { context.startActivity(intent) }
@@ -624,6 +673,10 @@ class SettingsScreen(
         const val NAV_BUTTONS = "nav_buttons"
         const val NAV_LAUNCHER = "nav_launcher"
         private const val THEME_COUNT = 3
+        private val POPS_STYLES = intArrayOf(R.string.pops_style_fin, R.string.pops_style_burble, R.string.pops_style_sec)
+        private val POPS_LEVELS = intArrayOf(R.string.pops_level_low, R.string.pops_level_mid, R.string.pops_level_high)
+        private val POPS_TIMES = intArrayOf(R.string.pops_time_short, R.string.pops_time_mid, R.string.pops_time_long)
+        private val SHIFT_SOUNDS = intArrayOf(R.string.off, R.string.pops_shift_soft, R.string.pops_shift_short)
         const val NAV_SYSTEM = "nav_system"
     }
 }
