@@ -257,8 +257,11 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
 
     /** Înălțimea unui rând: cea din vechiul meniu de trei (lista pornea de la [TOP_FOR_THREE]). */
     private fun rowHeightPx(): Int {
-        val parentHeight = binding.root.height
-        val bottom = binding.pageDots.top
+        // Mărimea rândurilor e cea aleasă cu bara de jos încă pe ecran (2026-11-08). Bara a
+        // dispărut, deci scădem înălțimea ei: rândurile rămân la fel, doar urcă mai puțin.
+        val removedBar = context.resources.getDimensionPixelSize(R.dimen.bottom_chips_space)
+        val parentHeight = binding.root.height - removedBar
+        val bottom = binding.pageDots.top - removedBar
         val gap = rowGapPx()
         return ((bottom - parentHeight * TOP_FOR_THREE - (MIN_ON_PAGE - 1) * gap) / MIN_ON_PAGE)
             .toInt().coerceAtLeast(1)

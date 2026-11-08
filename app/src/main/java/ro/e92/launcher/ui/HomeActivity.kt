@@ -106,7 +106,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             onBackgroundChanged = ::showBackground
         }
 
-        stack.setRoot(TileGridScreen(this))
+        // Ecranul implicit: Home cu widget-uri; dalele sunt paginile de după el.
+        stack.setRoot(ro.e92.launcher.ui.screens.HomeWidgetsScreen(this))
         setupBottomChips()
 
         // BACK de la touch / sistem: aceeași cale ca BACK-ul fizic.
@@ -499,8 +500,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
     override fun goHome() {
         rotary.reset()
-        if (stack.current is TileGridScreen && stack.depth == 1) return
-        stack.setRoot(TileGridScreen(this))
+        if (stack.current is ro.e92.launcher.ui.screens.HomeWidgetsScreen && stack.depth == 1) return
+        stack.setRoot(ro.e92.launcher.ui.screens.HomeWidgetsScreen(this))
     }
 
     override fun rebuildFocus(keepId: String?) = stack.rebuildFocus(keepId)
@@ -960,7 +961,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     private var reverseFromOutside = false
 
     private fun renderBarFor(top: ro.e92.launcher.ui.Screen) {
-        val isMenu = top is ro.e92.launcher.ui.screens.TileGridScreen
+        val isMenu = top is ro.e92.launcher.ui.screens.TileGridScreen ||
+            top is ro.e92.launcher.ui.screens.HomeWidgetsScreen
         // Marșarierul pe tot ecranul, fără nicio bară. Prin alpha, nu visibility: unele
         // bucăți ale barei de sus își comandă singure vizibilitatea (autonomia, temperatura).
         val reverse = top is ro.e92.launcher.ui.screens.ReverseScreen
@@ -980,14 +982,28 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             lp.topToBottom = R.id.topDivider
         }
         binding.screenContainer.layoutParams = lp
-        val bottom = if (isMenu || reverse) 0 else resources.getDimensionPixelSize(R.dimen.bottom_chips_space)
-        binding.screenContainer.setPadding(0, 0, 0, bottom)
-        // Pe dale: indicatorul de pagini; în orice meniu deschis: numele lui.
-        binding.barPages.visibility = if (isMenu) View.VISIBLE else View.GONE
-        binding.barTitle.visibility = if (isMenu) View.GONE else View.VISIBLE
+        // Fără bara de jos (2026-11-09): ecranele folosesc toată înălțimea. Pe Home și pe
+        // dale rămâne doar indicatorul mic (casă + puncte); numele meniului e în bara de sus.
+        binding.screenContainer.setPadding(0, 0, 0, 0)
+        binding.bottomBar.visibility = View.GONE
+        binding.barTitle.visibility = View.GONE
+        binding.miniPlayer.visibility = View.GONE
+        binding.barPages.visibility = if (isMenu && !reverse) View.VISIBLE else View.GONE
     }
 
     override val barPages: android.view.ViewGroup get() = binding.barPages
+
+    private var homeIndicator: ro.e92.launcher.ui.widget.HomePageIndicatorView? = null
+
+    override fun showHomePage(index: Int) {
+        val indicator = homeIndicator ?: ro.e92.launcher.ui.widget.HomePageIndicatorView(this, TileCatalog.pageCount)
+            .also {
+                homeIndicator = it
+                binding.barPages.removeAllViews()
+                binding.barPages.addView(it)
+            }
+        indicator.current = index
+    }
 
     private fun setupBottomChips() {
         // Fără Home / Back pe ecran (le fac butoanele consolei) și fără chip-ul de telefon:
@@ -1024,7 +1040,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             binding.miniPlayer.visibility = View.GONE
             return
         }
-        binding.miniPlayer.visibility = View.VISIBLE
+        // Bara de jos a dispărut (2026-11-09): piesa stă în widget-ul Media de pe Home.
+        binding.miniPlayer.visibility = View.GONE
         binding.miniTitle.text = media.title.orEmpty()
         binding.miniPlay.setImageResource(
             if (media.isPlaying) R.drawable.ic_transport_pause else R.drawable.ic_transport_play

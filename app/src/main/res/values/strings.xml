@@ -48,6 +48,18 @@
     <string name="bt_reset_confirm">Press again to confirm</string>
     <string name="set_park_beeps">Parking sensor beeps (radio must be on)</string>
     <string name="set_park_beep_test">Test parking beep</string>
+    <!-- Ecranul Home cu widget-uri. Etichetele barei verticale: scurte, ca să încapă mari. -->
+    <string name="home_rail_media">MEDIA</string>
+    <string name="home_rail_car">CAR</string>
+    <string name="home_rail_dash">DASH</string>
+    <string name="home_rail_setup">SETUP</string>
+    <string name="home_no_media">No active source</string>
+    <string name="home_source_bt">Bluetooth</string>
+    <string name="home_no_phone">No phone connected</string>
+    <string name="home_bt_playing">Playing music</string>
+    <string name="home_bt_music">Music connected</string>
+    <string name="home_bt_connected">Connected</string>
+    <string name="home_bt_connect">Tap to connect a phone</string>
     <string name="pops_title">Pops &amp; Bangs</string>
     <string name="pops_enabled">Pops &amp; Bangs (radio must be on)</string>
     <string name="pops_style">Style</string>

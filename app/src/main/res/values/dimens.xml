@@ -103,4 +103,8 @@
     <!-- Bara de sus -->
     <dimen name="topbar_clock_size">32sp</dimen>
     <dimen name="topbar_icon">30dp</dimen>
+    <!-- Ecranul Home cu widget-uri -->
+    <dimen name="home_rail_width">96dp</dimen>
+    <dimen name="widget_corner">22dp</dimen>
+    <dimen name="widget_pad">18dp</dimen>
 </resources>

@@ -46,8 +46,8 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
 
     override val title: String get() = "MENU"
 
-    /** Nivelul 1 are masina; tot ce se deschide din el are motorul. */
-    override val backgroundRes: Int get() = R.drawable.bg_home
+    /** Negru simplu (2026-11-09): mai minimalist; mașina e pe ecranul Home. */
+    override val backgroundRes: Int get() = 0
 
     private lateinit var binding: ScreenTileGridBinding
 
@@ -309,11 +309,19 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     }
 
     private fun buildDots() {
-        // Indicatorul stă în bara de jos a shell-ului, nu în ecran.
-        host.barPages.removeAllViews()
-        indicator = PageIndicatorView(context, TileCatalog.pageCount).also {
-            host.barPages.addView(it)
-        }
+        // Indicatorul (casă + puncte) e al shell-ului: Home e 0, paginile de dale urmează.
+        host.showHomePage(1 + currentPage)
+    }
+
+    private var focusedIndex = 0
+
+    /** Înapoi la Home: rotița spre stânga de pe prima dală (doar dacă am venit din Home). */
+    override fun onAction(action: ro.e92.launcher.input.LauncherAction): Boolean {
+        if (action != ro.e92.launcher.input.LauncherAction.ROTARY_CCW &&
+            action != ro.e92.launcher.input.LauncherAction.TILT_LEFT
+        ) return false
+        if (focusedIndex != 0) return false
+        return host.pop()
     }
 
     private fun focusFirstTileOfPage(page: Int): Boolean {
@@ -326,7 +334,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     // ---------------------------------------------------------------- focus
 
     private fun onTileFocus(index: Int, focused: Boolean) {
-        if (focused) indicator?.setPosition(index, TileCatalog.PAGE_SIZE)
+        if (focused) focusedIndex = index
         val view = tileViews.getOrNull(index) ?: return
 
         // Dala focusată iese în față. Scara de bază vine din arc, deci o
@@ -354,6 +362,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     private fun goToPage(page: Int) {
         if (page == currentPage || page !in 0 until TileCatalog.pageCount) return
         currentPage = page
+        host.showHomePage(1 + page)
         settleStrip()
     }
 
@@ -421,6 +430,11 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                 tracker?.recycle()
 
                 val moved = binding.tileStrip.translationX - (-(pageWidth.toFloat() * currentPage))
+                // Spre dreapta de pe prima pagină de dale: înapoi la Home, ca pe iOS.
+                if (currentPage == 0 && (vx > MIN_FLING_VELOCITY || moved > pageWidth * DRAG_PAGE_FRACTION)) {
+                    settleStrip()
+                    if (host.pop()) return true
+                }
                 val target = when {
                     vx < -MIN_FLING_VELOCITY || moved < -pageWidth * DRAG_PAGE_FRACTION -> currentPage + 1
                     vx > MIN_FLING_VELOCITY || moved > pageWidth * DRAG_PAGE_FRACTION -> currentPage - 1

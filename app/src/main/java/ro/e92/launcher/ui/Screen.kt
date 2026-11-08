@@ -21,6 +21,9 @@ interface ScreenHost {
 
     /** Locul indicatorului de pagini din bara de jos; se vede doar pe meniul principal. */
     val barPages: android.view.ViewGroup
+
+    /** Indicatorul de jos (casă + puncte): 0 = Home, 1.. = paginile de dale. */
+    fun showHomePage(index: Int)
     fun push(screen: Screen)
     fun pop(): Boolean
     fun goHome()

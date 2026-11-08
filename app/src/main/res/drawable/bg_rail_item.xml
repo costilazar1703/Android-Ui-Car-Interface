@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rândul din bara verticală: selectat, o lumină caldă discretă și linia portocalie din stânga
+     (linia e un View separat, ca în iDrive 7). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_activated="true">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="0"
+                android:endColor="#00F04A12"
+                android:startColor="#33F04A12" />
+        </shape>
+    </item>
+    <item android:drawable="@android:color/transparent" />
+</selector>
