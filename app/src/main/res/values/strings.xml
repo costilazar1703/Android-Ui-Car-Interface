@@ -46,6 +46,10 @@
     <string name="bt_reset">Reset Bluetooth</string>
     <string name="bt_reset_hint">Unit becomes visible again</string>
     <string name="bt_reset_confirm">Press again to confirm</string>
+    <string name="set_theme">Interface theme</string>
+    <string name="theme_orange">Orange</string>
+    <string name="theme_red">Red</string>
+    <string name="theme_mono">Black &amp; white</string>
     <string name="bt_resetting">Bluetooth is restarting…</string>
     <string name="bt_phone">Phone</string>
     <string name="bt_status">Status</string>

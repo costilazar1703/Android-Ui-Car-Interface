@@ -507,6 +507,23 @@ class SettingsScreen(
     // ------------------------------------------------------------------- sistem
 
     private fun systemRows(): List<DetailRow> = listOf(
+        // Se aplică pe loc, pe toată interfața: o apăsare trece la tema următoare.
+        DetailRow(
+            id = "sys_theme",
+            title = context.getString(R.string.set_theme),
+            value = context.getString(
+                when (Services.prefs.theme) {
+                    ro.e92.launcher.core.Prefs.THEME_RED -> R.string.theme_red
+                    ro.e92.launcher.core.Prefs.THEME_MONO -> R.string.theme_mono
+                    else -> R.string.theme_orange
+                }
+            ),
+            onActivate = {
+                Services.prefs.theme = (Services.prefs.theme + 1) % THEME_COUNT
+                ro.e92.launcher.ui.ThemeFilter.apply(host.activity.window.decorView, Services.prefs.theme)
+                reloadDetail("sys_theme")
+            }
+        ),
         DetailRow(
             id = "sys_android",
             title = context.getString(R.string.set_android_settings),
@@ -585,6 +602,7 @@ class SettingsScreen(
         const val NAV_APPS = "nav_apps"
         const val NAV_BUTTONS = "nav_buttons"
         const val NAV_LAUNCHER = "nav_launcher"
+        private const val THEME_COUNT = 3
         const val NAV_SYSTEM = "nav_system"
     }
 }

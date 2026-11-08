@@ -160,6 +160,10 @@ class Prefs(context: Context) {
         set(value) = sp.edit().putString(KEY_CAN_MODE, value).apply()
 
     /** Dezactivabil dacă tranzițiile costă frame-uri pe unitatea reală. */
+    var theme: Int
+        get() = sp.getInt(KEY_THEME, THEME_ORANGE)
+        set(value) = sp.edit().putInt(KEY_THEME, value).apply()
+
     var animationsEnabled: Boolean
         get() = sp.getBoolean(KEY_ANIM, true)
         set(value) = sp.edit().putBoolean(KEY_ANIM, value).apply()
@@ -225,6 +229,12 @@ class Prefs(context: Context) {
         // Cheie nouă: încercările vechi au trimis `PROFILE=`, pe care stiva îl refuză.
         private const val KEY_BT_PROFILE_TRIED = "bt_profile_tried_v2"
         private const val KEY_DRIFT_MODE = "drift_mode"
+        private const val KEY_THEME = "ui_theme"
+
+        /** Tema interfeței: portocaliu (originalul), roșu, alb-negru. */
+        const val THEME_ORANGE = 0
+        const val THEME_RED = 1
+        const val THEME_MONO = 2
         private const val KEY_REVERSE_SCENE = "reverse_scene"
         private const val KEY_START_GUARD = "start_guard"
         const val DEFAULT_UNIT_VOLUME = 30

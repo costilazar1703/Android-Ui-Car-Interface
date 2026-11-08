@@ -88,6 +88,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setupImmersive()
+        ThemeFilter.apply(window.decorView, Services.prefs.theme)
 
         stack = ScreenStack(
             container = binding.screenContainer,
