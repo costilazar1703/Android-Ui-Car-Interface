@@ -50,6 +50,7 @@
     <string name="set_park_beep_test">Test parking beep</string>
     <!-- Ecranul Home cu widget-uri. Etichetele barei verticale: scurte, ca să încapă mari. -->
     <string name="home_rail_media">MEDIA</string>
+    <string name="home_rail_bt">BT</string>
     <string name="home_rail_car">CAR</string>
     <string name="home_rail_dash">DASH</string>
     <string name="home_rail_setup">SETUP</string>

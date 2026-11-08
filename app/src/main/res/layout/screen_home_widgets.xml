@@ -75,7 +75,7 @@
                     android:layout_height="44dp"
                     android:contentDescription="@null"
                     android:scaleType="fitCenter"
-                    android:src="@drawable/ic_menu_media" />
+                    android:src="@drawable/ic_home_media" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -122,35 +122,32 @@
                 android:gravity="center"
                 android:orientation="horizontal">
 
+                <!-- Ca la Apple CarPlay: glife albe pline, fără cerc în spate. -->
                 <ImageView
                     android:id="@+id/mediaPrev"
-                    android:layout_width="52dp"
+                    android:layout_width="58dp"
                     android:layout_height="52dp"
                     android:contentDescription="@null"
                     android:padding="12dp"
-                    android:src="@drawable/ic_transport_prev"
-                    android:tint="@color/text_primary" />
+                    android:src="@drawable/ic_cp_prev" />
 
                 <ImageView
                     android:id="@+id/mediaPlay"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:layout_marginStart="28dp"
-                    android:layout_marginEnd="28dp"
-                    android:background="@drawable/bg_play_button"
+                    android:layout_width="64dp"
+                    android:layout_height="60dp"
+                    android:layout_marginStart="34dp"
+                    android:layout_marginEnd="34dp"
                     android:contentDescription="@null"
-                    android:padding="15dp"
-                    android:src="@drawable/ic_transport_play"
-                    android:tint="@color/text_primary" />
+                    android:padding="12dp"
+                    android:src="@drawable/ic_cp_play" />
 
                 <ImageView
                     android:id="@+id/mediaNext"
-                    android:layout_width="52dp"
+                    android:layout_width="58dp"
                     android:layout_height="52dp"
                     android:contentDescription="@null"
                     android:padding="12dp"
-                    android:src="@drawable/ic_transport_next"
-                    android:tint="@color/text_primary" />
+                    android:src="@drawable/ic_cp_next" />
             </LinearLayout>
         </LinearLayout>
 
@@ -176,7 +173,7 @@
                 android:layout_height="40dp"
                 android:contentDescription="@null"
                 android:scaleType="fitCenter"
-                android:src="@drawable/ic_menu_bluetooth" />
+                android:src="@drawable/ic_home_bt" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -211,14 +208,6 @@
                     tools:text="Music connected" />
             </LinearLayout>
 
-            <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:contentDescription="@null"
-                android:rotation="180"
-                android:src="@drawable/ic_transport_prev"
-                android:tint="@color/text_tertiary"
-                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

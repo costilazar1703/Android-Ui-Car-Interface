@@ -315,13 +315,19 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
 
     private var focusedIndex = 0
 
-    /** Înapoi la Home: rotița spre stânga de pe prima dală (doar dacă am venit din Home). */
+    /**
+     * Înapoi la Home, ca un cerc complet: rotița spre stânga de pe prima dală sau spre
+     * dreapta de pe ultima (Messages). Doar dacă am venit din Home; altfel lista se rotește.
+     */
     override fun onAction(action: ro.e92.launcher.input.LauncherAction): Boolean {
-        if (action != ro.e92.launcher.input.LauncherAction.ROTARY_CCW &&
-            action != ro.e92.launcher.input.LauncherAction.TILT_LEFT
-        ) return false
-        if (focusedIndex != 0) return false
-        return host.pop()
+        val back = when (action) {
+            ro.e92.launcher.input.LauncherAction.ROTARY_CCW,
+            ro.e92.launcher.input.LauncherAction.TILT_LEFT -> focusedIndex == 0
+            ro.e92.launcher.input.LauncherAction.ROTARY_CW,
+            ro.e92.launcher.input.LauncherAction.TILT_RIGHT -> focusedIndex == TileCatalog.items.size - 1
+            else -> false
+        }
+        return back && host.pop()
     }
 
     private fun focusFirstTileOfPage(page: Int): Boolean {

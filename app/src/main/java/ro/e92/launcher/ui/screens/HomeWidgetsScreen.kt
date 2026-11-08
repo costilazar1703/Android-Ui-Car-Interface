@@ -20,7 +20,6 @@ import ro.e92.launcher.core.Services
 import ro.e92.launcher.databinding.ScreenHomeWidgetsBinding
 import ro.e92.launcher.focus.FocusTarget
 import ro.e92.launcher.input.LauncherAction
-import ro.e92.launcher.media.MediaLogo
 import ro.e92.launcher.ui.Screen
 import ro.e92.launcher.ui.ScreenHost
 import ro.e92.launcher.ui.TileAction
@@ -162,7 +161,8 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
         val media = Services.media.snapshot.value
         val bt = Services.kswBt.state.value
         val hasSong = media.hasSession && !media.title.isNullOrBlank()
-        binding.mediaLogo.setImageResource(MediaLogo.current())
+        // Pe Home iconițele sunt desenate în linii, nu metalice (cele metalice: dale și meniuri).
+        binding.mediaLogo.setImageResource(R.drawable.ic_home_media)
         binding.mediaTitle.text = if (hasSong) media.title else context.getString(R.string.home_no_media)
         val source = when {
             !media.hasSession && !bt.audioConnected -> ""
@@ -171,9 +171,7 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
         }
         binding.mediaArtist.text = listOfNotNull(media.artist?.takeIf { hasSong && it.isNotBlank() }, source.ifBlank { null })
             .joinToString(" · ")
-        binding.mediaPlay.setImageResource(
-            if (media.isPlaying) R.drawable.ic_transport_pause else R.drawable.ic_transport_play
-        )
+        binding.mediaPlay.setImageResource(if (media.isPlaying) R.drawable.ic_cp_pause else R.drawable.ic_cp_play)
     }
 
     private fun renderBluetooth() {
@@ -236,16 +234,17 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
         const val ID_MEDIA = "home_media"
         const val ID_BT = "home_bt"
         val WIDGET_IDS = setOf(ID_MEDIA, ID_BT)
-        const val ICON_DP = 40
+        const val ICON_DP = 46
         const val LABEL_SP = 11f
         const val MIN_FLING = 600f
 
-        /** Ordinea cerută: media, car (Car Info), dashboard, settings. */
+        /** Ordinea cerută: media, bluetooth, car (Car Info), dashboard, settings. */
         val RAIL = listOf(
-            RailItem("rail_media", R.drawable.ic_menu_media, R.string.home_rail_media, TileAction.MEDIA),
-            RailItem("rail_car", R.drawable.ic_menu_car_info, R.string.home_rail_car, TileAction.CAR_INFO),
-            RailItem("rail_dash", R.drawable.ic_menu_dashboard, R.string.home_rail_dash, TileAction.DASHBOARD),
-            RailItem("rail_setup", R.drawable.ic_menu_settings, R.string.home_rail_setup, TileAction.SETTINGS)
+            RailItem("rail_media", R.drawable.ic_home_media, R.string.home_rail_media, TileAction.MEDIA),
+            RailItem("rail_bt", R.drawable.ic_home_bt, R.string.home_rail_bt, TileAction.BLUETOOTH),
+            RailItem("rail_car", R.drawable.ic_home_car, R.string.home_rail_car, TileAction.CAR_INFO),
+            RailItem("rail_dash", R.drawable.ic_home_dash, R.string.home_rail_dash, TileAction.DASHBOARD),
+            RailItem("rail_setup", R.drawable.ic_home_setup, R.string.home_rail_setup, TileAction.SETTINGS)
         )
     }
 }

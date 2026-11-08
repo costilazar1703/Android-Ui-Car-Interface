@@ -23,12 +23,28 @@ class HomePageIndicatorView(context: Context, private val pages: Int) : View(con
 
     private val density = resources.displayMetrics.density
     private val dot = 7f * density
-    private val house = 14f * density
+    private val house = 17f * density
     private val gap = 12f * density
 
     private val on = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ContextCompat.getColor(context, R.color.accent_focus) }
     private val off = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x80FFFFFF.toInt() }
+    /** Casa nefocusată: doar conturul, aceeași culoare ca punctele stinse. */
+    private val offLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0x99FFFFFF.toInt()
+        style = Paint.Style.STROKE
+        strokeWidth = 1.4f * density
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
+    }
+    /** Streașina, peste corp: linia acoperișului iese puțin în afara pereților. */
+    private val roofLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1.8f * density
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
+    }
     private val housePath = Path()
+    private val roofPath = Path()
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = house + pages * (gap + dot)
@@ -37,7 +53,7 @@ class HomePageIndicatorView(context: Context, private val pages: Int) : View(con
 
     override fun onDraw(canvas: Canvas) {
         val cy = height / 2f
-        drawHouse(canvas, 0f, cy, if (current == 0) on else off)
+        drawHouse(canvas, 0f, cy, current == 0)
         var x = house + gap + dot / 2f
         for (p in 1..pages) {
             canvas.drawCircle(x, cy, dot / 2f, if (current == p) on else off)
@@ -45,19 +61,49 @@ class HomePageIndicatorView(context: Context, private val pages: Int) : View(con
         }
     }
 
-    /** O casă simplă: acoperiș în triunghi peste un pătrat, ca iconița Home de pe iOS. */
-    private fun drawHouse(canvas: Canvas, left: Float, cy: Float, paint: Paint) {
+    /**
+     * Casa cu detalii: corp cu colțuri rotunjite, ușă decupată și acoperișul ca o
+     * linie separată cu streașină care iese peste pereți. Pe Home e plină în accentul temei,
+     * pe paginile de dale doar conturată.
+     */
+    private fun drawHouse(canvas: Canvas, left: Float, cy: Float, active: Boolean) {
         val s = house
         val top = cy - s / 2f
+        fun x(f: Float) = left + s * f
+        fun y(f: Float) = top + s * f
+
+        // Corpul (pereți + fronton), cu ușa scoasă din el (even-odd).
         housePath.reset()
-        housePath.moveTo(left + s / 2f, top)                 // vârful acoperișului
-        housePath.lineTo(left + s, top + s * 0.48f)
-        housePath.lineTo(left + s * 0.86f, top + s * 0.48f)
-        housePath.lineTo(left + s * 0.86f, top + s)
-        housePath.lineTo(left + s * 0.14f, top + s)
-        housePath.lineTo(left + s * 0.14f, top + s * 0.48f)
-        housePath.lineTo(left, top + s * 0.48f)
+        housePath.fillType = Path.FillType.EVEN_ODD
+        housePath.moveTo(x(0.5f), y(0.12f))
+        housePath.lineTo(x(0.86f), y(0.46f))
+        housePath.lineTo(x(0.86f), y(0.92f))
+        housePath.quadTo(x(0.86f), y(1f), x(0.78f), y(1f))
+        housePath.lineTo(x(0.22f), y(1f))
+        housePath.quadTo(x(0.14f), y(1f), x(0.14f), y(0.92f))
+        housePath.lineTo(x(0.14f), y(0.46f))
         housePath.close()
-        canvas.drawPath(housePath, paint)
+        // Ușa, cu partea de sus rotunjită.
+        housePath.moveTo(x(0.41f), y(1f))
+        housePath.lineTo(x(0.41f), y(0.72f))
+        housePath.quadTo(x(0.41f), y(0.6f), x(0.5f), y(0.6f))
+        housePath.quadTo(x(0.59f), y(0.6f), x(0.59f), y(0.72f))
+        housePath.lineTo(x(0.59f), y(1f))
+        housePath.close()
+
+        // Acoperișul: linia de deasupra, mai lată decât casa.
+        roofPath.reset()
+        roofPath.moveTo(x(0.02f), y(0.5f))
+        roofPath.lineTo(x(0.5f), y(0.03f))
+        roofPath.lineTo(x(0.98f), y(0.5f))
+
+        if (active) {
+            canvas.drawPath(housePath, on)
+            roofLine.color = on.color
+        } else {
+            canvas.drawPath(housePath, offLine)
+            roofLine.color = offLine.color
+        }
+        canvas.drawPath(roofPath, roofLine)
     }
 }

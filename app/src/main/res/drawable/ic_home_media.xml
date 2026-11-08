@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Media: două note legate de o bară, cu unde sonore. Desenată în linii (nu metalică), doar pentru ecranul Home. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:pathData="M17,33 L17,13.5 L33,9.5 L33,29"
+        android:strokeColor="#EDEDED"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M17,13.5 L33,9.5 L33,14 L17,18 Z"
+        android:fillColor="@color/accent_focus" />
+    <path
+        android:pathData="M9.00,33.20 a4.2,4.2 0 1,0 8.4,0 a4.2,4.2 0 1,0 -8.4,0"
+        android:fillColor="#EDEDED" />
+    <path
+        android:pathData="M25.00,29.20 a4.2,4.2 0 1,0 8.4,0 a4.2,4.2 0 1,0 -8.4,0"
+        android:fillColor="#EDEDED" />
+    <path
+        android:pathData="M38.5,17 Q41.5,21 38.5,25"
+        android:strokeColor="#59FFFFFF"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M41.8,14 Q46.6,21 41.8,28"
+        android:strokeColor="#59FFFFFF"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
