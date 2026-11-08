@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Setup: roată dințată cu butuc. Desenată în linii (nu metalică), doar pentru ecranul Home. -->
+<!-- Setup: roată dințată. Stil iOS: monocrom, linii curate. Doar pentru ecranul Home. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="48dp"
     android:height="48dp"
@@ -7,17 +7,14 @@
     android:viewportHeight="48">
     <path
         android:pathData="M35.40,20.95 L39.24,21.18 L39.24,26.82 L35.40,27.05 L34.22,29.90 L36.77,32.78 L32.78,36.77 L29.90,34.22 L27.05,35.40 L26.82,39.24 L21.18,39.24 L20.95,35.40 L18.10,34.22 L15.22,36.77 L11.23,32.78 L13.78,29.90 L12.60,27.05 L8.76,26.82 L8.76,21.18 L12.60,20.95 L13.78,18.10 L11.23,15.22 L15.22,11.23 L18.10,13.78 L20.95,12.60 L21.18,8.76 L26.82,8.76 L27.05,12.60 L29.90,13.78 L32.78,11.23 L36.77,15.22 L34.22,18.10 Z"
-        android:strokeColor="#EDEDED"
-        android:strokeWidth="2.0"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
-    <path
-        android:pathData="M18.60,24.00 a5.4,5.4 0 1,0 10.8,0 a5.4,5.4 0 1,0 -10.8,0"
-        android:strokeColor="@color/accent_focus"
+        android:strokeColor="#FFFFFFFF"
         android:strokeWidth="2.2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
     <path
-        android:pathData="M22.40,24.00 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0"
-        android:fillColor="#59FFFFFF" />
+        android:pathData="M18.8,24 a5.2,5.2 0 1,0 10.4,0 a5.2,5.2 0 1,0 -10.4,0"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
 </vector>

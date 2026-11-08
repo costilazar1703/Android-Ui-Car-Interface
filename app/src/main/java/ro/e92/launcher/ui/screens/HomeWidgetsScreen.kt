@@ -40,7 +40,8 @@ import kotlin.math.abs
 class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
 
     override val title: String get() = "HOME"
-    override val backgroundRes: Int get() = R.drawable.bg_home_widgets
+    /** Negru: mașina e acum widget-ul care se rotește ([ro.e92.launcher.ui.widget.CarSpinView]). */
+    override val backgroundRes: Int get() = 0
 
     private lateinit var binding: ScreenHomeWidgetsBinding
     private val railViews = ArrayList<View>(RAIL.size)

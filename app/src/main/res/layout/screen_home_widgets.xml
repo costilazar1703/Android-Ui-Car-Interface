@@ -9,7 +9,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/homeRoot"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#FF000000">
 
     <!-- Bara verticală: MEDIA, CAR, DASH, SETUP. Rândurile se pun din cod. -->
     <LinearLayout
@@ -30,6 +31,19 @@
         android:layout_height="0dp"
         android:background="@color/widget_card_stroke"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/rail"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Mașina care se rotește cu degetul, între bară și widget-uri. -->
+    <ro.e92.launcher.ui.widget.CarSpinView
+        android:id="@+id/carSpin"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="30dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/gWidgets"
         app:layout_constraintStart_toEndOf="@id/rail"
         app:layout_constraintTop_toTopOf="parent" />
 
