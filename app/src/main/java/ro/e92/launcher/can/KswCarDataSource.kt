@@ -156,7 +156,7 @@ class KswCarDataSource(
         val rpm = u16(13)
         val fuel = u16(15)
         updateCanForwarding(rpm)
-        if (rpm in 0..8000) ro.e92.launcher.media.PopsEngine.onRpm(rpm)
+        if (rpm in 0..8000) ro.e92.launcher.media.PopsEngine.onRpm(rpm, speed)
         if (!loggedFirstFrame) {
             loggedFirstFrame = true
             EventLog.log(TAG, "date de bord KSW: autonomie $range km, combustibil $fuel l, afară $outside, $speed km/h, $rpm rpm")

@@ -69,16 +69,18 @@ object PopsEngine {
     private var rising = 0             // citiri la rând cu turația în urcare
     private var falling = 0            // citiri la rând de frână de motor
     private var fallStartRpm = 0
+    private var freeFall = 0           // orice scădere la rând (pe loc)
+    private var freeFallStartRpm = 0
     private var armed = true
     private var downshiftAt = 0L       // inferioară văzută, așteptăm să vedem ce urmează
     private var burstUntil = 0L
     private var lastShiftAt = 0L
 
     /** De pe firul binder-ului, la fiecare cadru de bord. */
-    fun onRpm(rpm: Int) {
+    fun onRpm(rpm: Int, speedKmh: Int) {
         if (!Services.prefs.popsEnabled) return
         val now = SystemClock.elapsedRealtime()
-        handler.post { process(rpm, now) }
+        handler.post { process(rpm, speedKmh, now) }
     }
 
     fun testPops() = whenLoaded { startBurst(SystemClock.elapsedRealtime(), "test") }
@@ -97,18 +99,26 @@ object PopsEngine {
 
     // ------------------------------------------------------------------ logica
 
-    private fun process(rpm: Int, now: Long) {
+    private fun process(rpm: Int, speedKmh: Int, now: Long) {
         if (!ensureLoaded()) return
+        // În marșarier: nimic, niciodată. Istoricul se golește ca la ieșire să nu rămână nimic.
+        if (Services.reverse.vehicleState.value.reverseGear == true) {
+            stopBurst(now)
+            count = 0; rising = 0; falling = 0; freeFall = 0; downshiftAt = 0
+            return
+        }
         val prevIdx = (count - 1 + HISTORY) % HISTORY
         val hasPrev = count > 0
         val prevRpm = if (hasPrev) rpms[prevIdx] else rpm
         val dt = if (hasPrev) (now - times[prevIdx]).coerceAtLeast(1) else 1
         push(now, rpm)
-        if (!hasPrev || dt > STALE_MS) {
-            rising = 0; falling = 0
+        if (!hasPrev || dt > STALE_MS || rpm <= 0) {
+            rising = 0; falling = 0; freeFall = 0
             return
         }
         val rate = (rpm - prevRpm) * 1000f / dt
+        // Schimbările de treaptă și frâna de motor doar în mers; pe loc doar turatul (mai jos).
+        val moving = speedKmh >= MIN_SPEED_KMH
 
         // Urcare / frână de motor: contoare de citiri la rând.
         if (rate > RISE_RATE) rising++ else rising = 0
@@ -118,20 +128,37 @@ object PopsEngine {
         } else if (rate >= -BRAKE_RATE_MIN) {
             falling = 0
         }
-
-        // O rafală în curs se oprește la accelerație nouă.
-        if (now < burstUntil && rising >= 1 && rate > STOP_ON_RISE) {
-            burstUntil = now
-            handler.removeCallbacksAndMessages(BURST_TOKEN)
+        // Pe loc turația cade mult mai repede decât la frâna de motor: orice scădere contează.
+        if (rate < -BRAKE_RATE_MIN) {
+            if (freeFall == 0) freeFallStartRpm = prevRpm
+            freeFall++
+        } else {
+            freeFall = 0
         }
+
+        // O rafală în curs se oprește la accelerație nouă; în mers și sub [BURST_STOP_RPM].
+        if ((rising >= 1 && rate > STOP_ON_RISE) || (moving && rpm < BURST_STOP_RPM)) stopBurst(now)
 
         // Re-armare după o accelerație.
         if (rising >= REARM_SAMPLES) armed = true
 
+        // Pe loc (P/N, de exemplu parcat în fața casei): turat peste [STAND_RPM] și lăsat -
+        // pops, ca la o mașină reală. Fără schimbări de treaptă aici.
+        if (!moving) {
+            downshiftAt = 0
+            if (armed && freeFall >= STAND_SAMPLES && freeFallStartRpm >= STAND_RPM &&
+                rpm >= STAND_MIN_NOW && now >= burstUntil
+            ) {
+                armed = false
+                startBurst(now, "turat pe loc de la $freeFallStartRpm rpm")
+            }
+            return
+        }
+
         // 1. Schimbare în sus la accelerație.
         val wasAccelerating = averageRate(now, ACCEL_LOOKBACK_MS, skip = 1) > ACCEL_RATE
         val drop = maxInWindow(now, SHIFT_WINDOW_MS) - rpm
-        if (rate < -SHIFT_RATE && drop >= SHIFT_DROP && prevRpm >= SHIFT_MIN_RPM && wasAccelerating &&
+        if (moving && rate < -SHIFT_RATE && drop >= SHIFT_DROP && prevRpm >= SHIFT_MIN_RPM && wasAccelerating &&
             now - lastShiftAt > SHIFT_COOLDOWN_MS
         ) {
             lastShiftAt = now
@@ -145,7 +172,7 @@ object PopsEngine {
         //    turația urcă oricum repede). Fereastra de dinainte de salt sare peste ultimele
         //    [JUMP_SKIP] citiri, adică peste saltul însuși.
         val jump = rpm - minInWindow(now, JUMP_WINDOW_MS)
-        if (rate > JUMP_RATE && jump >= JUMP_MIN && rpm >= DOWNSHIFT_MIN_RPM && downshiftAt == 0L &&
+        if (moving && rate > JUMP_RATE && jump >= JUMP_MIN && rpm >= DOWNSHIFT_MIN_RPM && downshiftAt == 0L &&
             averageRate(now, ACCEL_LOOKBACK_MS, skip = JUMP_SKIP) <= ACCEL_RATE
         ) {
             downshiftAt = now
@@ -153,7 +180,7 @@ object PopsEngine {
         }
         if (downshiftAt != 0L) {
             // Pops doar dacă urmează frână de motor; orice altceva (kickdown, accelerație) = nimic.
-            if (falling >= BRAKE_SAMPLES) {
+            if (falling >= BRAKE_SAMPLES && moving && rpm >= BURST_MIN_RPM) {
                 downshiftAt = 0
                 armed = false
                 startBurst(now, "inferioară + frână de motor la $rpm rpm")
@@ -165,10 +192,18 @@ object PopsEngine {
         }
 
         // 3. Frână de motor peste prag, o dată pe episod.
-        if (armed && falling >= BRAKE_SAMPLES && fallStartRpm >= Services.prefs.popsRpm && now >= burstUntil) {
+        if (moving && armed && falling >= BRAKE_SAMPLES && fallStartRpm >= Services.prefs.popsRpm &&
+            rpm >= BURST_MIN_RPM && now >= burstUntil
+        ) {
             armed = false
             startBurst(now, "frână de motor de la $fallStartRpm rpm")
         }
+    }
+
+    private fun stopBurst(now: Long) {
+        if (now >= burstUntil) return
+        burstUntil = now
+        handler.removeCallbacksAndMessages(BURST_TOKEN)
     }
 
     private fun startBurst(now: Long, why: String) {
@@ -305,7 +340,8 @@ object PopsEngine {
     private const val SHIFT_RATE = 2500f
     private const val SHIFT_DROP = 400
     private const val SHIFT_WINDOW_MS = 350L
-    private const val SHIFT_MIN_RPM = 2000
+    /** „DSG fart" doar din schimbări pornite de la cel puțin 3000 rpm (cerut 2026-11-08). */
+    private const val SHIFT_MIN_RPM = 3000
     private const val SHIFT_COOLDOWN_MS = 800L
     private const val ACCEL_LOOKBACK_MS = 600L
     private const val ACCEL_RATE = 250f
@@ -313,7 +349,15 @@ object PopsEngine {
     private const val JUMP_RATE = 1500f
     private const val JUMP_MIN = 400
     private const val JUMP_WINDOW_MS = 400L
-    private const val DOWNSHIFT_MIN_RPM = 2500
+    private const val DOWNSHIFT_MIN_RPM = 3000
+    /** Nicio rafală nu pornește sub 2500 rpm și orice rafală se oprește sub 2200. */
+    private const val BURST_MIN_RPM = 2500
+    private const val BURST_STOP_RPM = 2200
+    private const val MIN_SPEED_KMH = 10
+    /** Pe loc: turat de la cel puțin 3000 rpm și lăsat; două citiri de cădere ajung. */
+    private const val STAND_RPM = 3000
+    private const val STAND_SAMPLES = 2
+    private const val STAND_MIN_NOW = 1800
     private const val DOWNSHIFT_WAIT_MS = 1200L
     private const val JUMP_SKIP = 4
     private const val SAMPLE_MS = 100L
