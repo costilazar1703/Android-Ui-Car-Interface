@@ -75,6 +75,8 @@
     <color name="split_divider">#1FFFFFFF</color>
     <!-- Ecranul Home cu widget-uri (stil iOS) -->
     <color name="widget_card_bg">#A6101010</color>
+    <!-- Interiorul ramei: opac, ca degradeul ramei să nu se vadă prin el. -->
+    <color name="widget_card_solid">#FF0E0E0E</color>
     <color name="widget_card_stroke">#26FFFFFF</color>
     <color name="home_rail_bg">#B3000000</color>
     <color name="home_rail_label">#B8B8B8</color>

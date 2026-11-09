@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Eticheta din bara verticală: gri deschis, iar pe rândul selectat în accentul temei. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/accent_focus" android:state_activated="true" />
+    <item android:color="@color/home_rail_label" />
+</selector>

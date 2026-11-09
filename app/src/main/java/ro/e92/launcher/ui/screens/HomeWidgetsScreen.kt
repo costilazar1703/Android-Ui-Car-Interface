@@ -130,23 +130,28 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
                 isDuplicateParentStateEnabled = true
             }
             row.addView(marker, FrameLayout.LayoutParams((3 * density).toInt(), ViewGroup.LayoutParams.MATCH_PARENT))
+            // Starea „selectat" a rândului coboară la iconiță și text: se colorează în accent.
             val column = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
+                isDuplicateParentStateEnabled = true
             }
             column.addView(ImageView(context).apply {
                 setImageResource(item.icon)
                 scaleType = ImageView.ScaleType.FIT_CENTER
                 contentDescription = null
+                imageTintList = ContextCompat.getColorStateList(context, R.color.home_rail_tint)
+                isDuplicateParentStateEnabled = true
             }, LinearLayout.LayoutParams((ICON_DP * density).toInt(), (ICON_DP * density).toInt()))
             column.addView(TextView(context).apply {
                 setText(item.label)
                 typeface = ResourcesCompat.getFont(context, R.font.inter_semibold)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, LABEL_SP)
                 letterSpacing = 0.08f
-                setTextColor(ContextCompat.getColor(context, R.color.home_rail_label))
+                setTextColor(ContextCompat.getColorStateList(context, R.color.home_rail_label_tint))
                 gravity = Gravity.CENTER
                 isSingleLine = true
+                isDuplicateParentStateEnabled = true
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 topMargin = (4 * density).toInt()
             })
