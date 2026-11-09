@@ -59,6 +59,13 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
         setupTouch()
         screenScope.launch { Services.media.snapshot.collect { renderMedia() } }
         screenScope.launch { Services.kswBt.state.collect { renderBluetooth(); renderMedia() } }
+        // Linia de progres: de două ori pe secundă, doar cât e Home pe ecran.
+        screenScope.launch {
+            while (true) {
+                renderProgress()
+                kotlinx.coroutines.delay(PROGRESS_TICK_MS)
+            }
+        }
         // Focusul îl pune stiva (primul rând la deschidere, ultimul folosit la întoarcere).
     }
 
@@ -175,9 +182,35 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
             media.packageName == KswBluetooth.PACKAGE -> context.getString(R.string.home_source_bt)
             else -> appLabel(media.packageName)
         }
+        // Sus: NOW PLAYING / MEDIA. Sub titlu: artistul și sursa (Bluetooth, Spotify...).
         binding.mediaArtist.text = listOfNotNull(media.artist?.takeIf { hasSong && it.isNotBlank() }, source.ifBlank { null })
             .joinToString(" · ")
+        binding.mediaArtist.visibility = if (binding.mediaArtist.text.isNullOrEmpty()) View.GONE else View.VISIBLE
         binding.mediaPlay.setImageResource(if (media.isPlaying) R.drawable.ic_cp_pause else R.drawable.ic_cp_play)
+    }
+
+    /**
+     * Cât a cântat din piesă. Din telefon: durata vine pe Bluetooth, poziția o socotește
+     * [ro.e92.launcher.media.TrackClock]. Din aplicațiile unității: poziția reală.
+     */
+    private fun renderProgress() {
+        val media = Services.media.snapshot.value
+        val bt = Services.kswBt.state.value
+        val fromPhone = media.packageName == KswBluetooth.PACKAGE
+        val duration = if (fromPhone) bt.songDurationMs else media.durationMs
+        val position = if (fromPhone) ro.e92.launcher.media.TrackClock.positionMs() else media.positionNow()
+        val show = media.hasSession && !media.title.isNullOrBlank() && duration > 0
+        binding.mediaProgressRow.visibility = if (show) View.VISIBLE else View.INVISIBLE
+        if (!show) return
+        val pos = position.coerceIn(0L, duration)
+        binding.mediaProgress.progress = (pos * 1000 / duration).toInt()
+        binding.mediaElapsed.text = clock(pos)
+        binding.mediaDuration.text = clock(duration)
+    }
+
+    private fun clock(ms: Long): String {
+        val s = ms / 1000
+        return "%d:%02d".format(s / 60, s % 60)
     }
 
     private fun renderBluetooth() {
@@ -243,6 +276,7 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
         const val ICON_DP = 46
         const val LABEL_SP = 11f
         const val MIN_FLING = 600f
+        const val PROGRESS_TICK_MS = 500L
 
         /** Ordinea cerută: media, bluetooth, car (Car Info), dashboard, settings. */
         val RAIL = listOf(

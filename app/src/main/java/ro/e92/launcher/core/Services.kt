@@ -78,6 +78,7 @@ object Services {
             trip = TripComputer(appContext, scope)
             initialized = true
             reverse.watchForScene()
+            ro.e92.launcher.media.TrackClock.start(scope)
         }
     }
 

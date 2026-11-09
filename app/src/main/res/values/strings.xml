@@ -55,6 +55,10 @@
     <string name="home_rail_dash">DASH</string>
     <string name="home_rail_setup">SETUP</string>
     <string name="home_no_media">No active source</string>
+    <string name="home_now_playing">NOW PLAYING</string>
+    <string name="home_card_media">MEDIA</string>
+    <string name="home_card_device">DEVICE</string>
+    <string name="home_card_bluetooth">BLUETOOTH</string>
     <string name="home_source_bt">Bluetooth</string>
     <string name="home_no_phone">No phone connected</string>
     <string name="home_bt_playing">Playing music</string>

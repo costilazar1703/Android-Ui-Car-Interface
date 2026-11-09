@@ -12,7 +12,7 @@
     android:layout_height="match_parent"
     android:background="#FF000000">
 
-    <!-- Bara verticală: MEDIA, CAR, DASH, SETUP. Rândurile se pun din cod. -->
+    <!-- Bara verticală: MEDIA, BT, CAR, DASH, SETUP. Rândurile se pun din cod. -->
     <LinearLayout
         android:id="@+id/rail"
         android:layout_width="@dimen/home_rail_width"
@@ -26,10 +26,11 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- Rama barei: aceeași lumină în degrade ca rama widget-urilor. -->
     <View
-        android:layout_width="1dp"
+        android:layout_width="1.5dp"
         android:layout_height="0dp"
-        android:background="@color/widget_card_stroke"
+        android:background="@drawable/bg_rail_frame"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@id/rail"
         app:layout_constraintTop_toTopOf="parent" />
@@ -68,6 +69,7 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <!-- ============================ MEDIA ============================ -->
+        <!-- Trei niveluri: sus NOW PLAYING și sursa, la mijloc piesa, jos butoanele. -->
         <LinearLayout
             android:id="@+id/mediaCard"
             android:layout_width="match_parent"
@@ -75,7 +77,46 @@
             android:layout_weight="1.25"
             android:background="@drawable/bg_widget_card"
             android:orientation="vertical"
-            android:padding="@dimen/widget_pad">
+            android:paddingStart="22dp"
+            android:paddingTop="16dp"
+            android:paddingEnd="22dp"
+            android:paddingBottom="10dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="@font/inter_semibold"
+                    android:includeFontPadding="false"
+                    android:letterSpacing="0.12"
+                    android:singleLine="true"
+                    android:text="@string/home_now_playing"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/mediaSource"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter_semibold"
+                    android:includeFontPadding="false"
+                    android:letterSpacing="0.12"
+                    android:singleLine="true"
+                    android:text="@string/home_card_media"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -85,8 +126,8 @@
 
                 <ImageView
                     android:id="@+id/mediaLogo"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
                     android:contentDescription="@null"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_home_media" />
@@ -94,7 +135,7 @@
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
+                    android:layout_marginStart="16dp"
                     android:layout_weight="1"
                     android:orientation="vertical">
 
@@ -107,21 +148,21 @@
                         android:includeFontPadding="false"
                         android:singleLine="true"
                         android:textColor="@color/text_primary"
-                        android:textSize="22sp"
+                        android:textSize="25sp"
                         tools:text="Midnight City" />
 
                     <TextView
                         android:id="@+id/mediaArtist"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="6dp"
                         android:ellipsize="end"
                         android:fontFamily="@font/inter_regular"
                         android:includeFontPadding="false"
                         android:singleLine="true"
                         android:textColor="@color/text_secondary"
-                        android:textSize="16sp"
-                        tools:text="M83 · Bluetooth" />
+                        android:textSize="17sp"
+                        tools:text="M83" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -130,37 +171,81 @@
                 android:layout_height="0dp"
                 android:layout_weight="1" />
 
+            <!-- Cât a cântat din piesă: timpul scurs, linia, durata. -->
+            <LinearLayout
+                android:id="@+id/mediaProgressRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="2dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/mediaElapsed"
+                    android:layout_width="44dp"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter_medium"
+                    android:fontFeatureSettings="tnum"
+                    android:includeFontPadding="false"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    tools:text="1:12" />
+
+                <ProgressBar
+                    android:id="@+id/mediaProgress"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="4dp"
+                    android:layout_weight="1"
+                    android:max="1000"
+                    android:progressDrawable="@drawable/bg_media_progress"
+                    tools:progress="340" />
+
+                <TextView
+                    android:id="@+id/mediaDuration"
+                    android:layout_width="44dp"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter_medium"
+                    android:fontFeatureSettings="tnum"
+                    android:gravity="end"
+                    android:includeFontPadding="false"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    tools:text="3:29" />
+            </LinearLayout>
+
+            <!-- Ca la Apple CarPlay: glife albe pline, fără cerc în spate. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:orientation="horizontal">
 
-                <!-- Ca la Apple CarPlay: glife albe pline, fără cerc în spate. -->
                 <ImageView
                     android:id="@+id/mediaPrev"
-                    android:layout_width="58dp"
-                    android:layout_height="52dp"
+                    android:layout_width="76dp"
+                    android:layout_height="66dp"
                     android:contentDescription="@null"
-                    android:padding="12dp"
+                    android:padding="14dp"
                     android:src="@drawable/ic_cp_prev" />
 
                 <ImageView
                     android:id="@+id/mediaPlay"
-                    android:layout_width="64dp"
-                    android:layout_height="60dp"
-                    android:layout_marginStart="34dp"
-                    android:layout_marginEnd="34dp"
+                    android:layout_width="80dp"
+                    android:layout_height="74dp"
+                    android:layout_marginStart="40dp"
+                    android:layout_marginEnd="40dp"
                     android:contentDescription="@null"
-                    android:padding="12dp"
+                    android:padding="14dp"
                     android:src="@drawable/ic_cp_play" />
 
                 <ImageView
                     android:id="@+id/mediaNext"
-                    android:layout_width="58dp"
-                    android:layout_height="52dp"
+                    android:layout_width="76dp"
+                    android:layout_height="66dp"
                     android:contentDescription="@null"
-                    android:padding="12dp"
+                    android:padding="14dp"
                     android:src="@drawable/ic_cp_next" />
             </LinearLayout>
         </LinearLayout>
@@ -176,52 +261,99 @@
             android:layout_height="0dp"
             android:layout_weight="0.75"
             android:background="@drawable/bg_widget_card"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="@dimen/widget_pad"
-            android:paddingEnd="@dimen/widget_pad">
-
-            <ImageView
-                android:id="@+id/btIcon"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:contentDescription="@null"
-                android:scaleType="fitCenter"
-                android:src="@drawable/ic_home_bt" />
+            android:orientation="vertical"
+            android:paddingStart="22dp"
+            android:paddingTop="16dp"
+            android:paddingEnd="22dp"
+            android:paddingBottom="14dp">
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/btName"
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:ellipsize="end"
+                    android:layout_weight="1"
                     android:fontFamily="@font/inter_semibold"
                     android:includeFontPadding="false"
+                    android:letterSpacing="0.12"
                     android:singleLine="true"
-                    android:textColor="@color/text_primary"
-                    android:textSize="20sp"
-                    tools:text="iPhone" />
+                    android:text="@string/home_card_device"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp" />
 
                 <TextView
-                    android:id="@+id/btStatus"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:ellipsize="end"
-                    android:fontFamily="@font/inter_regular"
+                    android:fontFamily="@font/inter_semibold"
                     android:includeFontPadding="false"
+                    android:letterSpacing="0.12"
                     android:singleLine="true"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="15sp"
-                    tools:text="Music connected" />
+                    android:text="@string/home_card_bluetooth"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp" />
             </LinearLayout>
 
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/btIcon"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:contentDescription="@null"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_home_bt" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/btName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:fontFamily="@font/inter_semibold"
+                        android:includeFontPadding="false"
+                        android:singleLine="true"
+                        android:textColor="@color/text_primary"
+                        android:textSize="22sp"
+                        tools:text="iPhone" />
+
+                    <TextView
+                        android:id="@+id/btStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:ellipsize="end"
+                        android:fontFamily="@font/inter_regular"
+                        android:includeFontPadding="false"
+                        android:singleLine="true"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="16sp"
+                        tools:text="Music connected" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
         </LinearLayout>
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
