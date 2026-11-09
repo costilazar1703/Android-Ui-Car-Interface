@@ -35,6 +35,16 @@
         app:layout_constraintStart_toEndOf="@id/rail"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- A doua linie, fină, la 4dp în interiorul barei: rama dublă, ca la widget-uri. -->
+    <View
+        android:layout_width="1dp"
+        android:layout_height="0dp"
+        android:layout_marginEnd="4dp"
+        android:background="#14FFFFFF"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/rail"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <!-- Mașina care se rotește cu degetul, între bară și widget-uri. -->
     <ro.e92.launcher.ui.widget.CarSpinView
         android:id="@+id/carSpin"
