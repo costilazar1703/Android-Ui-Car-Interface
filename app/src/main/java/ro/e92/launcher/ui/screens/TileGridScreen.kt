@@ -20,7 +20,6 @@ import ro.e92.launcher.ui.ScreenHost
 import ro.e92.launcher.ui.Tile
 import ro.e92.launcher.ui.TileCatalog
 import ro.e92.launcher.nav.NavNotificationRelay
-import ro.e92.launcher.ui.widget.PageIndicatorView
 import kotlin.math.abs
 
 /**
@@ -56,7 +55,6 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     private val tileBindings = HashMap<String, ItemTileBinding>()
     /** Cât urcă iconița când sub ea apare textul viu. */
     private var liveIconShift = 0f
-    private var indicator: PageIndicatorView? = null
 
     /**
      * Geometria semicercului, pe pozitie in pagina (0..5): marimea fiecarei dale

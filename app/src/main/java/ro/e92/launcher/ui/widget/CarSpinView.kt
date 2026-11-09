@@ -45,7 +45,7 @@ class CarSpinView @JvmOverloads constructor(
     private val src = Rect()
     private val dst = RectF()
 
-    /** Cadrele decodate, RGB_565: 72 × 640×320 ≈ 29 MB în cel mai rău caz, ținute cât trăiește view-ul. */
+    /** Cadrele decodate, RGB_565 (≈400 KB fiecare), plafonate la [CACHE_KB]. */
     private val cache = object : LruCache<Int, Bitmap>(CACHE_KB) {
         override fun sizeOf(key: Int, value: Bitmap) = value.byteCount / 1024
     }
@@ -147,12 +147,21 @@ class CarSpinView @JvmOverloads constructor(
         cache.evictAll()
     }
 
+    /** Home acoperit (meniuri, marșarier): păstrăm doar cadrul curent, restul se eliberează. */
+    fun trimMemory() {
+        removeCallbacks(spin)
+        velocityDegPerSec = 0f
+        cache.trimToSize(KEEP_WHEN_HIDDEN_KB)
+    }
+
     private companion object {
         const val FRAMES = 72
         const val STEP_DEG = 360f / FRAMES
         /** Cadrul de pornire: 3/4 față, ca în pozele de prezentare. */
         const val START_ANGLE = 50f
-        const val CACHE_KB = 32 * 1024
+        /** ~40 de cadre decodate (RGB_565, 640×320); restul se decodează din mers, în câțiva ms. */
+        const val CACHE_KB = 16 * 1024
+        const val KEEP_WHEN_HIDDEN_KB = 512
         const val SLOP_PX = 6f
         const val MIN_SPIN_DEG_S = 60f
         const val STOP_DEG_S = 8f

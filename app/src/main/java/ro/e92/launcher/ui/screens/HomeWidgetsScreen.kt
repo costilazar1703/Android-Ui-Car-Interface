@@ -69,6 +69,12 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
         // Focusul îl pune stiva (primul rând la deschidere, ultimul folosit la întoarcere).
     }
 
+    /** Acoperit de un meniu: mașina eliberează cadrele decodate (se refac la întoarcere). */
+    override fun onHide() {
+        super.onHide()
+        binding.carSpin.trimMemory()
+    }
+
     override fun focusTargets(): List<FocusTarget> {
         if (railViews.isEmpty()) return emptyList()
         val rail = RAIL.mapIndexed { i, item ->
