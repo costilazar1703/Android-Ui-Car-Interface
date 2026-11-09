@@ -113,9 +113,9 @@ class CarStatus(
             .withEndAction { banner.visibility = View.GONE }.start()
     }
 
-    /** „12.5°" ca în bord, dar fără „.0" când e număr întreg. */
+    /** „12.5°C" ca în bord, dar fără „.0" când e număr întreg. */
     private fun formatTemp(c: Float): String =
-        if (c % 1f == 0f) "${c.toInt()}°" else String.format(Locale.US, "%.1f°", c)
+        if (c % 1f == 0f) "${c.toInt()}°C" else String.format(Locale.US, "%.1f°C", c)
 
     private companion object {
         const val STICKY = "sticky"
