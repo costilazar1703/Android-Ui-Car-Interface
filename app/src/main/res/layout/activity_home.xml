@@ -227,7 +227,7 @@
 
     <LinearLayout
         android:id="@+id/statusIcons"
-        android:layout_width="wrap_content"
+        android:layout_width="216dp"
         android:layout_height="0dp"
         android:layout_marginEnd="@dimen/screen_margin"
         android:gravity="center_vertical|end"
@@ -239,9 +239,9 @@
         <!-- CarPlay dintr-o atingere: pornește aplicația setată (ca primul rând din meniul CarPlay). -->
         <ImageView
             android:id="@+id/btnCarPlay"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginEnd="12dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="-6dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/menu_carplay"
             android:focusable="false"
@@ -250,22 +250,32 @@
             android:src="@drawable/ic_status_carplay"
             />
 
+        <!-- Distanțe egale: blocul are exact lățimea autonomiei din stânga (26 + 10 + 180 dp). -->
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
         <!-- Temperatura exterioară, din CAN-ul unității KSW. -->
         <TextView
             android:id="@+id/statusTemp"
             style="@style/Text.Body"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
             android:fontFamily="@font/inter_regular"
             android:letterSpacing="-0.01"
             android:fontFeatureSettings="tnum"
             android:includeFontPadding="false"
             android:textColor="@color/text_primary"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:visibility="gone"
             tools:text="14.5°C"
             tools:visibility="visible" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
 
         <ro.e92.launcher.ui.widget.WifiIconView
             android:id="@+id/icWifi"
