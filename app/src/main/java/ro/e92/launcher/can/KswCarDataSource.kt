@@ -103,6 +103,8 @@ class KswCarDataSource(
             readHandbrake()
             // Cererile de la pornirea ecranului de bord KSW, apoi cererea periodică.
             for (cmd in START_CMDS) sendCanbus(binder, cmd)
+            // Ecranul de marșarier al MCU-ului oprit din start, nu doar la primul R.
+            tellMcuNoCamera()
             poller?.cancel()
             poller = scope.launch {
                 while (isActive) {
@@ -224,8 +226,12 @@ class KswCarDataSource(
     private fun tellMcuNoCamera() {
         if (!Services.prefs.reverseScene) return
         val binder = service ?: return
-        scope.launch { transact(binder, TX_SEND_MCU) { it.writeByteArray(MCU_CAMERA_NONE) } }
-        EventLog.log(TAG, "MCU: tip cameră 0")
+        // Pe lângă cameră, MCU-ul își desenează singur radarul și liniile de ghidaj în R:
+        // acela e ecranul KSW care revenea (EventCenter nu-și deschide fereastra, 2026-11-09).
+        scope.launch {
+            for (cmd in MCU_REVERSE_OFF) transact(binder, TX_SEND_MCU) { it.writeByteArray(cmd) }
+        }
+        EventLog.log(TAG, "MCU: cameră 0, radar 0, linii 0")
     }
 
     private var canSentAt = 0L
@@ -294,6 +300,10 @@ class KswCarDataSource(
         const val CAN_RETRY_MS = 3_000L
         /** sendKSW_0x00_0x6A(11, 0) din EventCenter: tipul camerei pentru MCU = niciuna. */
         val MCU_CAMERA_NONE = byteArrayOf(0xF2.toByte(), 0x00, 0x6A, 0x02, 0x0B, 0x00)
+        /** ksw_Send8902BackcarMod_0x1b/0x1c din EventCenter: liniile (22) și radarul (23) oprite. */
+        val MCU_TRACK_OFF = byteArrayOf(0xF2.toByte(), 0x00, 0x6A, 0x02, 0x16, 0x00)
+        val MCU_RADAR_OFF = byteArrayOf(0xF2.toByte(), 0x00, 0x6A, 0x02, 0x17, 0x00)
+        val MCU_REVERSE_OFF = listOf(MCU_CAMERA_NONE, MCU_TRACK_OFF, MCU_RADAR_OFF)
         val START_CMDS = listOf(
             byteArrayOf(0x89.toByte(), 0x01, 0x10),
             byteArrayOf(0x8A.toByte(), 0x01, 0x10),

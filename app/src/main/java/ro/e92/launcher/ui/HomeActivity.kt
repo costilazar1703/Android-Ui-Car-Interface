@@ -265,7 +265,12 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         if (Services.kswBt.state.value.call != ro.e92.launcher.core.KswBluetooth.Call.NONE) return
         guardReclaims++
         ro.e92.launcher.core.EventLog.log("Home", "acoperit la pornire fără intervenția șoferului - revin în față")
-        binding.rootLayout.postDelayed({ if (!resumedNow) bringToFront(0) }, GUARD_RECLAIM_DELAY_MS)
+        binding.rootLayout.postDelayed({
+            // Doar ecranele KSW le dăm la o parte. CarPlay wireless se conectează chiar în primul
+            // minut și își deschide singur aplicația: aceea trebuie să rămână (2026-11-09).
+            val app = foregroundApp()
+            if (!resumedNow && (app == null || app.startsWith(KSW_PREFIX))) bringToFront(0)
+        }, GUARD_RECLAIM_DELAY_MS)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -844,9 +849,24 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                 ro.e92.launcher.core.EventLog.log("Home", "$app a apărut după marșarier - revin")
                 bringToFront(0)
             }
+            else if (Services.prefs.reverseScene && !resumedNow && noCall && !reverse && app != null &&
+                app.startsWith(KSW_PREFIX) && app != allowedKswApp
+            ) {
+                if (android.os.SystemClock.elapsedRealtime() - lastInputAt < GUARD_INPUT_GRACE_MS) {
+                    // Deschisă de șofer (din meniurile noastre): o lăsăm cât stă în față.
+                    allowedKswApp = app
+                } else {
+                    ro.e92.launcher.core.EventLog.log("Home", "$app s-a deschis singură - revin")
+                    bringToFront(0)
+                }
+            }
+            if (resumedNow || app == null || !app.startsWith(KSW_PREFIX)) allowedKswApp = null
             binding.rootLayout.postDelayed(this, KSW_GUARD_MS)
         }
     }
+
+    /** Aplicația KSW deschisă de șofer; restul aplicațiilor KSW apărute singure sunt închise. */
+    private var allowedKswApp: String? = null
 
     private fun foregroundApp(): String? = runCatching {
         Class.forName("android.os.SystemProperties")

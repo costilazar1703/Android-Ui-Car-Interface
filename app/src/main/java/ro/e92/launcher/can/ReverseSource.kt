@@ -277,6 +277,15 @@ class ReverseSource(
     /** Pune tipul de cameră conform opțiunii. La pornire: unitatea își poate rescrie setările. */
     fun applyCameraMode() {
         scope.launch(Dispatchers.IO) {
+            // Radarul și liniile KSW: EventCenter le retrimite MCU-ului din setările lui la pornire,
+            // deci le oprim și acolo (0/1, ca restul setărilor KSW). Opțiunea oprită le repune.
+            for (key in listOf(RADAR, TRACK)) {
+                val want = if (Services.prefs.reverseScene) "0" else "1"
+                if (KswSettings.read(context, key) != want) {
+                    KswSettings.write(context, key, want)
+                    EventLog.log(TAG, "$key → $want")
+                }
+            }
             val wanted = if (Services.prefs.reverseScene) CAMERA_NONE else CAMERA_AFTERMARKET
             val current = KswSettings.read(context, CAMERA_SELECTION) ?: return@launch
             // Oprită, opțiunea nu atinge nimic decât dacă noi am pus 0 mai devreme.
@@ -316,6 +325,8 @@ class ReverseSource(
         const val RADAR_ACTION = "com.szchoiceway.eventcenter.MCU_CAR_CAN_RADAR_INFO"
         const val RADAR_DATA = "com.szchoiceway.eventcenter.CAR_CAN_DATA"
         const val CAMERA_SELECTION = "KESAIWEI_SYS_CAMERA_SELECTION"
+        const val RADAR = "KESAIWEI_SYS_RADAR"
+        const val TRACK = "KESAIWEI_SYS_REVERSING_TRACK"
         const val CAMERA_NONE = "0"
         const val CAMERA_AFTERMARKET = "1"
 
