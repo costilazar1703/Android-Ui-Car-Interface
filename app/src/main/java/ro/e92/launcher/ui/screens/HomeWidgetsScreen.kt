@@ -24,7 +24,6 @@ import ro.e92.launcher.ui.Screen
 import ro.e92.launcher.ui.ScreenHost
 import ro.e92.launcher.ui.TileAction
 import ro.e92.launcher.ui.widget.scaleOnPress
-import ro.e92.launcher.ui.widget.slideIn
 import kotlin.math.abs
 
 /**
@@ -56,12 +55,6 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
 
     override fun onShow() {
         host.showHomePage(0)
-        // Venind înapoi de pe dale: glisează în cadru din partea în care a plecat rotița.
-        if (enterFrom != 0) {
-            val direction = enterFrom
-            enterFrom = 0
-            root?.let { r -> r.post { r.slideIn(direction) } }
-        }
         if (railViews.isEmpty()) buildRail()
         setupTouch()
         screenScope.launch { Services.media.snapshot.collect { renderMedia() } }
@@ -276,12 +269,6 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
     }
 
     companion object {
-        /**
-         * Din ce parte intră Home când se întoarce de pe dale: +1 din dreapta (rotița după
-         * Messages), -1 din stânga (înapoi de pe prima dală). Îl pune [TileGridScreen].
-         */
-        var enterFrom = 0
-
         private const val ID_MEDIA = "home_media"
         private const val ID_BT = "home_bt"
         private val WIDGET_IDS = setOf(ID_MEDIA, ID_BT)

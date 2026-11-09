@@ -317,23 +317,16 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
     private var focusedIndex = 0
 
     /**
-     * Înapoi la Home, ca un cerc complet: rotița spre stânga de pe prima dală sau spre
-     * dreapta de pe ultima (Messages). Doar dacă am venit din Home; altfel lista se rotește.
+     * Rotița spre stânga de pe prima dală: înapoi la Home (doar dacă am venit din Home).
+     * Spre dreapta de pe ultima dală (Messages): blocat, nu se mai rotește în cerc; la Home
+     * se ajunge cu MENU de pe consolă (cerut 2026-11-09).
      */
-    override fun onAction(action: ro.e92.launcher.input.LauncherAction): Boolean {
-        val back = when (action) {
-            ro.e92.launcher.input.LauncherAction.ROTARY_CCW,
-            ro.e92.launcher.input.LauncherAction.TILT_LEFT -> focusedIndex == 0
-            ro.e92.launcher.input.LauncherAction.ROTARY_CW,
-            ro.e92.launcher.input.LauncherAction.TILT_RIGHT -> focusedIndex == TileCatalog.items.size - 1
-            else -> false
-        }
-        if (!back) return false
-        // Home intră din partea spre care ai rotit: după Messages din dreapta, înapoi din stânga.
-        val cw = action == ro.e92.launcher.input.LauncherAction.ROTARY_CW ||
-            action == ro.e92.launcher.input.LauncherAction.TILT_RIGHT
-        HomeWidgetsScreen.enterFrom = if (cw) 1 else -1
-        return host.pop()
+    override fun onAction(action: ro.e92.launcher.input.LauncherAction): Boolean = when (action) {
+        ro.e92.launcher.input.LauncherAction.ROTARY_CCW,
+        ro.e92.launcher.input.LauncherAction.TILT_LEFT -> focusedIndex == 0 && host.pop()
+        ro.e92.launcher.input.LauncherAction.ROTARY_CW,
+        ro.e92.launcher.input.LauncherAction.TILT_RIGHT -> focusedIndex == TileCatalog.items.size - 1
+        else -> false
     }
 
     private fun focusFirstTileOfPage(page: Int): Boolean {
@@ -445,7 +438,6 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                 // Spre dreapta de pe prima pagină de dale: înapoi la Home, ca pe iOS.
                 if (currentPage == 0 && (vx > MIN_FLING_VELOCITY || moved > pageWidth * DRAG_PAGE_FRACTION)) {
                     settleStrip()
-                    HomeWidgetsScreen.enterFrom = -1
                     if (host.pop()) return true
                 }
                 val target = when {
