@@ -1,6 +1,8 @@
 package ro.e92.launcher.media
 
 import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.media.SoundPool
 import android.os.Handler
 import android.os.HandlerThread
@@ -215,6 +217,7 @@ object PopsEngine {
         EventLog.log(TAG, "pops: $why")
         val (gapMin, gapMax) = GAPS_MS[style]
         val ids = popIds[style]
+        val warm = holdAudio(duration + KEEP_TAIL_MS)
         var at = Random.nextLong(10, 50)
         var last = -1
         while (at < duration) {
@@ -227,7 +230,7 @@ object PopsEngine {
             val id = ids[k]
             handler.postAtTime(
                 { pool?.play(id, vol, vol, 1, 0, 0.96f + Random.nextFloat() * 0.08f) },
-                BURST_TOKEN, SystemClock.uptimeMillis() + at
+                BURST_TOKEN, SystemClock.uptimeMillis() + warm + at
             )
             at += (Random.nextLong(gapMin, gapMax) / fade).toLong()
         }
@@ -239,8 +242,10 @@ object PopsEngine {
         if (option == 0) return
         val volume = volumeFraction() * SHIFT_LEVEL
         EventLog.log(TAG, "schimbare: $why")
+        val warm = holdAudio(1000L + KEEP_TAIL_MS)
         if (option >= 2) {
-            pool?.play(shiftIds[option - 2], volume, volume, 1, 0, 1f)
+            val id = shiftIds[option - 2]
+            handler.postAtTime({ pool?.play(id, volume, volume, 1, 0, 1f) }, BURST_TOKEN, SystemClock.uptimeMillis() + warm)
             return
         }
         val ids = popIds[Services.prefs.popsStyle.coerceIn(0, STYLES - 1)]
@@ -249,9 +254,50 @@ object PopsEngine {
         for (i in 0 until n) {
             val id = ids[Random.nextInt(ids.size)]
             val vol = volume * (1f - i * 0.25f)
-            handler.postAtTime({ pool?.play(id, vol, vol, 1, 0, 1f) }, BURST_TOKEN, SystemClock.uptimeMillis() + at)
+            handler.postAtTime({ pool?.play(id, vol, vol, 1, 0, 1f) }, BURST_TOKEN, SystemClock.uptimeMillis() + warm + at)
             at += Random.nextLong(35, 70)
         }
+    }
+
+    // Unitatea KSW pornește sunetul din Android cu întârziere la fiecare sunet nou (vede doar
+    // începutul și sfârșitul ieșirii). Bipurile, un singur sunet continuu, se auzeau; pops-urile,
+    // multe sunete scurte, nu (2026-11-09). Ținem o pistă de liniște deschisă cât durează
+    // rafala și pornim pocniturile după o mică încălzire.
+    private var keepAlive: AudioTrack? = null
+    private val KEEP_TOKEN = Any()
+
+    /** Ține ieșirea audio deschisă încă [ms]; întoarce cât să mai așteptăm până la primul sunet. */
+    private fun holdAudio(ms: Long): Long {
+        val track = keepAlive ?: runCatching {
+            val rate = 44100
+            val frames = rate / 2
+            AudioTrack.Builder()
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(rate)
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                        .build()
+                )
+                .setTransferMode(AudioTrack.MODE_STATIC)
+                .setBufferSizeInBytes(frames * 2)
+                .build()
+                .also {
+                    it.write(ShortArray(frames), 0, frames)
+                    it.setLoopPoints(0, frames, -1)
+                }
+        }.getOrNull()?.also { keepAlive = it } ?: return 0L
+        val wasPlaying = track.playState == AudioTrack.PLAYSTATE_PLAYING
+        if (!wasPlaying) runCatching { track.play() }
+        handler.removeCallbacksAndMessages(KEEP_TOKEN)
+        handler.postAtTime({ runCatching { track.pause() } }, KEEP_TOKEN, SystemClock.uptimeMillis() + ms)
+        return if (wasPlaying) 0L else WARM_MS
     }
 
     private fun volumeFraction(): Float = Services.prefs.popsVolume.coerceIn(1, 10) / 10f
@@ -322,9 +368,12 @@ object PopsEngine {
     }
 
     private const val TAG = "Pops"
+    /** Cât lăsăm ieșirea să pornească înainte de primul sunet și cât o mai ținem după ultimul. */
+    private const val WARM_MS = 250L
+    private const val KEEP_TAIL_MS = 1500L
 
     /** Pragurile de turație din setări, pentru frâna de motor fără inferioară. */
-    val RPM_STEPS = intArrayOf(3000, 3500, 4000, 4500)
+    val RPM_STEPS = intArrayOf(2500, 3000, 3500, 4000)
     private val DURATIONS_MS = longArrayOf(600, 1200, 2000)
     private const val SHIFT_LEVEL = 0.8f
     /** Pauzele dintre pocnituri, pe stil (Video adânc, Video, Fin, Burble, Sec). */
@@ -340,8 +389,8 @@ object PopsEngine {
     private const val SHIFT_RATE = 2500f
     private const val SHIFT_DROP = 400
     private const val SHIFT_WINDOW_MS = 350L
-    /** „DSG fart" doar din schimbări pornite de la cel puțin 3000 rpm (cerut 2026-11-08). */
-    private const val SHIFT_MIN_RPM = 3000
+    /** „DSG fart" doar din schimbări pornite de la cel puțin 2500 rpm (cerut 2026-11-09, înainte 3000). */
+    private const val SHIFT_MIN_RPM = 2500
     private const val SHIFT_COOLDOWN_MS = 800L
     private const val ACCEL_LOOKBACK_MS = 600L
     private const val ACCEL_RATE = 250f
@@ -349,13 +398,13 @@ object PopsEngine {
     private const val JUMP_RATE = 1500f
     private const val JUMP_MIN = 400
     private const val JUMP_WINDOW_MS = 400L
-    private const val DOWNSHIFT_MIN_RPM = 3000
+    private const val DOWNSHIFT_MIN_RPM = 2500
     /** Nicio rafală nu pornește sub 2500 rpm și orice rafală se oprește sub 2200. */
     private const val BURST_MIN_RPM = 2500
     private const val BURST_STOP_RPM = 2200
     private const val MIN_SPEED_KMH = 10
-    /** Pe loc: turat de la cel puțin 3000 rpm și lăsat; două citiri de cădere ajung. */
-    private const val STAND_RPM = 3000
+    /** Pe loc: turat de la cel puțin 2500 rpm și lăsat; două citiri de cădere ajung. */
+    private const val STAND_RPM = 2500
     private const val STAND_SAMPLES = 2
     private const val STAND_MIN_NOW = 1800
     private const val DOWNSHIFT_WAIT_MS = 1200L

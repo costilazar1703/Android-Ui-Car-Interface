@@ -183,7 +183,16 @@ class KswCarDataSource(
         lastRpm = rpm
         val reverse = Services.reverse.vehicleState.value.reverseGear == true && Services.prefs.reverseScene
         val drift = Services.prefs.driftMode && rpm >= ENGINE_ON_RPM
-        val wanted = reverse || drift
+        // Cu scena noastră, cadrele CAN pornesc o dată cu motorul și se opresc doar la oprirea
+        // lui, nu la fiecare R: după primul R ecranul KSW (desenat de MCU, nu de Android)
+        // revenea la fiecare marșarier, iar singurul lucru trimis MCU-ului la fiecare R era
+        // această comandă din Factory (2026-11-09, capturile rprobe-*-r3x*).
+        val nowMs = SystemClock.elapsedRealtime()
+        if (rpm >= ENGINE_ON_RPM) engineOnAt = nowMs
+        // O citire de 0 rpm izolată nu oprește cadrele: motorul e oprit abia după [ENGINE_OFF_MS].
+        val engineRunning = engineOnAt != 0L && nowMs - engineOnAt < ENGINE_OFF_MS
+        val engineScene = Services.prefs.reverseScene && engineRunning
+        val wanted = reverse || drift || engineScene
         // Fără legătura cu EventCenter nu trimitem nimic și nu ținem minte nimic: altfel
         // „pornite" rămânea notat fără să fi plecat comanda (marșarier imediat după pornire).
         val binder = service ?: return
@@ -220,6 +229,7 @@ class KswCarDataSource(
     }
 
     private var canSentAt = 0L
+    private var engineOnAt = 0L
 
     private fun readHandbrake() {
         val park = KswSettings.read(context, "KESAIWEI_RECORD_PARK")?.toIntOrNull() ?: return
@@ -280,6 +290,7 @@ class KswCarDataSource(
         val CAN_ON = byteArrayOf(0xF2.toByte(), 0x00, 0x70, 0x02, 0x0F, 0x01)
         val CAN_OFF = byteArrayOf(0xF2.toByte(), 0x00, 0x70, 0x02, 0x0F, 0x00)
         const val ENGINE_ON_RPM = 300
+        const val ENGINE_OFF_MS = 10_000L
         const val CAN_RETRY_MS = 3_000L
         /** sendKSW_0x00_0x6A(11, 0) din EventCenter: tipul camerei pentru MCU = niciuna. */
         val MCU_CAMERA_NONE = byteArrayOf(0xF2.toByte(), 0x00, 0x6A, 0x02, 0x0B, 0x00)

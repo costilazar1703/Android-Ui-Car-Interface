@@ -198,7 +198,7 @@ class Prefs(context: Context) {
 
     /** Turația peste care încep pops-urile, în rpm. */
     var popsRpm: Int
-        get() = sp.getInt(KEY_POPS_RPM, 4000)
+        get() = sp.getInt(KEY_POPS_RPM, 2500)
         set(value) = sp.edit().putInt(KEY_POPS_RPM, value).apply()
 
     /** Sunetul la schimbarea în sus: 0 oprit, 1 din pocnituri, 2 Moale, 3 Scurt. Doar cu Pops & Bangs pornit. */
@@ -283,7 +283,8 @@ class Prefs(context: Context) {
         private const val KEY_POPS_STYLE = "pops_style"
         private const val KEY_POPS_VOLUME = "pops_volume"
         private const val KEY_POPS_TIME = "pops_time"
-        private const val KEY_POPS_RPM = "pops_rpm"
+        /** Cheie nouă la pragul de 2500 (2026-11-09): vechea valoare salvată (3000-4500) nu mai contează. */
+        private const val KEY_POPS_RPM = "pops_rpm_2500"
         private const val KEY_SHIFT_SOUND = "shift_sound"
 
         /** Tema interfeței: portocaliu (originalul), roșu, alb-negru. */

@@ -108,7 +108,7 @@ class MediaHub(private val context: Context) {
     }
 
     fun refreshSessions() {
-        val mgr = manager ?: return
+        val mgr = manager ?: return publish()
         val active = try {
             mgr.getActiveSessions(listenerComponent)
         } catch (e: SecurityException) {
@@ -123,10 +123,17 @@ class MediaHub(private val context: Context) {
             )
         }
 
-        // Preferăm sesiunea fixată manual, apoi cea care chiar cântă, apoi prima.
-        val chosen = active.firstOrNull { it.packageName == pinnedPackage }
-            ?: active.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
-            ?: active.firstOrNull()
+        // Preferăm sesiunea care chiar cântă. Altfel, dacă muzica vine pe Bluetooth, rămânem pe
+        // ea: o sesiune pe pauză și fără piesă (aplicația CarPlay, după marșarier) lua
+        // comenzile și dala Media rămânea goală, deși telefonul cânta (2026-11-09).
+        val playing = active.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+        val pinned = active.firstOrNull { it.packageName == pinnedPackage }
+        val chosen = when {
+            pinned != null && (playing == null || pinned == playing) && !kswStreaming() -> pinned
+            playing != null -> playing
+            kswActive() -> null
+            else -> pinned ?: active.firstOrNull()
+        }
 
         if (chosen?.sessionToken != controller?.sessionToken) {
             detachController()
@@ -177,12 +184,18 @@ class MediaHub(private val context: Context) {
         kswObserved = true
         val ksw = ro.e92.launcher.core.Services.kswBt
         ro.e92.launcher.core.Services.scope.launch {
-            ksw.state.collect { handler.post { if (controller == null) publish() } }
+            // Bluetooth-ul pornit sau oprit poate schimba cine primește comenzile.
+            ksw.state.collect { handler.post { refreshSessions() } }
         }
     }
 
     /** Comenzile merg cât e telefon legat: pauza de la conectare n-are nici titlu, nici redare. */
     private fun kswPhone(): Boolean = ro.e92.launcher.core.Services.kswBt.state.value.phoneConnected
+
+    private fun kswStreaming(): Boolean {
+        val st = ro.e92.launcher.core.Services.kswBt.state.value
+        return st.phoneConnected && st.audioStreaming
+    }
 
     private fun kswActive(): Boolean {
         val st = ro.e92.launcher.core.Services.kswBt.state.value
