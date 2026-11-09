@@ -1019,6 +1019,12 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         binding.miniTitle.setOnClickListener {
             pushUnique(ro.e92.launcher.ui.screens.MediaScreen::class.java) { ro.e92.launcher.ui.screens.MediaScreen(this) }
         }
+        // Logo-ul CarPlay din dreapta sus: deschide direct aplicația setată pentru CarPlay.
+        binding.btnCarPlay.scaleOnPress()
+        binding.btnCarPlay.defaultFocusHighlightEnabled = false
+        binding.btnCarPlay.setOnClickListener {
+            ro.e92.launcher.core.AppLaunch.launch(this, Services.prefs.carPlayPackage, getString(R.string.menu_carplay))
+        }
         // Doar de atins: focusabile, ar prinde DPAD_CENTER înaintea FocusEngine
         // și ar desena dreptunghiul gri de focus peste ele.
         for (v in listOf(binding.miniPlayer, binding.miniPrev, binding.miniPlay, binding.miniNext, binding.miniTitle)) {
