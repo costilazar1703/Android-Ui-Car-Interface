@@ -201,6 +201,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                     activate(tile)
                 }
                 tileBinding.root.setOnTouchListener { v, event -> onStripTouch(v, event) }
+                ro.e92.launcher.ui.widget.noNativeFocus(tileBinding.root)
 
                 val lp = LinearLayout.LayoutParams(tileWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
                     .apply { marginStart = if (index == first) 0 else gap }

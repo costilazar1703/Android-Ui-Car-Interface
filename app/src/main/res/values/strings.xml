@@ -66,7 +66,7 @@
     <string name="home_bt_connected">Connected</string>
     <string name="home_bt_connect">Tap to connect a phone</string>
     <string name="pops_title">Pops &amp; Bangs</string>
-    <string name="pops_enabled">Pops &amp; Bangs (radio must be on)</string>
+    <string name="pops_enabled">Pops &amp; Bangs</string>
     <string name="pops_style">Style</string>
     <string name="pops_style_deep">Video, deep (from behind)</string>
     <string name="pops_style_video">Video (as recorded)</string>

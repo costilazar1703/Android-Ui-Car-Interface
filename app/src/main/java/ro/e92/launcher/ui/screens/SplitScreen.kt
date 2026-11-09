@@ -12,6 +12,7 @@ import ro.e92.launcher.databinding.ScreenSplitBinding
 import ro.e92.launcher.focus.FocusTarget
 import ro.e92.launcher.ui.Screen
 import ro.e92.launcher.ui.ScreenHost
+import ro.e92.launcher.ui.widget.noNativeFocus
 
 /** O categorie din coloana din stânga. */
 data class NavEntry(val id: String, val title: String)
@@ -141,6 +142,7 @@ abstract class SplitScreen(host: ScreenHost) : Screen(host) {
         val inflater = LayoutInflater.from(context)
         for (entry in entries) {
             val row = ItemSplitNavBinding.inflate(inflater, binding.navList, false)
+            noNativeFocus(row.root)
             row.navTitle.text = entry.title
             row.navTitle.setOnClickListener {
                 selectNav(entry.id)
@@ -325,7 +327,9 @@ abstract class SplitScreen(host: ScreenHost) : Screen(host) {
                 }
                 return HeaderVH(text)
             }
-            return VH(ItemSettingRowBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            return VH(ItemSettingRowBinding.inflate(LayoutInflater.from(parent.context), parent, false).also {
+                noNativeFocus(it.root)
+            })
         }
 
         override fun onBindViewHolder(vh: RecyclerView.ViewHolder, position: Int) {

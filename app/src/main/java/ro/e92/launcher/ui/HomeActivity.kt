@@ -360,8 +360,10 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             LauncherAction.ROTARY_CCW -> { focus.prev(rotary.step(-1)); true }
             LauncherAction.SELECT -> { focus.activate(); true }
 
-            LauncherAction.TILT_UP -> focus.move(FocusDirection.UP)
-            LauncherAction.TILT_DOWN -> focus.move(FocusDirection.DOWN)
+            // Sus/jos fără vecin anume (o listă de setări): ca rotița, pe rândul anterior/următor.
+            // Mereu consumate: altfel Android-ul își mută focusul lui și desenează un chenar gri.
+            LauncherAction.TILT_UP -> { if (!focus.move(FocusDirection.UP)) focus.prev(1); true }
+            LauncherAction.TILT_DOWN -> { if (!focus.move(FocusDirection.DOWN)) focus.next(1); true }
             LauncherAction.TILT_LEFT -> focus.move(FocusDirection.LEFT)
             LauncherAction.TILT_RIGHT -> focus.move(FocusDirection.RIGHT)
 

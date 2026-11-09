@@ -264,8 +264,7 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
         // Focusul îl desenează FocusEngine (activated). Focusul nativ al Android-ului ar pune
         // peste rânduri un dreptunghi gri care rămâne pe MEDIA după ce rotești mai departe.
         for (v in railViews + listOf(binding.mediaCard, binding.btCard, binding.mediaPrev, binding.mediaPlay, binding.mediaNext)) {
-            v.isFocusable = false
-            v.defaultFocusHighlightEnabled = false
+            ro.e92.launcher.ui.widget.noNativeFocus(v)
         }
     }
 

@@ -207,6 +207,7 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
                     host.rebuildFocus(entry.id)
                     entry.onActivate()
                 }
+                ro.e92.launcher.ui.widget.noNativeFocus(rowBinding.root)
                 // Swipe-ul se ascultă pe rânduri, nu pe viewport: rândurile sunt
                 // clickable, deci consumă ACTION_DOWN și părintele n-ar mai vedea
                 // gestul. Returnăm false ca să nu stricăm click-ul.
