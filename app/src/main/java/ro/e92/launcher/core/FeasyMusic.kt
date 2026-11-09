@@ -552,7 +552,9 @@ class FeasyMusic(
     }
 
     private fun onDevice(data: ByteArray) {
-        val device = parseDevice(data) ?: return
+        val parsed = parseDevice(data) ?: return
+        // Fără HFP numele lipsește: telefonul cunoscut primește numele lui fix, altul rămâne gol.
+        val device = parsed.copy(name = parsed.name.ifBlank { KnownPhones.nameFor(parsed.address) })
         if (device.index == 0) {
             connectedName = device.name
         } else if (pairedName.isBlank()) {
