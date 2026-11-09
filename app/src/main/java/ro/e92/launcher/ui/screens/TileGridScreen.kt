@@ -328,7 +328,12 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
             ro.e92.launcher.input.LauncherAction.TILT_RIGHT -> focusedIndex == TileCatalog.items.size - 1
             else -> false
         }
-        return back && host.pop()
+        if (!back) return false
+        // Home intră din partea spre care ai rotit: după Messages din dreapta, înapoi din stânga.
+        val cw = action == ro.e92.launcher.input.LauncherAction.ROTARY_CW ||
+            action == ro.e92.launcher.input.LauncherAction.TILT_RIGHT
+        HomeWidgetsScreen.enterFrom = if (cw) 1 else -1
+        return host.pop()
     }
 
     private fun focusFirstTileOfPage(page: Int): Boolean {
@@ -440,6 +445,7 @@ class TileGridScreen(host: ScreenHost) : Screen(host) {
                 // Spre dreapta de pe prima pagină de dale: înapoi la Home, ca pe iOS.
                 if (currentPage == 0 && (vx > MIN_FLING_VELOCITY || moved > pageWidth * DRAG_PAGE_FRACTION)) {
                     settleStrip()
+                    HomeWidgetsScreen.enterFrom = -1
                     if (host.pop()) return true
                 }
                 val target = when {

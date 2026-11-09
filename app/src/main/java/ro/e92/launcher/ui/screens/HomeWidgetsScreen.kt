@@ -24,6 +24,7 @@ import ro.e92.launcher.ui.Screen
 import ro.e92.launcher.ui.ScreenHost
 import ro.e92.launcher.ui.TileAction
 import ro.e92.launcher.ui.widget.scaleOnPress
+import ro.e92.launcher.ui.widget.slideIn
 import kotlin.math.abs
 
 /**
@@ -55,6 +56,12 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
 
     override fun onShow() {
         host.showHomePage(0)
+        // Venind înapoi de pe dale: glisează în cadru din partea în care a plecat rotița.
+        if (enterFrom != 0) {
+            val direction = enterFrom
+            enterFrom = 0
+            root?.let { r -> r.post { r.slideIn(direction) } }
+        }
         if (railViews.isEmpty()) buildRail()
         setupTouch()
         screenScope.launch { Services.media.snapshot.collect { renderMedia() } }
@@ -268,17 +275,23 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
         }
     }
 
-    private companion object {
-        const val ID_MEDIA = "home_media"
-        const val ID_BT = "home_bt"
-        val WIDGET_IDS = setOf(ID_MEDIA, ID_BT)
-        const val ICON_DP = 46
-        const val LABEL_SP = 11f
-        const val MIN_FLING = 600f
-        const val PROGRESS_TICK_MS = 500L
+    companion object {
+        /**
+         * Din ce parte intră Home când se întoarce de pe dale: +1 din dreapta (rotița după
+         * Messages), -1 din stânga (înapoi de pe prima dală). Îl pune [TileGridScreen].
+         */
+        var enterFrom = 0
+
+        private const val ID_MEDIA = "home_media"
+        private const val ID_BT = "home_bt"
+        private val WIDGET_IDS = setOf(ID_MEDIA, ID_BT)
+        private const val ICON_DP = 46
+        private const val LABEL_SP = 11f
+        private const val MIN_FLING = 600f
+        private const val PROGRESS_TICK_MS = 500L
 
         /** Ordinea cerută: media, bluetooth, car (Car Info), dashboard, settings. */
-        val RAIL = listOf(
+        private val RAIL = listOf(
             RailItem("rail_media", R.drawable.ic_home_media, R.string.home_rail_media, TileAction.MEDIA),
             RailItem("rail_bt", R.drawable.ic_home_bt, R.string.home_rail_bt, TileAction.BLUETOOTH),
             RailItem("rail_car", R.drawable.ic_home_car, R.string.home_rail_car, TileAction.CAR_INFO),
