@@ -58,28 +58,6 @@
         app:layout_constraintStart_toEndOf="@id/rail"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- CarPlay: chenar mic, ca widget-urile, chiar la dreapta barei. O atingere deschide
-         aplicația setată pentru CarPlay. Peste mașină, în colțul ei întunecat. -->
-    <FrameLayout
-        android:id="@+id/carPlayCard"
-        android:layout_width="72dp"
-        android:layout_height="72dp"
-        android:layout_marginStart="18dp"
-        android:layout_marginTop="16dp"
-        android:background="@drawable/bg_widget_card"
-        android:contentDescription="@string/menu_carplay"
-        android:focusable="false"
-        app:layout_constraintStart_toEndOf="@id/rail"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <ImageView
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_gravity="center"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_status_carplay" />
-    </FrameLayout>
-
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/gWidgets"
         android:layout_width="wrap_content"

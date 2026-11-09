@@ -258,7 +258,7 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
         binding.homeRoot.setOnTouchListener { _, e -> swipe.onTouchEvent(e); true }
         // Pe elementele care se apasă, gestul se ascultă fără să strice click-ul.
         val listen = View.OnTouchListener { _, e -> swipe.onTouchEvent(e); false }
-        for (v in railViews + listOf(binding.mediaCard, binding.btCard, binding.carPlayCard, binding.mediaPrev, binding.mediaPlay, binding.mediaNext)) {
+        for (v in railViews + listOf(binding.mediaCard, binding.btCard, binding.mediaPrev, binding.mediaPlay, binding.mediaNext)) {
             v.setOnTouchListener(listen)
         }
         binding.mediaPrev.setOnClickListener { Services.media.previous() }
@@ -266,15 +266,10 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
         binding.mediaNext.setOnClickListener { Services.media.next() }
         binding.mediaCard.setOnClickListener { host.rebuildFocus(ID_MEDIA); host.openTile(TileAction.MEDIA) }
         binding.btCard.setOnClickListener { host.rebuildFocus(ID_BT); host.openTile(TileAction.BLUETOOTH) }
-        // CarPlay dintr-o atingere: aplicația setată, ca primul rând din meniul CarPlay.
-        binding.carPlayCard.setOnClickListener {
-            ro.e92.launcher.core.AppLaunch.launch(context, Services.prefs.carPlayPackage, context.getString(R.string.menu_carplay))
-        }
-        binding.carPlayCard.scaleOnPress()
         for (b in listOf(binding.mediaPrev, binding.mediaPlay, binding.mediaNext)) b.scaleOnPress()
         // Focusul îl desenează FocusEngine (activated). Focusul nativ al Android-ului ar pune
         // peste rânduri un dreptunghi gri care rămâne pe MEDIA după ce rotești mai departe.
-        for (v in railViews + listOf(binding.mediaCard, binding.btCard, binding.carPlayCard, binding.mediaPrev, binding.mediaPlay, binding.mediaNext)) {
+        for (v in railViews + listOf(binding.mediaCard, binding.btCard, binding.mediaPrev, binding.mediaPlay, binding.mediaNext)) {
             ro.e92.launcher.ui.widget.noNativeFocus(v)
         }
     }
