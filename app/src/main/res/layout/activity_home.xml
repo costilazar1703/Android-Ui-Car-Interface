@@ -236,27 +236,8 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <!-- CarPlay dintr-o atingere: pornește aplicația setată (ca primul rând din meniul CarPlay). -->
-        <ImageView
-            android:id="@+id/btnCarPlay"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="-6dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/menu_carplay"
-            android:focusable="false"
-            android:padding="6dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_status_carplay"
-            />
-
-        <!-- Distanțe egale, fixe: blocul iese cam cât autonomia din stânga, fără goluri mari. -->
-        <Space
-            android:layout_width="20dp"
-            android:layout_height="1dp" />
-
         <!-- Temperatura exterioară, din CAN-ul unității KSW. Coborâtă 5dp: baza cifrelor
-             cade pe aceeași linie cu marginea de jos a logo-ului CarPlay și a Wi-Fi-ului. -->
+             cade pe aceeași linie cu marginea de jos a Wi-Fi-ului. -->
         <TextView
             android:id="@+id/statusTemp"
             style="@style/Text.Body"
