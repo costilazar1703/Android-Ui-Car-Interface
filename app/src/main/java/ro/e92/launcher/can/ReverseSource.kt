@@ -303,9 +303,12 @@ class ReverseSource(
     fun applyCameraMode() {
         scope.launch(Dispatchers.IO) {
             // Radarul și liniile KSW: EventCenter le retrimite MCU-ului din setările lui la pornire,
-            // deci le oprim și acolo (0/1, ca restul setărilor KSW). Opțiunea oprită le repune.
-            for (key in listOf(RADAR, TRACK)) {
-                val want = if (Services.prefs.reverseScene) "0" else "1"
+            // deci le scriem și acolo, cu aceleași valori ca la MCU (Prefs.mcuRadar / mcuTrack).
+            // Implicit pornite (2026-11-16): cât ecranul KSW tot apare de la al doilea R, e mai
+            // util cu senzori și volan decât gol. Opțiunea oprită le repune pe 1.
+            val p = Services.prefs
+            for ((key, value) in listOf(RADAR to p.mcuRadar, TRACK to p.mcuTrack)) {
+                val want = if (p.reverseScene) value.toString() else "1"
                 if (KswSettings.read(context, key) != want) {
                     KswSettings.write(context, key, want)
                     EventLog.log(TAG, "$key → $want")

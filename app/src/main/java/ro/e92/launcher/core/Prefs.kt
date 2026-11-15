@@ -157,11 +157,11 @@ class Prefs(context: Context) {
         set(value) = sp.edit().putInt(KEY_MCU_CAMERA, value.coerceIn(0, 3)).apply()
 
     var mcuTrack: Int
-        get() = sp.getInt(KEY_MCU_TRACK, 0).coerceIn(0, 1)
+        get() = sp.getInt(KEY_MCU_TRACK, 1).coerceIn(0, 1)
         set(value) = sp.edit().putInt(KEY_MCU_TRACK, value.coerceIn(0, 1)).apply()
 
     var mcuRadar: Int
-        get() = sp.getInt(KEY_MCU_RADAR, 0).coerceIn(0, 1)
+        get() = sp.getInt(KEY_MCU_RADAR, 1).coerceIn(0, 1)
         set(value) = sp.edit().putInt(KEY_MCU_RADAR, value.coerceIn(0, 1)).apply()
 
     /**
