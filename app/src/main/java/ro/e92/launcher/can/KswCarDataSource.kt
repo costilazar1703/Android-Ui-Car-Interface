@@ -193,10 +193,11 @@ class KswCarDataSource(
         if (rpm >= ENGINE_ON_RPM) engineOnAt = nowMs
         // O citire de 0 rpm izolată nu oprește cadrele: motorul e oprit abia după [ENGINE_OFF_MS].
         val engineRunning = engineOnAt != 0L && nowMs - engineOnAt < ENGINE_OFF_MS
-        // Cât merge motorul, cadrele CAN sunt pornite oricum: tensiunea bateriei (0x3B4) și ora
-        // din bord rămân reale tot drumul, cu scena de marșarier pornită sau nu (2026-11-15).
-        // Cu motorul oprit se opresc după [ENGINE_OFF_MS]: nimic pornit cu contactul pus.
-        val engineScene = engineRunning
+        // Cadre CAN doar când chiar trebuie (2026-11-15, cerut): cu motorul pornit, până vine
+        // o dată ora din bord (0x2F8, apoi ceasul numără singur), și cât e deschis ecranul cu
+        // ceasuri, singurul care arată tensiunea (0x3B4). Trip ia totul din datele de bord.
+        val engineScene = engineRunning &&
+            (dashboardOpen || !ro.e92.launcher.core.GpsClock.hasCarTime())
         // Fără fereastră la pornirea unității (2026-11-15, cerut): cu contactul pus și motorul
         // oprit nu pornim nimic. Ora din bord (0x2F8, la ~15 s) vine după pornirea motorului,
         // iar după oprire ceasul merge mai departe singur (GpsClock numără de la ultima oră).
@@ -242,6 +243,14 @@ class KswCarDataSource(
 
     private var canSentAt = 0L
     private var engineOnAt = 0L
+
+    /** Ecranul cu ceasuri deschis: tensiunea bateriei vine din CAN. */
+    @Volatile
+    var dashboardOpen = false
+        set(value) {
+            field = value
+            updateCanForwarding()
+        }
 
     private fun readHandbrake() {
         val park = KswSettings.read(context, "KESAIWEI_RECORD_PARK")?.toIntOrNull() ?: return

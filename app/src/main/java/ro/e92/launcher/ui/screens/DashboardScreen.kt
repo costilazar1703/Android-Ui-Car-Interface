@@ -30,6 +30,8 @@ class DashboardScreen(host: ScreenHost) : Screen(host) {
         ScreenDashboardBinding.inflate(inflater, container, false).also { binding = it }.root
 
     override fun onShow() {
+        // Doar aici avem nevoie de cadre CAN (tensiunea bateriei); la ieșire se opresc.
+        Services.kswCar?.dashboardOpen = true
         binding.gaugeRow.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob ->
             if (r - l != or - ol || b - t != ob - ot) sizeGauges(r - l, b - t)
         }
@@ -125,6 +127,10 @@ class DashboardScreen(host: ScreenHost) : Screen(host) {
     }
 
     /** OPTION pe dashboard duce direct în diagnostic — util când datele arată ciudat. */
+    override fun onHide() {
+        Services.kswCar?.dashboardOpen = false
+    }
+
     override fun onAction(action: LauncherAction): Boolean {
         if (action != LauncherAction.OPTION) return false
         host.push(DiagnosticsScreen(host))
