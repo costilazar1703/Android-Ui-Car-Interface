@@ -169,6 +169,15 @@ class Prefs(context: Context) {
      * „marșarier necunoscut" (0xFF), ca înainte de primul R după pornire, când ecranul KSW nu
      * apare. 0 oprit (implicit), 1 pornit. Doar din DiagServer /mcu?hb=1.
      */
+    /**
+     * Probă: la ieșirea din R cerem MCU-ului modul „original" (0x69 12 02), ca la pornire.
+     * 0 oprit (implicit), 1 imediat, 2 după [ro.e92.launcher.can.KswCarDataSource.AFTER_R_DELAY_MS].
+     * Doar din DiagServer /mcu?after=0|1|2.
+     */
+    var mcuAfterReverse: Int
+        get() = sp.getInt(KEY_MCU_AFTER_R, 0).coerceIn(0, 2)
+        set(value) = sp.edit().putInt(KEY_MCU_AFTER_R, value.coerceIn(0, 2)).apply()
+
     var mcuHeartbeat: Int
         get() = sp.getInt(KEY_MCU_HB, 0).coerceIn(0, 1)
         set(value) = sp.edit().putInt(KEY_MCU_HB, value.coerceIn(0, 1)).apply()
@@ -331,6 +340,7 @@ class Prefs(context: Context) {
         private const val KEY_MCU_RADAR = "mcu_radar"
         private const val KEY_MCU_ORIG_VIDEO = "mcu_orig_video"
         private const val KEY_MCU_HB = "mcu_heartbeat"
+        private const val KEY_MCU_AFTER_R = "mcu_after_reverse"
         private const val KEY_START_GUARD = "start_guard"
         const val DEFAULT_UNIT_VOLUME = 30
         private const val KEY_UPDATE_URL = "update_url"

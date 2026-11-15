@@ -70,7 +70,7 @@ class KswCarDataSource(
                 .map { it.reverseGear == true }
                 .distinctUntilChanged()
                 .collect { reverse ->
-                    if (reverse) tellMcuNoCamera()
+                    if (reverse) tellMcuNoCamera() else afterReverse()
                     updateCanForwarding()
                 }
         }
@@ -279,6 +279,21 @@ class KswCarDataSource(
         return true
     }
 
+    private var sawReverse = false
+
+    /** Probă: după ieșirea din R, modul „original" (vezi [ro.e92.launcher.core.Prefs.mcuAfterReverse]). */
+    private fun afterReverse() {
+        // Prima emisie a fluxului e „nu e marșarier" la pornire: nu e o ieșire din R.
+        if (!sawReverse) { sawReverse = true; return }
+        val mode = Services.prefs.mcuAfterReverse
+        if (mode == 0 || !Services.prefs.reverseScene) return
+        scope.launch {
+            if (mode == 2) delay(AFTER_R_DELAY_MS)
+            // Dacă între timp s-a băgat iar în R, nu mai trimitem.
+            if (Services.reverse.vehicleState.value.reverseGear != true) sendViewMode(original = true)
+        }
+    }
+
     private var heartbeat: kotlinx.coroutines.Job? = null
 
     /**
@@ -393,6 +408,7 @@ class KswCarDataSource(
          */
         val MCU_STATE_UNKNOWN_REVERSE = byteArrayOf(0xF2.toByte(), 0x00, 0x76, 0x03, 0xFF.toByte(), 0xFF.toByte(), 0x01)
         const val HEARTBEAT_MS = 250L
+        const val AFTER_R_DELAY_MS = 800L
         const val MCU_SET_CAMERA = 0x0B
         const val MCU_SET_TRACK = 0x16
         const val MCU_SET_RADAR = 0x17
