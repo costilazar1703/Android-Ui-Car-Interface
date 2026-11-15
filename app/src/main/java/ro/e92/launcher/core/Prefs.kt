@@ -164,6 +164,15 @@ class Prefs(context: Context) {
         get() = sp.getInt(KEY_MCU_RADAR, 0).coerceIn(0, 1)
         set(value) = sp.edit().putInt(KEY_MCU_RADAR, value.coerceIn(0, 1)).apply()
 
+    /**
+     * Probă pentru ecranul KSW de la al doilea R: trimitem des starea de interfață 0x76 cu
+     * „marșarier necunoscut" (0xFF), ca înainte de primul R după pornire, când ecranul KSW nu
+     * apare. 0 oprit (implicit), 1 pornit. Doar din DiagServer /mcu?hb=1.
+     */
+    var mcuHeartbeat: Int
+        get() = sp.getInt(KEY_MCU_HB, 0).coerceIn(0, 1)
+        set(value) = sp.edit().putInt(KEY_MCU_HB, value.coerceIn(0, 1)).apply()
+
     var mcuOrigVideo: Int
         get() = sp.getInt(KEY_MCU_ORIG_VIDEO, -1).coerceIn(-1, 1)
         set(value) = sp.edit().putInt(KEY_MCU_ORIG_VIDEO, value.coerceIn(-1, 1)).apply()
@@ -321,6 +330,7 @@ class Prefs(context: Context) {
         private const val KEY_MCU_TRACK = "mcu_track"
         private const val KEY_MCU_RADAR = "mcu_radar"
         private const val KEY_MCU_ORIG_VIDEO = "mcu_orig_video"
+        private const val KEY_MCU_HB = "mcu_heartbeat"
         private const val KEY_START_GUARD = "start_guard"
         const val DEFAULT_UNIT_VOLUME = 30
         private const val KEY_UPDATE_URL = "update_url"

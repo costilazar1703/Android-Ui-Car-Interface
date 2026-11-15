@@ -105,6 +105,7 @@ class KswCarDataSource(
             for (cmd in START_CMDS) sendCanbus(binder, cmd)
             // Ecranul de marșarier al MCU-ului oprit din start, nu doar la primul R.
             tellMcuNoCamera()
+            updateHeartbeat()
             poller?.cancel()
             poller = scope.launch {
                 while (isActive) {
@@ -263,6 +264,32 @@ class KswCarDataSource(
         return true
     }
 
+    private var heartbeat: kotlinx.coroutines.Job? = null
+
+    /**
+     * Probă (doar cu [ro.e92.launcher.core.Prefs.mcuHeartbeat] = 1, pornită din DiagServer):
+     * EventCenter trimite la 1 s F2 00 76 03 <interfață> <marșarier> <lumină>. Până la primul R
+     * după pornire marșarierul e -1 (0xFF) și ecranul KSW nu apare; după, e 0/1 și apare la
+     * fiecare R. Trimitem de 4 ori pe secundă aceeași stare cu 0xFF, cu scena noastră pornită.
+     */
+    fun updateHeartbeat() {
+        val on = Services.prefs.mcuHeartbeat == 1 && Services.prefs.reverseScene
+        if (!on) {
+            if (heartbeat != null) EventLog.log(TAG, "MCU: stare 0x76 oprită")
+            heartbeat?.cancel()
+            heartbeat = null
+            return
+        }
+        if (heartbeat?.isActive == true) return
+        EventLog.log(TAG, "MCU: stare 0x76 cu interfață și marșarier necunoscute, la 250 ms")
+        heartbeat = scope.launch {
+            while (isActive) {
+                service?.let { binder -> transact(binder, TX_SEND_MCU) { it.writeByteArray(MCU_STATE_UNKNOWN_REVERSE) } }
+                delay(HEARTBEAT_MS)
+            }
+        }
+    }
+
     /** sendKSW_0x00_0x6A(index, valoare) din EventCenter: o setare de afișare a MCU-ului. */
     private fun mcuSetting(index: Int, value: Int) =
         byteArrayOf(0xF2.toByte(), 0x00, 0x6A, 0x02, index.toByte(), value.toByte())
@@ -343,6 +370,14 @@ class KswCarDataSource(
         const val CLOCK_WAIT_MS = 60_000L
         const val CAN_RETRY_MS = 3_000L
         /** Indicii setărilor 0x6A: ksw_Send8902BackcarMod_0x04 / 0x1b / 0x1c / 0x0c din EventCenter. */
+        /**
+         * Interfață și marșarier 0xFF (-1, necunoscute), lumină 1: starea de după pornire, până la
+         * primul R. La ieșirea din primul R MCU-ul trimite 0x15 0x01 („modul original s-a
+         * terminat") și EventCenter trece interfața pe 1; de atunci MCU-ul comută pe cameră la
+         * fiecare R (captura rprobe-20261115-2054-r1-vs-r2). Cu interfața 1 proba n-a mers.
+         */
+        val MCU_STATE_UNKNOWN_REVERSE = byteArrayOf(0xF2.toByte(), 0x00, 0x76, 0x03, 0xFF.toByte(), 0xFF.toByte(), 0x01)
+        const val HEARTBEAT_MS = 250L
         const val MCU_SET_CAMERA = 0x0B
         const val MCU_SET_TRACK = 0x16
         const val MCU_SET_RADAR = 0x17
