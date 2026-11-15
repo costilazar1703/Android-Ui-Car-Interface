@@ -152,7 +152,7 @@ class ReverseSource(
         EventLog.log(TAG, "urmăresc marșarierul")
         try {
             started.inputStream.bufferedReader().forEachLine { line ->
-                FRAME.find(line)?.let { publish(it.groupValues[1] == "1") }
+                FRAME.find(line)?.let { publish(it.groupValues[2] == "1", it.groupValues[1]) }
                 CAN_FRAME.find(line)?.let { match ->
                     val id = match.groupValues[1].toInt(16)
                     val bytes = BYTE.findAll(match.groupValues[2]).map { it.groupValues[1].toInt(16) }.toList()
@@ -255,12 +255,13 @@ class ReverseSource(
         if (button) onDscButton(listOf(0xFD, 0xFF))
     }
 
-    private fun publish(on: Boolean) {
+    private fun publish(on: Boolean, frameType: String = "?") {
         val value = if (on) true else null
         if (_state.value.reverseGear == value && _state.value.timestamp != 0L) return
         if (on) {
             val camera = KswSettings.read(context, CAMERA_SELECTION)
-            EventLog.log(TAG, "marșarier (tip cameră KSW $camera)")
+            // Tipul din cadru (1 aftermarket, 2 360, 3 originală) arată ce crede MCU-ul că are.
+            EventLog.log(TAG, "marșarier (cadru MCU tip $frameType, tip cameră KSW $camera)")
         } else if (_state.value.reverseGear == true) {
             EventLog.log(TAG, "ieșit din marșarier")
         }
@@ -323,7 +324,7 @@ class ReverseSource(
 
     private companion object {
         const val TAG = "Reverse"
-        val FRAME = Regex("""0xf2 0x00 0x11 0x02 0x0[123] 0x0([01])""")
+        val FRAME = Regex("""0xf2 0x00 0x11 0x02 0x0([123]) 0x0([01])""")
         const val LOG_FILTER =
             "0xf2 0x00 0x11 0x02|0xA1_0x1DEvent: stringBuilder.toString\\(\\) = 0x(01c2|00c4|0304|0316|0338|02f8|03b4) "
         val CAN_FRAME = Regex("""0xA1_0x1DEvent: .*= 0x([0-9a-f]{4}) \S+ \S+ 0x[0-9a-f]+ ((?:0x[0-9a-f]{2} ?)+)""")

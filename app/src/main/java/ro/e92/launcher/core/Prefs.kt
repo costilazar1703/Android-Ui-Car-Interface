@@ -145,6 +145,29 @@ class Prefs(context: Context) {
         get() = sp.getBoolean(KEY_REVERSE_SCENE, false)
         set(value) = sp.edit().putBoolean(KEY_REVERSE_SCENE, value).apply()
 
+    /**
+     * Ce îi spunem MCU-ului despre marșarier cât e pornită scena noastră: aceleași comenzi 0x6A
+     * pe care le trimit meniurile KSW. Tipul camerei (0B: 0 nimic, 1 aftermarket, 2 360,
+     * 3 originală), liniile de ghidaj (16) și radarul (17) desenate de MCU, și „original car
+     * video display" (13), trimis doar dacă a fost setat (-1 = neatins). Se pot schimba din
+     * DiagServer /mcu, pentru probe în mașină fără versiune nouă; rămân salvate.
+     */
+    var mcuCameraType: Int
+        get() = sp.getInt(KEY_MCU_CAMERA, 0).coerceIn(0, 3)
+        set(value) = sp.edit().putInt(KEY_MCU_CAMERA, value.coerceIn(0, 3)).apply()
+
+    var mcuTrack: Int
+        get() = sp.getInt(KEY_MCU_TRACK, 0).coerceIn(0, 1)
+        set(value) = sp.edit().putInt(KEY_MCU_TRACK, value.coerceIn(0, 1)).apply()
+
+    var mcuRadar: Int
+        get() = sp.getInt(KEY_MCU_RADAR, 0).coerceIn(0, 1)
+        set(value) = sp.edit().putInt(KEY_MCU_RADAR, value.coerceIn(0, 1)).apply()
+
+    var mcuOrigVideo: Int
+        get() = sp.getInt(KEY_MCU_ORIG_VIDEO, -1).coerceIn(-1, 1)
+        set(value) = sp.edit().putInt(KEY_MCU_ORIG_VIDEO, value.coerceIn(-1, 1)).apply()
+
     /** La pornire, launcher-ul revine în față dacă îl acoperă ceva neatins de șofer. */
     var startGuard: Boolean
         get() = sp.getBoolean(KEY_START_GUARD, true)
@@ -294,6 +317,10 @@ class Prefs(context: Context) {
         const val THEME_RED = 1
         const val THEME_MONO = 2
         private const val KEY_REVERSE_SCENE = "reverse_scene"
+        private const val KEY_MCU_CAMERA = "mcu_camera_type"
+        private const val KEY_MCU_TRACK = "mcu_track"
+        private const val KEY_MCU_RADAR = "mcu_radar"
+        private const val KEY_MCU_ORIG_VIDEO = "mcu_orig_video"
         private const val KEY_START_GUARD = "start_guard"
         const val DEFAULT_UNIT_VOLUME = 30
         private const val KEY_UPDATE_URL = "update_url"

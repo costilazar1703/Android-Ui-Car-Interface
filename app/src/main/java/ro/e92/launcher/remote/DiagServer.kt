@@ -249,6 +249,7 @@ object DiagServer {
             }
             "/sniff" -> respond(out, 200, sniff(req.query["actions"]))
             "/sim" -> respond(out, 200, simulate(req.query))
+            "/mcu" -> respond(out, 200, mcu(req.query))
             "/content" -> respond(out, 200, content(req.query["uri"].orEmpty()))
             "/screenshot" -> {
                 val png = screenshot()
@@ -281,6 +282,31 @@ object DiagServer {
         if (value != Prefs.BT_ENGINE_E92 && value != Prefs.BT_ENGINE_KSW) return "set=e92 sau set=ksw\n"
         Services.kswBt.setEngine(value)
         return "motor: $value\n"
+    }
+
+    /**
+     * Probe în mașină pentru ecranul de marșarier al MCU-ului. Se pot schimba doar cele patru
+     * setări de afișare 0x6A pe care le trimit și meniurile KSW (tip cameră, linii, radar,
+     * video original), fiecare cu valorile ei permise. Nimic altceva nu pleacă pe aici: nici
+     * setări Factory (0x70), nici tipul mașinii, nici cadre libere.
+     */
+    private fun mcu(query: Map<String, String>): String {
+        val p = Services.prefs
+        val allowed = linkedMapOf("camera" to 0..3, "track" to 0..1, "radar" to 0..1, "origvideo" to -1..1)
+        // Întâi verificăm tot: o valoare greșită nu schimbă nimic.
+        for ((name, range) in allowed) {
+            val raw = query[name] ?: continue
+            val value = raw.toIntOrNull()
+            if (value == null || value !in range) return "$name=$raw: permis $range, nimic schimbat\n"
+        }
+        query["camera"]?.let { p.mcuCameraType = it.toInt() }
+        query["track"]?.let { p.mcuTrack = it.toInt() }
+        query["radar"]?.let { p.mcuRadar = it.toInt() }
+        query["origvideo"]?.let { p.mcuOrigVideo = it.toInt() }
+        val changed = allowed.keys.any { it in query }
+        val sent = changed && Services.kswCar?.sendMcuReverseSetup() == true
+        return "camera=${p.mcuCameraType} track=${p.mcuTrack} radar=${p.mcuRadar} origvideo=${p.mcuOrigVideo}" +
+            " scena=${if (p.reverseScene) 1 else 0} trimis=${if (sent) 1 else 0}\n"
     }
 
     /** Pentru probe fără mașină: /sim?reverse=1&cm=150,40,18,60 /sim?wifi=0..3|off|real */
@@ -443,6 +469,7 @@ object DiagServer {
           GET  /info                 unitate + tot ce arată ecranul Diagnostic
           GET  /bt                   starea Bluetooth, cheie=valoare
           GET  /sim?reverse=1&cm=150,40,18,60   simulează marșarierul; /sim?wifi=0..3|off|real
+          GET  /mcu?camera=0..3&radar=0|1&track=0|1&origvideo=-1|0|1   setările de marșarier ale MCU-ului
           GET  /bt/engine?set=e92    motorul Bluetooth: e92 sau ksw
           GET  /bt/do?c=playpause    connect, repair, pair, playpause, next, previous
           GET  /keys                 ultimele taste primite

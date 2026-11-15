@@ -177,31 +177,32 @@ class KswCarDataSource(
 
     /**
      * Cadrele CAN brute (A1 1D) încarcă legătura cu MCU-ul cu până la ~240 de cadre pe
-     * secundă, așa că le cerem doar când chiar trebuie: în marșarier, cu scena noastră
-     * pornită (senzori, volan), și, dacă e aleasă, pentru Drift Mode cât merge motorul.
-     * Aceeași comandă ca butonul din Factory.
+     * secundă, așa că le cerem doar când chiar trebuie (2026-11-15, cerut):
+     *  - în marșarier, cu scena noastră pornită (senzori, volan), pe toată durata lui;
+     *  - cu motorul pornit, până vine o dată ora din bord (0x2F8, la ~15 s), cel mult
+     *    [CLOCK_WAIT_MS]; apoi ceasul numără singur ([ro.e92.launcher.core.GpsClock]);
+     *  - cu motorul pornit, cât e deschis ecranul cu ceasuri (tensiunea bateriei, 0x3B4).
+     * Cu contactul pus și motorul oprit nu pornim nimic. Aceeași comandă ca butonul din Factory.
      */
     fun updateCanForwarding(rpm: Int = lastRpm) {
         lastRpm = rpm
         val reverse = Services.reverse.vehicleState.value.reverseGear == true && Services.prefs.reverseScene
         val drift = Services.prefs.driftMode && rpm >= ENGINE_ON_RPM
-        // Cu scena noastră, cadrele CAN pornesc o dată cu motorul și se opresc doar la oprirea
-        // lui, nu la fiecare R: după primul R ecranul KSW (desenat de MCU, nu de Android)
-        // revenea la fiecare marșarier, iar singurul lucru trimis MCU-ului la fiecare R era
-        // această comandă din Factory (2026-11-09, capturile rprobe-*-r3x*).
         val nowMs = SystemClock.elapsedRealtime()
         if (rpm >= ENGINE_ON_RPM) engineOnAt = nowMs
         // O citire de 0 rpm izolată nu oprește cadrele: motorul e oprit abia după [ENGINE_OFF_MS].
         val engineRunning = engineOnAt != 0L && nowMs - engineOnAt < ENGINE_OFF_MS
-        // Cadre CAN doar când chiar trebuie (2026-11-15, cerut): cu motorul pornit, până vine
-        // o dată ora din bord (0x2F8, apoi ceasul numără singur), și cât e deschis ecranul cu
-        // ceasuri, singurul care arată tensiunea (0x3B4). Trip ia totul din datele de bord.
-        val engineScene = engineRunning &&
-            (dashboardOpen || !ro.e92.launcher.core.GpsClock.hasCarTime())
-        // Fără fereastră la pornirea unității (2026-11-15, cerut): cu contactul pus și motorul
-        // oprit nu pornim nimic. Ora din bord (0x2F8, la ~15 s) vine după pornirea motorului,
-        // iar după oprire ceasul merge mai departe singur (GpsClock numără de la ultima oră).
-        val wanted = reverse || drift || engineScene
+        // Ora din bord: așteptăm cel mult [CLOCK_WAIT_MS] de la pornirea motorului. Dacă nu vine
+        // (jurnalul nu se poate citi, de exemplu), renunțăm: nu ținem cadrele pornite tot drumul.
+        val needClock = engineRunning && !ro.e92.launcher.core.GpsClock.hasCarTime()
+        if (!needClock) clockWaitFrom = 0L else if (clockWaitFrom == 0L) clockWaitFrom = nowMs
+        val waitingClock = needClock && !clockGaveUp && nowMs - clockWaitFrom < CLOCK_WAIT_MS
+        if (needClock && !clockGaveUp && !waitingClock) {
+            clockGaveUp = true
+            EventLog.log(TAG, "ora din bord n-a venit în ${CLOCK_WAIT_MS / 1000} s - opresc cadrele CAN")
+        }
+        if (!engineRunning) clockGaveUp = false
+        val wanted = reverse || drift || waitingClock || (engineRunning && dashboardOpen)
         // Fără legătura cu EventCenter nu trimitem nimic și nu ținem minte nimic: altfel
         // „pornite" rămânea notat fără să fi plecat comanda (marșarier imediat după pornire).
         val binder = service ?: return
@@ -232,17 +233,44 @@ class KswCarDataSource(
      */
     private fun tellMcuNoCamera() {
         if (!Services.prefs.reverseScene) return
-        val binder = service ?: return
-        // Pe lângă cameră, MCU-ul își desenează singur radarul și liniile de ghidaj în R:
-        // acela e ecranul KSW care revenea (EventCenter nu-și deschide fereastra, 2026-11-09).
-        scope.launch {
-            for (cmd in MCU_REVERSE_OFF) transact(binder, TX_SEND_MCU) { it.writeByteArray(cmd) }
-        }
-        EventLog.log(TAG, "MCU: cameră 0, radar 0, linii 0")
+        sendMcuReverseSetup()
     }
+
+    /**
+     * Setările de marșarier ale MCU-ului, din [ro.e92.launcher.core.Prefs]: pe lângă cameră,
+     * MCU-ul își desenează singur radarul și liniile de ghidaj în R, iar acela e ecranul KSW
+     * care revenea (EventCenter nu-și deschide fereastra, 2026-11-09). Se trimit la pornire, la
+     * fiecare R și din DiagServer /mcu, la probele din mașină.
+     *
+     * @return false dacă legătura cu EventCenter lipsește și n-a plecat nimic.
+     */
+    fun sendMcuReverseSetup(): Boolean {
+        val binder = service ?: return false
+        val p = Services.prefs
+        val cmds = ArrayList<ByteArray>(4)
+        cmds.add(mcuSetting(MCU_SET_CAMERA, p.mcuCameraType))
+        cmds.add(mcuSetting(MCU_SET_TRACK, p.mcuTrack))
+        cmds.add(mcuSetting(MCU_SET_RADAR, p.mcuRadar))
+        if (p.mcuOrigVideo >= 0) cmds.add(mcuSetting(MCU_SET_ORIG_VIDEO, p.mcuOrigVideo))
+        scope.launch {
+            for (cmd in cmds) transact(binder, TX_SEND_MCU) { it.writeByteArray(cmd) }
+        }
+        EventLog.log(
+            TAG,
+            "MCU: cameră ${p.mcuCameraType}, radar ${p.mcuRadar}, linii ${p.mcuTrack}" +
+                if (p.mcuOrigVideo >= 0) ", video original ${p.mcuOrigVideo}" else ""
+        )
+        return true
+    }
+
+    /** sendKSW_0x00_0x6A(index, valoare) din EventCenter: o setare de afișare a MCU-ului. */
+    private fun mcuSetting(index: Int, value: Int) =
+        byteArrayOf(0xF2.toByte(), 0x00, 0x6A, 0x02, index.toByte(), value.toByte())
 
     private var canSentAt = 0L
     private var engineOnAt = 0L
+    private var clockWaitFrom = 0L
+    private var clockGaveUp = false
 
     /** Ecranul cu ceasuri deschis: tensiunea bateriei vine din CAN. */
     @Volatile
@@ -312,13 +340,13 @@ class KswCarDataSource(
         val CAN_OFF = byteArrayOf(0xF2.toByte(), 0x00, 0x70, 0x02, 0x0F, 0x00)
         const val ENGINE_ON_RPM = 300
         const val ENGINE_OFF_MS = 10_000L
+        const val CLOCK_WAIT_MS = 60_000L
         const val CAN_RETRY_MS = 3_000L
-        /** sendKSW_0x00_0x6A(11, 0) din EventCenter: tipul camerei pentru MCU = niciuna. */
-        val MCU_CAMERA_NONE = byteArrayOf(0xF2.toByte(), 0x00, 0x6A, 0x02, 0x0B, 0x00)
-        /** ksw_Send8902BackcarMod_0x1b/0x1c din EventCenter: liniile (22) și radarul (23) oprite. */
-        val MCU_TRACK_OFF = byteArrayOf(0xF2.toByte(), 0x00, 0x6A, 0x02, 0x16, 0x00)
-        val MCU_RADAR_OFF = byteArrayOf(0xF2.toByte(), 0x00, 0x6A, 0x02, 0x17, 0x00)
-        val MCU_REVERSE_OFF = listOf(MCU_CAMERA_NONE, MCU_TRACK_OFF, MCU_RADAR_OFF)
+        /** Indicii setărilor 0x6A: ksw_Send8902BackcarMod_0x04 / 0x1b / 0x1c / 0x0c din EventCenter. */
+        const val MCU_SET_CAMERA = 0x0B
+        const val MCU_SET_TRACK = 0x16
+        const val MCU_SET_RADAR = 0x17
+        const val MCU_SET_ORIG_VIDEO = 0x13
         val START_CMDS = listOf(
             byteArrayOf(0x89.toByte(), 0x01, 0x10),
             byteArrayOf(0x8A.toByte(), 0x01, 0x10),

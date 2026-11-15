@@ -16,6 +16,8 @@
     .\scripts\car.ps1 reverse -Minutes 5   arata marsarierul si datele de la senzori
     .\scripts\car.ps1 scene-on             scena E92 in marsarier (tip camera KSW = 0)
     .\scripts\car.ps1 scene-off            inapoi la ecranul KSW (tip camera KSW = 1)
+    .\scripts\car.ps1 mcu -Label "camera=3"  setarile de marsarier ale placii (camera, radar, track, origvideo)
+    .\scripts\car.ps1 kswapps -Label off   dezactiveaza playerele KSW care apar singure (on = la loc, status)
 
   Fara diacritice: PowerShell 5.1 citeste scripturile fara BOM ca ANSI.
 #>
@@ -226,6 +228,51 @@ switch ($Command) {
         }
         if (($seen.Keys | Where-Object { $_ -match "radar KSW" }).Count -eq 0) {
             Write-Output "Nicio data de la senzori pe canalul KSW."
+        }
+    }
+    "mcu" {
+        # Setarile de marsarier ale placii (MCU): tip camera, radar, linii, video original.
+        # -Label "camera=3" sau "camera=0&radar=0&track=0"; fara -Label arata ce e salvat.
+        if ($Label -eq "test") { Call $base "/mcu" } else { Call $base "/mcu?$Label" }
+    }
+    "kswapps" {
+        # Aplicatiile KSW de ecran care apar singure peste launcher: playerul de muzica, video,
+        # DVD, DVR, AUX, TV. Dezactivare reversibila (pm disable-user): nu se sterge nimic,
+        # "-Label on" le pune la loc. Raman neatinse: eventcenter (legatura cu masina),
+        # settings si btsuite (EventCenter le porneste direct, fara protectie), fatset,
+        # updatemcu, index (launcher de rezerva), ksw_dashboard, navigation, ksw_old_bmw_x1_original.
+        $apps = @(
+            "com.szchoiceway.musicplayer", "com.szchoiceway.videoplayer", "com.szchoiceway.dvdplayer",
+            "com.szchoiceway.ksw_dvd", "com.szchoiceway.ksw_dvr", "com.szchoiceway.ksw_cmmb",
+            "com.szchoiceway.ksw_aux"
+        )
+        if (@("off", "on", "status") -notcontains $Label) {
+            Write-Output "Foloseste: car.ps1 kswapps -Label off | on | status"
+            exit 1
+        }
+        if ($Label -ne "status") {
+            # Deschide adb doar cat dureaza schimbarea, apoi il inchide la loc.
+            $adb = Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.exe"
+            $target = "$(([uri]$base).Host):5555"
+            curl.exe -s --max-time 10 -H "X-Key: $Key" --data-binary "setprop service.adb.tcp.port 5555; setprop ctl.restart adbd" "$base/shell" | Out-Null
+            Start-Sleep 4
+            cmd /c "`"$adb`" connect $target" | Out-Null
+            try {
+                foreach ($app in $apps) {
+                    if ($Label -eq "off") { cmd /c "`"$adb`" -s $target shell pm disable-user --user 0 $app" | Out-Null }
+                    else { cmd /c "`"$adb`" -s $target shell pm enable $app" | Out-Null }
+                }
+            } finally {
+                cmd /c "`"$adb`" -s $target shell `"setprop service.adb.tcp.port -1; setprop ctl.restart adbd`"" 2>$null
+                cmd /c "`"$adb`" disconnect $target" | Out-Null
+            }
+            Start-Sleep 2
+        }
+        # Starea se citeste fara adb: lista pachetelor dezactivate o vede orice aplicatie.
+        $disabled = "$(curl.exe -s --max-time 15 -H "X-Key: $Key" --data-binary "pm list packages -d" "$base/shell")"
+        foreach ($app in $apps) {
+            if ($disabled -match [regex]::Escape("package:$app")) { Write-Output "  dezactivata  $app" }
+            else { Write-Output "  activa       $app" }
         }
     }
     "revert" {
