@@ -179,16 +179,6 @@ class SettingsScreen(
                 }
             ),
             DetailRow(
-                id = "car_drift_mode",
-                title = context.getString(R.string.set_drift_mode),
-                value = context.getString(if (prefs.driftMode) R.string.on else R.string.off),
-                onActivate = {
-                    prefs.driftMode = !prefs.driftMode
-                    Services.kswCar?.updateCanForwarding()
-                    reloadDetail("car_drift_mode")
-                }
-            ),
-            DetailRow(
                 id = "car_time_source",
                 title = context.getString(R.string.set_time_source),
                 value = context.getString(
@@ -239,53 +229,6 @@ class SettingsScreen(
                     }.onFailure { ro.e92.launcher.core.EventLog.log("Reverse", "bip de test: ${it.message}") }
                 }
             ),
-            // ---------------------------------------------------------- Pops & Bangs
-            // Doar din turometru; se aude cu radioul pornit. Oprit implicit.
-            DetailRow(id = "hdr_pops", title = context.getString(R.string.pops_title), header = true),
-            DetailRow(
-                id = "pops_on",
-                title = context.getString(R.string.pops_enabled),
-                value = context.getString(if (prefs.popsEnabled) R.string.on else R.string.off),
-                onActivate = {
-                    prefs.popsEnabled = !prefs.popsEnabled
-                    if (prefs.popsEnabled) ro.e92.launcher.media.PopsEngine.preload()
-                    reloadDetail("pops_on")
-                }
-            ),
-            cycleRow("pops_style", R.string.pops_style, POPS_STYLES, { prefs.popsStyle }, { prefs.popsStyle = it }),
-            // Volum fix, doar al pops-urilor; radioul le schimbă pe toate, restul se reglează aici.
-            DetailRow(
-                id = "pops_volume",
-                title = context.getString(R.string.pops_volume),
-                value = "${prefs.popsVolume * 10} %",
-                onActivate = {
-                    prefs.popsVolume = if (prefs.popsVolume >= 10) 1 else prefs.popsVolume + 1
-                    reloadDetail("pops_volume")
-                }
-            ),
-            cycleRow("pops_time", R.string.pops_duration, POPS_TIMES, { prefs.popsDuration }, { prefs.popsDuration = it }),
-            DetailRow(
-                id = "pops_rpm",
-                title = context.getString(R.string.pops_from_rpm),
-                value = "${prefs.popsRpm} rpm",
-                onActivate = {
-                    val steps = ro.e92.launcher.media.PopsEngine.RPM_STEPS
-                    val next = steps.indexOfFirst { it > prefs.popsRpm }.let { if (it < 0) 0 else it }
-                    prefs.popsRpm = steps[next]
-                    reloadDetail("pops_rpm")
-                }
-            ),
-            cycleRow("pops_shift", R.string.pops_shift, SHIFT_SOUNDS, { prefs.shiftSound }, { prefs.shiftSound = it }),
-            DetailRow(
-                id = "pops_test",
-                title = context.getString(R.string.pops_test),
-                onActivate = { ro.e92.launcher.media.PopsEngine.testPops() }
-            ),
-            DetailRow(
-                id = "pops_test_shift",
-                title = context.getString(R.string.pops_test_shift),
-                onActivate = { ro.e92.launcher.media.PopsEngine.testShift() }
-            ),
             DetailRow(
                 id = "car_block_reopen",
                 title = context.getString(R.string.set_block_ksw_reopen),
@@ -305,16 +248,6 @@ class SettingsScreen(
                     prefs.startGuard = !prefs.startGuard
                     reloadDetail("car_start_guard")
                 }
-            ),
-            DetailRow(
-                id = "car_ksw_bt",
-                title = context.getString(R.string.set_open_ksw_bt),
-                onActivate = { AppLaunch.openBluetooth(context) }
-            ).takeUnless { prefs.btOwnEngine },
-            DetailRow(
-                id = "car_factory",
-                title = context.getString(R.string.set_open_factory),
-                onActivate = { openPackage(FACTORY_PACKAGE) }
             )
         )
     }
@@ -481,11 +414,6 @@ class SettingsScreen(
                 Services.prefs.greetingName = ""
                 reloadDetail("greeting_name")
             }
-        ),
-        DetailRow(
-            id = "sport_preview",
-            title = context.getString(R.string.diag_sport_test),
-            onActivate = { host.push(DriveSportScreen(host)) }
         ),
         // ---- backup si jurnale ----
         DetailRow(

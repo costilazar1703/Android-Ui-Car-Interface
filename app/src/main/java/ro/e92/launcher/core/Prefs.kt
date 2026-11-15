@@ -130,8 +130,9 @@ class Prefs(context: Context) {
      * Scena Drift Mode. Butonul DSC vine doar prin cadrele CAN, deci cere cadrele pornite
      * tot timpul cât merge motorul, nu doar în marșarier. Oprită implicit: costă.
      */
+    /** Scoasă din setări 2026-11-15: mereu oprită, chiar dacă era pornită înainte. */
     var driftMode: Boolean
-        get() = sp.getBoolean(KEY_DRIFT_MODE, false)
+        get() = false
         set(value) = sp.edit().putBoolean(KEY_DRIFT_MODE, value).apply()
 
     /** Ultimul profil trimis stivei, ca să nu o repornim în buclă dacă nu-l ține minte. */
@@ -177,8 +178,9 @@ class Prefs(context: Context) {
 
     // ------------------------------------------------------------ Pops & Bangs
     /** Oprit implicit. */
+    /** Scoase din setări 2026-11-15: mereu oprite, chiar dacă erau pornite înainte. */
     var popsEnabled: Boolean
-        get() = sp.getBoolean(KEY_POPS_ON, false)
+        get() = false
         set(value) = sp.edit().putBoolean(KEY_POPS_ON, value).apply()
 
     /** 0 Video (din clipul ales), 1 Fin, 2 Burble, 3 Sec. */
