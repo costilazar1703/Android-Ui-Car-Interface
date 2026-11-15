@@ -194,7 +194,10 @@ class KswCarDataSource(
         if (rpm >= ENGINE_ON_RPM) engineOnAt = nowMs
         // O citire de 0 rpm izolată nu oprește cadrele: motorul e oprit abia după [ENGINE_OFF_MS].
         val engineRunning = engineOnAt != 0L && nowMs - engineOnAt < ENGINE_OFF_MS
-        val engineScene = Services.prefs.reverseScene && engineRunning
+        // Cât merge motorul, cadrele CAN sunt pornite oricum: tensiunea bateriei (0x3B4) și ora
+        // din bord rămân reale tot drumul, cu scena de marșarier pornită sau nu (2026-11-15).
+        // Cu motorul oprit se opresc după [ENGINE_OFF_MS]: nimic pornit cu contactul pus.
+        val engineScene = engineRunning
         // La pornirea unității: cadre CAN cât să vină ora din bord (0x2F8, la ~15 s) și
         // tensiunea, chiar înainte de motor. Ceasul nu mai stă 2-3 minute pe „--:--".
         val bootWindow = connectedAt != 0L && nowMs - connectedAt < BOOT_CAN_MS &&
