@@ -98,7 +98,6 @@ class KswCarDataSource(
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             service = binder ?: return
             canForwarding = null
-            connectedAt = SystemClock.elapsedRealtime()
             systemMode = KswSettings.read(context, "KESAIWEI_SYS_MODE_SELECTION")?.toIntOrNull() ?: 0
             register(binder, callback)
             readHandbrake()
@@ -198,11 +197,10 @@ class KswCarDataSource(
         // din bord rămân reale tot drumul, cu scena de marșarier pornită sau nu (2026-11-15).
         // Cu motorul oprit se opresc după [ENGINE_OFF_MS]: nimic pornit cu contactul pus.
         val engineScene = engineRunning
-        // La pornirea unității: cadre CAN cât să vină ora din bord (0x2F8, la ~15 s) și
-        // tensiunea, chiar înainte de motor. Ceasul nu mai stă 2-3 minute pe „--:--".
-        val bootWindow = connectedAt != 0L && nowMs - connectedAt < BOOT_CAN_MS &&
-            !ro.e92.launcher.core.GpsClock.hasCarTime()
-        val wanted = reverse || drift || engineScene || bootWindow
+        // Fără fereastră la pornirea unității (2026-11-15, cerut): cu contactul pus și motorul
+        // oprit nu pornim nimic. Ora din bord (0x2F8, la ~15 s) vine după pornirea motorului,
+        // iar după oprire ceasul merge mai departe singur (GpsClock numără de la ultima oră).
+        val wanted = reverse || drift || engineScene
         // Fără legătura cu EventCenter nu trimitem nimic și nu ținem minte nimic: altfel
         // „pornite" rămânea notat fără să fi plecat comanda (marșarier imediat după pornire).
         val binder = service ?: return
@@ -244,7 +242,6 @@ class KswCarDataSource(
 
     private var canSentAt = 0L
     private var engineOnAt = 0L
-    private var connectedAt = 0L
 
     private fun readHandbrake() {
         val park = KswSettings.read(context, "KESAIWEI_RECORD_PARK")?.toIntOrNull() ?: return
@@ -306,7 +303,6 @@ class KswCarDataSource(
         val CAN_OFF = byteArrayOf(0xF2.toByte(), 0x00, 0x70, 0x02, 0x0F, 0x00)
         const val ENGINE_ON_RPM = 300
         const val ENGINE_OFF_MS = 10_000L
-        const val BOOT_CAN_MS = 45_000L
         const val CAN_RETRY_MS = 3_000L
         /** sendKSW_0x00_0x6A(11, 0) din EventCenter: tipul camerei pentru MCU = niciuna. */
         val MCU_CAMERA_NONE = byteArrayOf(0xF2.toByte(), 0x00, 0x6A, 0x02, 0x0B, 0x00)
