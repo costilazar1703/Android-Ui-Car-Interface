@@ -264,6 +264,21 @@ class KswCarDataSource(
         return true
     }
 
+    /**
+     * Probă: cere MCU-ului modul de afișare, cu aceeași comandă ca EventCenter
+     * (SendSwitchOriginaCar = 0x69 0x12 0x02, setArmView_KeSaiwei = 0x69 0x12 0x01). După pornire
+     * MCU-ul e în modul „original" și atunci primul R arată scena noastră; la ieșirea din primul
+     * R trece pe ARM (cadrul 0x15 0x01) și de atunci comută pe cameră la fiecare R.
+     * Doar din DiagServer /mcu?view=original|arm, la probe în mașină.
+     */
+    fun sendViewMode(original: Boolean): Boolean {
+        val binder = service ?: return false
+        val cmd = byteArrayOf(0xF2.toByte(), 0x00, 0x69, 0x02, 0x12, if (original) 0x02 else 0x01)
+        scope.launch { transact(binder, TX_SEND_MCU) { it.writeByteArray(cmd) } }
+        EventLog.log(TAG, "MCU: mod de afișare " + if (original) "original (0x69 12 02)" else "ARM (0x69 12 01)")
+        return true
+    }
+
     private var heartbeat: kotlinx.coroutines.Job? = null
 
     /**

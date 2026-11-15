@@ -292,6 +292,12 @@ object DiagServer {
      */
     private fun mcu(query: Map<String, String>): String {
         val p = Services.prefs
+        // Mod de afișare al MCU-ului: doar „original" sau „arm", trimis o dată, nu se salvează.
+        query["view"]?.let { view ->
+            if (view != "original" && view != "arm") return "view=$view: permis original sau arm, nimic trimis\n"
+            val sent = Services.kswCar?.sendViewMode(view == "original") == true
+            return "view=$view trimis=${if (sent) 1 else 0}\n"
+        }
         val allowed = linkedMapOf("camera" to 0..3, "track" to 0..1, "radar" to 0..1, "origvideo" to -1..1, "hb" to 0..1)
         // Întâi verificăm tot: o valoare greșită nu schimbă nimic.
         for ((name, range) in allowed) {
@@ -473,7 +479,7 @@ object DiagServer {
           GET  /info                 unitate + tot ce arată ecranul Diagnostic
           GET  /bt                   starea Bluetooth, cheie=valoare
           GET  /sim?reverse=1&cm=150,40,18,60   simulează marșarierul; /sim?wifi=0..3|off|real
-          GET  /mcu?camera=0..3&radar=0|1&track=0|1&origvideo=-1|0|1&hb=0|1   setările de marșarier ale MCU-ului
+          GET  /mcu?camera=0..3&radar=0|1&track=0|1&origvideo=-1|0|1&hb=0|1   setările de marșarier ale MCU-ului; /mcu?view=original|arm
           GET  /bt/engine?set=e92    motorul Bluetooth: e92 sau ksw
           GET  /bt/do?c=playpause    connect, repair, pair, playpause, next, previous
           GET  /keys                 ultimele taste primite
