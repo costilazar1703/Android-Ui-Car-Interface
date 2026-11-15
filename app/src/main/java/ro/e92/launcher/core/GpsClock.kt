@@ -21,6 +21,17 @@ object GpsClock {
     @Volatile
     private var fixElapsed = 0L
 
+    @Volatile
+    private var carUtc = 0L
+    @Volatile
+    private var carElapsed = 0L
+
+    /** Ceasul din bord (cadrul CAN 0x2F8), cel pe care șoferul îl potrivește din mașină. */
+    fun onCarTime(epochMillis: Long) {
+        carUtc = epochMillis
+        carElapsed = SystemClock.elapsedRealtime()
+    }
+
     /** Din [ro.e92.launcher.can.GpsSpeedDataSource], la fiecare fix. */
     fun onFix(utcMillis: Long) {
         if (utcMillis <= 0L) return
@@ -29,15 +40,20 @@ object GpsClock {
     }
 
     /**
-     * Ora de afișat: cea de sistem dacă e bună, altfel cea din ultimul fix
+     * Ora de afișat: cea din bord dacă a venit, apoi cea de sistem dacă e bună, altfel cea din ultimul fix
      * GPS; null cât nu știm ora (ecranul arată atunci „--:--", nu o oră falsă).
      */
     fun now(): Long? {
+        // Ora din bord are întâietate: e cea pe care o vede șoferul pe cadranul mașinii și vine
+        // în câteva secunde, nu după fixul GPS de 2-3 minute (2026-11-15).
+        if (carUtc != 0L) return carUtc + (SystemClock.elapsedRealtime() - carElapsed)
         val system = System.currentTimeMillis()
         if (yearOf(system) >= MIN_VALID_YEAR) return system
         if (fixUtc == 0L) return null
         return fixUtc + (SystemClock.elapsedRealtime() - fixElapsed)
     }
+
+    fun hasCarTime(): Boolean = carUtc != 0L
 
     fun systemClockValid(): Boolean = yearOf(System.currentTimeMillis()) >= MIN_VALID_YEAR
 

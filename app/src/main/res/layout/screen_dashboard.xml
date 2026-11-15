@@ -63,6 +63,37 @@
         android:textSize="14sp"
         tools:text="HANDBRAKE · REVERSE" />
 
+    <!-- Tensiunea bateriei (CAN 0x3B4), sus, între cele două cercuri mari. -->
+    <LinearLayout
+        android:id="@+id/batteryRow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="6dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/icBattery"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_status_battery"
+            android:tint="@color/text_primary" />
+
+        <TextView
+            android:id="@+id/txtBattery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFamily="@font/inter_regular"
+            android:fontFeatureSettings="tnum"
+            android:includeFontPadding="false"
+            android:textColor="@color/text_primary"
+            android:textSize="22sp"
+            tools:text="14.2 V" />
+    </LinearLayout>
+
     <TextView
         android:id="@+id/txtSource"
         style="@style/Text.Mono"

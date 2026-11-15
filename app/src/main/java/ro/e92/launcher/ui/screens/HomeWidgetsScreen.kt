@@ -48,6 +48,18 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
     private var focusedId: String? = null
     private lateinit var swipe: GestureDetector
 
+    /**
+     * CAR și DASH sar peste meniul cu rotiță, direct în ecranul folosit mereu: Trip, respectiv
+     * ceasurile (cerut 2026-11-15). Meniurile rămân din dalele de pe pagina a doua.
+     */
+    private fun openRail(action: TileAction) {
+        when (action) {
+            TileAction.CAR_INFO -> host.push(TripScreen(host))
+            TileAction.DASHBOARD -> host.push(DashboardScreen(host))
+            else -> host.openTile(action)
+        }
+    }
+
     private class RailItem(val id: String, val icon: Int, val label: Int, val action: TileAction)
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup): View =
@@ -81,7 +93,7 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
             FocusTarget(
                 id = item.id,
                 view = railViews[i],
-                onActivate = { host.openTile(item.action) },
+                onActivate = { openRail(item.action) },
                 onFocus = { if (it) focusedId = item.id },
                 up = RAIL.getOrNull(i - 1)?.id,
                 down = RAIL.getOrNull(i + 1)?.id,
@@ -134,7 +146,7 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
                 isClickable = true
                 setOnClickListener {
                     host.rebuildFocus(item.id)
-                    host.openTile(item.action)
+                    openRail(item.action)
                 }
             }
             // Linia portocalie din stânga rândului selectat, ca în iDrive 7.

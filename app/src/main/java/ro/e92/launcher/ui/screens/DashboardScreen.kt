@@ -89,6 +89,9 @@ class DashboardScreen(host: ScreenHost) : Screen(host) {
             Services.vehicle.state.collect { render(it) }
         }
         screenScope.launch {
+            Services.reverse.batteryVolts.collect { renderBattery(it) }
+        }
+        screenScope.launch {
             Services.vehicle.activeSourceId.collect {
                 binding.txtSource.text = "source: $it"
             }
@@ -152,6 +155,25 @@ class DashboardScreen(host: ScreenHost) : Screen(host) {
             if (state.reverseGear == true) add("REVERSE")
         }
         binding.txtWarnings.text = warnings.joinToString("  ·  ")
+    }
+
+    /** „14.2 V"; galben sub 13 V cu motorul pornit (nu încarcă), roșu sub 11.8 V. */
+    private fun renderBattery(volts: Float?) {
+        if (volts == null) {
+            binding.txtBattery.text = "-- V"
+            binding.txtBattery.setTextColor(context.getColor(R.color.text_primary))
+            binding.icBattery.setColorFilter(context.getColor(R.color.text_primary))
+            return
+        }
+        binding.txtBattery.text = String.format(java.util.Locale.US, "%.1f V", volts)
+        val running = (Services.vehicle.state.value.rpm ?: 0) >= 300
+        val color = when {
+            volts < 11.8f -> context.getColor(R.color.warn_red)
+            running && volts < 13.0f -> context.getColor(R.color.warn_amber)
+            else -> context.getColor(R.color.text_primary)
+        }
+        binding.txtBattery.setTextColor(color)
+        binding.icBattery.setColorFilter(color)
     }
 
     private companion object {

@@ -24,6 +24,7 @@
     <!-- Stări -->
     <color name="ok_green">#3FA34D</color>
     <color name="warn_amber">#E0A800</color>
+    <color name="warn_red">#E5484D</color>
 
     <!-- Glow-ul selecției din meniul principal. Alfa mică intenționat:
          straturile se suprapun, iar un halo prea opac arată ca un chenar, nu ca lumină. -->

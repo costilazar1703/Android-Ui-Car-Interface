@@ -66,6 +66,10 @@ class ReverseSource(
     val sensorCm: StateFlow<List<Int>?> = _sensorCm.asStateFlow()
 
     /** Unghiul volanului din 0x0C4: -1 dreapta ... 1 stânga, null = necunoscut. */
+    /** Tensiunea bateriei din cadrul CAN 0x3B4 (cât vin cadre CAN), în volți. */
+    private val _batteryVolts = MutableStateFlow<Float?>(null)
+    val batteryVolts: StateFlow<Float?> = _batteryVolts.asStateFlow()
+
     private val _steering = MutableStateFlow<Float?>(null)
     val steering: StateFlow<Float?> = _steering.asStateFlow()
 
@@ -176,7 +180,27 @@ class ReverseSource(
             ID_GEAR -> if (b.isNotEmpty()) onGear(b[0])
             ID_MESSAGE -> if (b.size >= 3) onCarMessage(b[0], b[1], b[2])
             ID_DSC_BUTTON -> onDscButton(b)
+            ID_CAR_TIME -> onCarTime(b)
+            ID_BATTERY -> if (b.size >= 2) {
+                // E9x PM: (b1 & 0x0F) << 8 | b0, câte 15 mV (2026-11-15, din capturi: 13,96-14,62 V în mers).
+                val raw = ((b[1] and 0x0F) shl 8) or b[0]
+                if (raw in 1..0xFFE) _batteryVolts.value = raw * 0.015f
+            }
         }
+    }
+
+    /** Ceasul din bord: ora, minut, secundă, zi, lună în nibble-ul de sus, an pe 2 octeți LE. */
+    private fun onCarTime(b: List<Int>) {
+        if (b.size < 7) return
+        val hour = b[0]; val min = b[1]; val sec = b[2]; val day = b[3]
+        val month = b[4] shr 4
+        val year = b[5] or (b[6] shl 8)
+        if (hour > 23 || min > 59 || sec > 59 || day !in 1..31 || month !in 1..12 || year !in 2020..2099) return
+        val local = java.util.Calendar.getInstance().apply {
+            set(year, month - 1, day, hour, min, sec)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        ro.e92.launcher.core.GpsClock.onCarTime(local)
     }
 
     private fun onSensors(raw: List<Int>) {
@@ -301,7 +325,7 @@ class ReverseSource(
         const val TAG = "Reverse"
         val FRAME = Regex("""0xf2 0x00 0x11 0x02 0x0[123] 0x0([01])""")
         const val LOG_FILTER =
-            "0xf2 0x00 0x11 0x02|0xA1_0x1DEvent: stringBuilder.toString\\(\\) = 0x(01c2|00c4|0304|0316|0338) "
+            "0xf2 0x00 0x11 0x02|0xA1_0x1DEvent: stringBuilder.toString\\(\\) = 0x(01c2|00c4|0304|0316|0338|02f8|03b4) "
         val CAN_FRAME = Regex("""0xA1_0x1DEvent: .*= 0x([0-9a-f]{4}) \S+ \S+ 0x[0-9a-f]+ ((?:0x[0-9a-f]{2} ?)+)""")
         val BYTE = Regex("""0x([0-9a-f]{2})""")
 
@@ -309,6 +333,8 @@ class ReverseSource(
         const val ID_STEERING = 0x0C4
         const val ID_GEAR = 0x304
         const val ID_MESSAGE = 0x338
+        const val ID_CAR_TIME = 0x2F8
+        const val ID_BATTERY = 0x3B4
         const val SENSORS = 4
         const val RAW_NOTHING = 0xFE
         /** Ce ține minte șoferul la ultimul roșu: 8 cm reali arătați ca 4, de siguranță. */
