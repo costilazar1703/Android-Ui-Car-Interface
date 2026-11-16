@@ -153,6 +153,7 @@
     <string name="mode_normal">Normal Mode</string>
     <string name="mode_sport">Dynamic Sport</string>
     <string name="mode_drive">Drive Mode</string>
+    <string name="mode_kicker">Driving mode</string>
     <string name="mode_traction_off">Traction Off</string>
     <string name="mode_traction_on">Traction On</string>
     <string name="trip_cons_unit">l/100 km · car</string>
