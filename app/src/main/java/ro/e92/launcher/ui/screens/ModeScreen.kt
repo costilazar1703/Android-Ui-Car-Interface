@@ -313,7 +313,7 @@ class ModeBannerView(
     }
 
     companion object {
-        const val TOTAL_MS = 2_000f
+        const val TOTAL_MS = 2_500f
         private const val FADE_IN_MS = 220f
         private const val EXIT_MS = 300f
         private const val PHOTO_START_SCALE = 1.06f
