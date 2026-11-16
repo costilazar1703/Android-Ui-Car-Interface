@@ -352,8 +352,13 @@ object DiagServer {
             steer = query["steer"]?.toIntOrNull(),
             gear = query["gear"]?.toIntOrNull(16),
             drift = query["drift"]?.let { it == "1" },
-            button = query["dscbutton"] == "1"
+            sport = query["sport"]?.let { it == "1" }
         )
+        // /sim?mode=drift|normal|sport|drive: scena de mod, direct.
+        query["mode"]?.let { name ->
+            ro.e92.launcher.can.ModeScene.values().firstOrNull { it.name.equals(name, ignoreCase = true) }
+                ?.let { Services.reverse.simulateScene(it) }
+        }
         query["reverse"]?.let { on ->
             val cm = query["cm"]?.split(",")?.mapNotNull { it.toIntOrNull() }
             Services.reverse.simulate(on == "1", cm)

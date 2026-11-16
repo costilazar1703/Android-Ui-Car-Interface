@@ -11,8 +11,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -22,6 +25,9 @@ import ro.e92.launcher.core.EventLog
 import ro.e92.launcher.core.KswSettings
 import ro.e92.launcher.core.Services
 import ro.e92.launcher.ui.HomeActivity
+
+/** Cele patru confirmări de mod, arătate de [ro.e92.launcher.ui.screens.ModeScreen]. */
+enum class ModeScene { DRIFT, NORMAL, SPORT, DRIVE }
 
 /** Senzorul nu vede nimic. Mai mare decât orice prag din ParkSensorView. */
 const val NO_OBSTACLE_CM = 999
@@ -74,16 +80,32 @@ class ReverseSource(
     val steering: StateFlow<Float?> = _steering.asStateFlow()
 
     /**
-     * Sistemele oprite (DSC sau DTC). La fiecare contact pornesc activate, deci starea
-     * începe ca false. Se schimbă la fiecare apăsare a butonului (0x316, o rafală de
-     * cadre cât e ținut apăsat); mesajul de pe bord (0x338, cod B8) confirmă doar
-     * oprirea. Ștergerea mesajului NU înseamnă repornire: bordul îl ascunde singur după
-     * câteva secunde, iar asta dădea „Drift mode off" fals (2026-11-07).
+     * Sistemele oprite (DSC sau DTC), citite direct din starea DSC: 0x19E, octetul 1,
+     * bitul 0x10 (f0 = oprite, e0 = normal; probă oarbă 3 din 3, 2026-11-16). Null = n-am
+     * văzut încă niciun cadru. Butonul (0x316) și mesajul de pe bord (0x338, cod B8) nu mai
+     * hotărăsc nimic: numărarea apăsărilor putea rămâne în urmă, iar mesajul dispare singur.
      */
-    private val _driftMode = MutableStateFlow<Boolean?>(false)
-    private var lastButtonAt = 0L
-    private var lastGear = -1
+    private val _driftMode = MutableStateFlow<Boolean?>(null)
     val driftMode: StateFlow<Boolean?> = _driftMode.asStateFlow()
+
+    /**
+     * Drive Sport, din afișajul cutiei: 0x1D2 cu octetul 0 = 78 (D), octetul 4 = f0 în D și
+     * f1 în DS (probă oarbă 2 din 2, 2026-11-16). 0x304 arată la fel în D și DS, nu e bun.
+     */
+    private val _sportMode = MutableStateFlow<Boolean?>(null)
+    val sportMode: StateFlow<Boolean?> = _sportMode.asStateFlow()
+
+    /**
+     * Schimbările văzute în direct, pentru scena de mod. Prima citire după o pauză de cadre
+     * (cadrele CAN vin doar cu ecranul Dashboard deschis) e doar punct de plecare: dacă modul
+     * s-a schimbat cât nu ascultam, nu anunțăm nimic.
+     */
+    private val _modeEvents = MutableSharedFlow<ModeScene>(extraBufferCapacity = 4)
+    val modeEvents: SharedFlow<ModeScene> = _modeEvents.asSharedFlow()
+
+    private val dscTrack = ModeTrack()
+    private val sportTrack = ModeTrack()
+    private var lastGear = -1
 
     private var lastRawLogAt = 0L
     private val seenMessages = HashSet<Int>()
@@ -226,7 +248,12 @@ class ReverseSource(
             }
             ID_GEAR -> if (b.isNotEmpty()) onGear(b[0])
             ID_MESSAGE -> if (b.size >= 3) onCarMessage(b[0], b[1], b[2])
-            ID_DSC_BUTTON -> onDscButton(b)
+            ID_DSC_STATE -> if (b.size >= 2) {
+                dscTrack.read(b[1] and DSC_OFF_BIT != 0)?.let { (on, live) -> setDrift(on, live) }
+            }
+            ID_GEARBOX -> if (b.size >= 5 && b[0] == GEARBOX_D) {
+                sportTrack.read(b[4] and 0x0F != 0)?.let { (on, live) -> setSport(on, live) }
+            }
             ID_CAR_TIME -> onCarTime(b)
             ID_BATTERY -> if (b.size >= 2) {
                 // E9x PM: (b1 & 0x0F) << 8 | b0, câte 15 mV (2026-11-15, din capturi: 13,96-14,62 V în mers).
@@ -271,35 +298,67 @@ class ReverseSource(
         EventLog.log(TAG, "treaptă brut: %02x".format(value))
     }
 
-    private fun onDscButton(b: List<Int>) {
-        val now = SystemClock.elapsedRealtime()
-        val newPress = now - lastButtonAt > BUTTON_GAP_MS
-        lastButtonAt = now
-        if (!newPress) return
-        EventLog.log(TAG, "buton DSC: " + b.joinToString(" ") { "%02x".format(it) })
-        setDrift(_driftMode.value != true)
-    }
-
     private fun onCarMessage(code: Int, group: Int, status: Int) {
         val message = (group shl 8) or code
         if (seenMessages.add(message)) EventLog.log(TAG, "mesaj bord: cod %02x %02x".format(group, code))
-        if (code != CODE_DSC_OFF || group != 0) return
-        if (status == STATUS_SHOWN) setDrift(true)
     }
 
-    private fun setDrift(on: Boolean) {
+    private fun setDrift(on: Boolean, live: Boolean) {
         if (_driftMode.value == on) return
-        EventLog.log(TAG, "DSC " + if (on) "oprit" else "pornit")
+        EventLog.log(TAG, "sisteme " + (if (on) "oprite" else "normale") + if (live) "" else " (la prima citire)")
         _driftMode.value = on
+        if (live) _modeEvents.tryEmit(if (on) ModeScene.DRIFT else ModeScene.NORMAL)
+    }
+
+    private fun setSport(on: Boolean, live: Boolean) {
+        if (_sportMode.value == on) return
+        EventLog.log(TAG, (if (on) "Drive Sport" else "Drive") + if (live) "" else " (la prima citire)")
+        _sportMode.value = on
+        if (live) _modeEvents.tryEmit(if (on) ModeScene.SPORT else ModeScene.DRIVE)
+    }
+
+    /**
+     * O stare citită din cadre repetate: se schimbă abia după [STABLE_FRAMES] cadre la fel,
+     * iar după o pauză mai lungă de [STATE_GAP_MS] prima valoare e doar punct de plecare.
+     */
+    private class ModeTrack {
+        private var lastAt = 0L
+        private var candidate: Boolean? = null
+        private var same = 0
+        private var fresh = true
+
+        /** Întoarce (valoarea, e schimbare văzută în direct) când valoarea s-a așezat. */
+        fun read(value: Boolean): Pair<Boolean, Boolean>? {
+            val now = SystemClock.elapsedRealtime()
+            if (now - lastAt > STATE_GAP_MS) {
+                fresh = true
+                candidate = null
+            }
+            lastAt = now
+            if (candidate != value) {
+                candidate = value
+                same = 0
+            }
+            if (++same != STABLE_FRAMES) return null
+            val live = !fresh
+            fresh = false
+            return value to live
+        }
     }
 
     /** Pentru probe fără mașină, din DiagServer: valorile brute ale cadrelor. */
-    fun simulateCan(raw: List<Int>?, steer: Int?, gear: Int?, drift: Boolean?, button: Boolean = false) {
+    fun simulateCan(raw: List<Int>?, steer: Int?, gear: Int?, drift: Boolean?, sport: Boolean? = null) {
         raw?.let { onSensors(it) }
         steer?.let { onCan(ID_STEERING, listOf(it and 0xFF, (it shr 8) and 0xFF)) }
         gear?.let { onGear(it) }
-        drift?.let { setDrift(it) }
-        if (button) onDscButton(listOf(0xFD, 0xFF))
+        // Ca în mașină: prima valoare e punct de plecare, a doua (diferită) aduce scena.
+        drift?.let { setDrift(it, _driftMode.value != null) }
+        sport?.let { setSport(it, _sportMode.value != null) }
+    }
+
+    /** Scena cerută direct, pentru poze din emulator. */
+    fun simulateScene(scene: ModeScene) {
+        _modeEvents.tryEmit(scene)
     }
 
     private fun publish(on: Boolean, frameType: String = "?") {
@@ -386,7 +445,7 @@ class ReverseSource(
         const val TAG = "Reverse"
         val FRAME = Regex("""0xf2 0x00 0x11 0x02 0x0([123]) 0x0([01])""")
         const val LOG_FILTER =
-            "0xf2 0x00 0x11 0x02|0xA1_0x1DEvent: stringBuilder.toString\\(\\) = 0x(01c2|00c4|0304|0316|0338|02f8|03b4) |bydata = 0xf2 0x00 0x1[035] |bydata = 0xf2 0x00 0xa1 0x02 0x1a |ES s send: 0xf2 0x00 0x6[79] "
+            "0xf2 0x00 0x11 0x02|0xA1_0x1DEvent: stringBuilder.toString\\(\\) = 0x(01c2|00c4|0304|0338|02f8|03b4|019e|01d2) |bydata = 0xf2 0x00 0x1[035] |bydata = 0xf2 0x00 0xa1 0x02 0x1a |ES s send: 0xf2 0x00 0x6[79] "
         val CAN_FRAME = Regex("""0xA1_0x1DEvent: .*= 0x([0-9a-f]{4}) \S+ \S+ 0x[0-9a-f]+ ((?:0x[0-9a-f]{2} ?)+)""")
         val BYTE = Regex("""0x([0-9a-f]{2})""")
 
@@ -421,11 +480,12 @@ class ReverseSource(
         const val RAW_LOG_MS = 2_000L
         /** Volanul la capăt (2026-11-07); semnul pozitiv = stânga, de confirmat în mașină. */
         const val STEERING_FULL = 10_400f
-        const val ID_DSC_BUTTON = 0x316
-        /** Cadrele butonului vin în rafală cât e apăsat; o pauză mai lungă = apăsare nouă. */
-        const val BUTTON_GAP_MS = 1_200L
-        const val CODE_DSC_OFF = 0xB8
-        const val STATUS_SHOWN = 2
+        const val ID_DSC_STATE = 0x19E
+        const val DSC_OFF_BIT = 0x10
+        const val ID_GEARBOX = 0x1D2
+        const val GEARBOX_D = 0x78
+        const val STABLE_FRAMES = 3
+        const val STATE_GAP_MS = 3_000L
 
         const val RADAR_ACTION = "com.szchoiceway.eventcenter.MCU_CAR_CAN_RADAR_INFO"
         const val RADAR_DATA = "com.szchoiceway.eventcenter.CAR_CAN_DATA"

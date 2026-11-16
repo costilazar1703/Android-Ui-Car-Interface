@@ -170,7 +170,8 @@ class KswCarDataSource(
             avgSpeedKmh = (u16(9) / 10f).takeIf { it > 0f && it < 300f },
             fuel = fuel.takeIf { it in 0..100 },
             outsideTempC = outside?.takeIf { it in -40f..60f },
-            speedKmh = speed.takeIf { it in 0..300 },
+            // Placa KSW raportează 2 km/h pe loc (2026-11-16): sub [SPEED_FLOOR_KMH] arătăm 0.
+            speedKmh = speed.takeIf { it in 0..300 }?.let { if (it < SPEED_FLOOR_KMH) 0 else it },
             rpm = rpm.takeIf { it in 0..8000 },
             timestamp = SystemClock.elapsedRealtime()
         )
@@ -188,7 +189,6 @@ class KswCarDataSource(
     fun updateCanForwarding(rpm: Int = lastRpm) {
         lastRpm = rpm
         val reverse = Services.reverse.vehicleState.value.reverseGear == true && Services.prefs.reverseScene
-        val drift = Services.prefs.driftMode && rpm >= ENGINE_ON_RPM
         val nowMs = SystemClock.elapsedRealtime()
         if (rpm >= ENGINE_ON_RPM) engineOnAt = nowMs
         // O citire de 0 rpm izolată nu oprește cadrele: motorul e oprit abia după [ENGINE_OFF_MS].
@@ -203,7 +203,7 @@ class KswCarDataSource(
             EventLog.log(TAG, "ora din bord n-a venit în ${CLOCK_WAIT_MS / 1000} s - opresc cadrele CAN")
         }
         if (!engineRunning) clockGaveUp = false
-        val wanted = reverse || drift || waitingClock || (engineRunning && dashboardOpen)
+        val wanted = reverse || waitingClock || (engineRunning && dashboardOpen)
         // Fără legătura cu EventCenter nu trimitem nimic și nu ținem minte nimic: altfel
         // „pornite" rămânea notat fără să fi plecat comanda (marșarier imediat după pornire).
         val binder = service ?: return
@@ -423,6 +423,7 @@ class KswCarDataSource(
         val CAN_ON = byteArrayOf(0xF2.toByte(), 0x00, 0x70, 0x02, 0x0F, 0x01)
         val CAN_OFF = byteArrayOf(0xF2.toByte(), 0x00, 0x70, 0x02, 0x0F, 0x00)
         const val ENGINE_ON_RPM = 300
+        const val SPEED_FLOOR_KMH = 3
         const val ENGINE_OFF_MS = 10_000L
         const val CLOCK_WAIT_MS = 60_000L
         const val CAN_RETRY_MS = 3_000L

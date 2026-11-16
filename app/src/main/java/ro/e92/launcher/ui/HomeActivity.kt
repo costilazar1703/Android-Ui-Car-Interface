@@ -1117,19 +1117,14 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         }
     }
 
-    /** DSC oprit sau repornit: apare doar la schimbare, nu și cu marșarierul băgat. */
+    /** Scena de mod (sisteme oprite/normale, Drive Sport/Drive): doar la schimbare, nu în marșarier. */
     private fun observeDriftMode() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                var previous: Boolean? = Services.reverse.driftMode.value
-                Services.reverse.driftMode.collect { now ->
-                    if (now != null && previous != null && now != previous && Services.prefs.driftMode &&
-                        Services.vehicle.state.value.reverseGear != true
-                    ) {
-                        if (stack.current is ro.e92.launcher.ui.screens.DriftScreen) stack.pop()
-                        stack.push(ro.e92.launcher.ui.screens.DriftScreen(this@HomeActivity, now))
-                    }
-                    if (now != null) previous = now
+                Services.reverse.modeEvents.collect { scene ->
+                    if (Services.vehicle.state.value.reverseGear == true) return@collect
+                    if (stack.current is ro.e92.launcher.ui.screens.ModeScreen) stack.pop()
+                    stack.push(ro.e92.launcher.ui.screens.ModeScreen(this@HomeActivity, scene))
                 }
             }
         }

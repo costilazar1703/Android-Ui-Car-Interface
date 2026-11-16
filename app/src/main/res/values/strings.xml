@@ -149,8 +149,12 @@
     <string name="set_car_type">Car type – restart after change</string>
     <string name="set_bt_music_only">Bluetooth: music only (no calls)</string>
     <string name="set_reverse_scene">Reverse screen: E92 instead of KSW</string>
-    <string name="set_drift_mode">Drift mode scene (uses more CAN data)</string>
-    <string name="drift_title">DRIFT MODE</string>
+    <string name="mode_drift">Drift Mode</string>
+    <string name="mode_normal">Normal Mode</string>
+    <string name="mode_sport">Dynamic Sport</string>
+    <string name="mode_drive">Drive Mode</string>
+    <string name="mode_traction_off">Traction Off</string>
+    <string name="mode_traction_on">Traction On</string>
     <string name="trip_cons_unit">l/100 km · car</string>
     <string name="trip_board_avg">Car average speed</string>
     <string name="set_time_source">Clock source</string>
