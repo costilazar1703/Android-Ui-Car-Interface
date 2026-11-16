@@ -148,6 +148,7 @@
     <string name="set_battery_no_obd">needs the OBD Wi-Fi</string>
     <string name="set_car_type">Car type – restart after change</string>
     <string name="set_bt_music_only">Bluetooth: music only (no calls)</string>
+    <string name="set_live_can">Live CAN data on Home and menus</string>
     <string name="set_reverse_scene">Reverse screen: E92 instead of KSW</string>
     <string name="mode_drift">Drift Mode</string>
     <string name="mode_normal">Normal Mode</string>

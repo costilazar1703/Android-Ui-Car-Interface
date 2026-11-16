@@ -357,7 +357,7 @@ class ModeBannerView(
  * Cardul de mod de condus, jos pe mijloc, peste ecranul curent (care rămâne vizibil și primește
  * atingerile). Sticlă închisă cu:
  *  - o lumină care aleargă o dată în jurul marginii, apoi rămâne o margine stinsă în culoarea modului;
- *  - în stânga un ecuson animat: la DS trei săgeți care se aprind în val, la D o undă liniștită;
+ *  - în stânga un ecuson: la DS un turometru simplu care urcă în zona roșie, la D o undă liniștită;
  *  - la DS dâre de viteză care trec prin card la intrare, la D un halou care respiră;
  *  - numele modului, selectorul D / DS cu bucata aprinsă care alunecă la modul nou;
  *  - jos o linie subțire care se scurtează cât timp mai stă cardul pe ecran.
@@ -410,8 +410,12 @@ class ModeCardView(
     private val card = RectF()
     private val r = RectF()
     private val clip = Path()
+    private val needle = Path()
     private val wave = Path()
     private val kicker = context.getString(R.string.mode_kicker).uppercase()
+
+    /** DS stă mai mult: turometrul are nevoie de timp să urce (cerut 2026-11-17). */
+    private val total = if (sport) SPORT_TOTAL_MS else TOTAL_MS
 
     private var startedAt = 0L
     private var running = false
@@ -437,7 +441,7 @@ class ModeCardView(
 
         val enter = ease(now, 0f, ENTER_MS)
         val pop = back(now, 0f, ENTER_MS + 120f)
-        val exit = ease(now, TOTAL_MS - EXIT_MS, EXIT_MS)
+        val exit = ease(now, total - EXIT_MS, EXIT_MS)
         val alpha = enter * (1f - exit)
         if (alpha <= 0f) return tick(now)
         val a255 = (255 * alpha).toInt()
@@ -496,7 +500,7 @@ class ModeCardView(
         fillPaint.shader = null
         if (sport) drawStreaks(canvas, now, u, alpha)
         // Timpul rămas: o linie subțire pe fundul cardului care se scurtează spre centru.
-        val left = 1f - ((now - ENTER_MS) / (TOTAL_MS - EXIT_MS - ENTER_MS)).coerceIn(0f, 1f)
+        val left = 1f - ((now - ENTER_MS) / (total - EXIT_MS - ENTER_MS)).coerceIn(0f, 1f)
         if (left > 0f) {
             val half = (cw / 2f - rad) * left
             fillPaint.color = withAlpha(accent, (150 * alpha).toInt())
@@ -528,7 +532,7 @@ class ModeCardView(
         }
 
         // ---- ecusonul din stânga ----
-        val bR = ch * 0.34f
+        val bR = ch * if (sport) 0.42f else 0.36f
         val bcx = card.left + rad
         fillPaint.shader = RadialGradient(
             bcx, cy - bR * 0.3f, bR * 1.2f,
@@ -540,7 +544,7 @@ class ModeCardView(
         strokePaint.strokeWidth = 1.6f * u
         strokePaint.color = withAlpha(accent, (130 * alpha).toInt())
         canvas.drawCircle(bcx, cy, bR, strokePaint)
-        if (sport) drawChevrons(canvas, now, bcx, cy, bR, u, alpha) else drawWave(canvas, now, bcx, cy, bR, u, alpha)
+        if (sport) drawGauge(canvas, now, bcx, cy, bR, u, alpha) else drawWave(canvas, now, bcx, cy, bR, u, alpha)
 
         // ---- textul ----
         val tx = bcx + bR + 22f * u
@@ -601,31 +605,129 @@ class ModeCardView(
         tick(now)
     }
 
-    /** DS: trei săgeți spre dreapta; un val de lumină trece prin ele, de două ori, apoi rămân aprinse. */
-    private fun drawChevrons(canvas: Canvas, now: Float, cx: Float, cy: Float, r: Float, u: Float, alpha: Float) {
-        val size = r * 0.36f
-        val step = r * 0.36f
-        iconPaint.strokeWidth = 3.4f * u
-        for (i in 0..2) {
-            val x = cx - step + step * i - size * 0.2f
-            val phase = ((now - CHEV_AT_MS - i * 110f) / 640f)
-            val pulse = if (phase in 0f..2f) {
-                val p = phase % 1f
-                if (p < 0.35f) p / 0.35f else 1f - (p - 0.35f) / 0.65f
-            } else 0f
-            val on = ease(now, CHEV_AT_MS + i * 110f, 260f)
-            val base = 0.35f + 0.65f * on
-            val c = blend(accent, Color.WHITE, pulse * 0.7f)
-            iconPaint.color = withAlpha(c, (255 * alpha * base).toInt())
-            canvas.drawLine(x - size * 0.5f, cy - size, x + size * 0.5f, cy, iconPaint)
-            canvas.drawLine(x + size * 0.5f, cy, x - size * 0.5f, cy + size, iconPaint)
+    /**
+     * DS: turometru după desenul ales de utilizator (2026-11-17): două arcuri subțiri, groase sus
+     * și ascuțite la capete, și un ac subțire. Arcurile se trag de la stânga la dreapta, acul urcă
+     * în viteză, scade puțin ca la o schimbare de treaptă, apoi intră în zona roșie și tremură
+     * acolo; arcul interior se umple cu portocaliu după ac.
+     */
+    private fun drawGauge(canvas: Canvas, now: Float, cx: Float, cy: Float, bR: Float, u: Float, alpha: Float) {
+        val rOut = bR * 0.72f
+        val rIn = bR * 0.54f
+        val c0 = cy + rOut * 0.42f
+        val reveal = ease(now, GAUGE_AT_MS, 420f)
+        if (reveal <= 0f) return
+        val a255 = (255 * alpha).toInt()
+
+        val outer = crescent(cx, c0, rOut, 3.3f * u)
+        val inner = crescent(cx, c0, rIn, 2.7f * u)
+
+        // Arcurile apar de la stânga la dreapta.
+        canvas.save()
+        canvas.clipPath(wedge(cx, c0, rOut * 1.4f, 180f, 180f * reveal))
+        fillPaint.color = Color.argb((235 * alpha).toInt(), 238, 240, 244)
+        canvas.drawPath(outer, fillPaint)
+        fillPaint.color = Color.argb((150 * alpha).toInt(), 238, 240, 244)
+        canvas.drawPath(inner, fillPaint)
+        canvas.restore()
+
+        val f = revLevel(now - GAUGE_AT_MS)
+        val angle = 180f + 180f * f
+
+        run {
+            // Zona roșie: capătul din dreapta al arcului exterior; se aprinde cât acul e în ea.
+            val inRed = ((f - RED_FROM) / (1f - RED_FROM)).coerceIn(0f, 1f)
+            val flicker = 0.75f + 0.25f * kotlin.math.sin(now / 38f).toFloat()
+            canvas.save()
+            canvas.clipPath(wedge(cx, c0, rOut * 1.4f, 180f + 180f * RED_FROM, 180f * (1f - RED_FROM) * reveal))
+            fillPaint.color = Color.argb((255 * alpha * (0.55f + 0.45f * inRed * flicker)).toInt(), 232, 36, 27)
+            canvas.drawPath(outer, fillPaint)
+            canvas.restore()
+            // Arcul interior se umple după ac.
+            canvas.save()
+            canvas.clipPath(wedge(cx, c0, rOut * 1.4f, 180f, angle - 180f))
+            fillPaint.color = withAlpha(accent, a255)
+            canvas.drawPath(inner, fillPaint)
+            canvas.restore()
         }
+
+        // Acul: subțire, mai lat la bază, cu o coadă scurtă dincolo de centru.
+        val rad = Math.toRadians(angle.toDouble())
+        val dx = kotlin.math.cos(rad).toFloat()
+        val dy = kotlin.math.sin(rad).toFloat()
+        val len = rIn * 0.95f
+        val tail = rIn * 0.22f
+        val wb = 2.1f * u
+        val wt = 0.6f * u
+        needle.reset()
+        needle.moveTo(cx - dx * tail - dy * wb, c0 - dy * tail + dx * wb)
+        needle.lineTo(cx + dx * len - dy * wt, c0 + dy * len + dx * wt)
+        needle.lineTo(cx + dx * len + dy * wt, c0 + dy * len - dx * wt)
+        needle.lineTo(cx - dx * tail + dy * wb, c0 - dy * tail - dx * wb)
+        needle.close()
+        fillPaint.color = Color.argb(a255, 245, 246, 248)
+        canvas.drawPath(needle, fillPaint)
+    }
+
+    /**
+     * Turația acului la DS, 0 = stânga, 1 = capătul din dreapta: urcă repede, scade puțin la
+     * schimbarea de treaptă, urcă în zona roșie și tremură acolo.
+     */
+    private fun revLevel(t: Float): Float {
+        val s = t - NEEDLE_DELAY_MS
+        if (s <= 0f) return 0.02f
+        return when {
+            // Urcă lin, ca o turație care crește.
+            s < 1_000f -> 0.02f + 0.6f * smooth(s / 1_000f)
+            // Schimbarea de treaptă: scade puțin.
+            s < 1_300f -> 0.62f - 0.1f * smooth((s - 1_000f) / 300f)
+            // Urcă din nou, până în zona roșie.
+            s < 2_400f -> 0.52f + 0.42f * smooth((s - 1_300f) / 1_100f)
+            // Stă în zona roșie, cu un tremur abia vizibil.
+            else -> 0.94f + 0.006f * kotlin.math.sin((s - 2_400f) / 55f).toFloat()
+        }
+    }
+
+    /** Pornește lin și se oprește lin. */
+    private fun smooth(t: Float): Float {
+        val x = t.coerceIn(0f, 1f)
+        return x * x * (3f - 2f * x)
+    }
+
+    private fun easeT(t: Float): Float {
+        val x = t.coerceIn(0f, 1f)
+        return 1f - (1f - x) * (1f - x) * (1f - x)
+    }
+
+    /**
+     * Semicercul de sus, subțiat spre capete: discul de sus minus un cerc puțin mai mic, coborât.
+     * Sus are grosimea [t], la capete rămâne o treime, ca zona roșie să se vadă.
+     */
+    private fun crescent(cx: Float, cy: Float, r: Float, t: Float): Path {
+        val half = Path()
+        half.moveTo(cx - r, cy)
+        half.arcTo(RectF(cx - r, cy - r, cx + r, cy + r), 180f, 180f, false)
+        half.close()
+        val cut = Path()
+        cut.addCircle(cx, cy + t * 0.67f, r - t * 0.33f, Path.Direction.CW)
+        half.op(cut, Path.Op.DIFFERENCE)
+        return half
+    }
+
+    /** O felie din cerc, pentru tăiat arcurile pe unghi. */
+    private fun wedge(cx: Float, cy: Float, r: Float, start: Float, sweep: Float): Path {
+        val p = Path()
+        if (sweep <= 0f) return p
+        p.moveTo(cx, cy)
+        p.arcTo(RectF(cx - r, cy - r, cx + r, cy + r), start, sweep, false)
+        p.close()
+        return p
     }
 
     /** D: o undă lină care curge încet spre dreapta. */
     private fun drawWave(canvas: Canvas, now: Float, cx: Float, cy: Float, r: Float, u: Float, alpha: Float) {
         val half = r * 0.62f
-        val amp = r * 0.2f * ease(now, CHEV_AT_MS, 500f)
+        val amp = r * 0.2f * ease(now, GAUGE_AT_MS, 500f)
         val shift = now / 380f
         wave.reset()
         var first = true
@@ -672,7 +774,7 @@ class ModeCardView(
 
     private fun tick(now: Float) {
         if (!running) return
-        if (now >= TOTAL_MS) {
+        if (now >= total) {
             if (!finished) {
                 finished = true
                 running = false
@@ -706,11 +808,16 @@ class ModeCardView(
 
     private companion object {
         const val TOTAL_MS = ModeBannerView.TOTAL_MS
+        const val SPORT_TOTAL_MS = 4_000f
         const val ENTER_MS = 380f
         const val EXIT_MS = 320f
         const val RUN_AT_MS = 180f
         const val RUN_MS = 1_000f
-        const val CHEV_AT_MS = 260f
+        const val GAUGE_AT_MS = 200f
+        /** Acul pornește după ce arcurile s-au tras. */
+        const val NEEDLE_DELAY_MS = 350f
+        /** De unde începe zona roșie, ca parte din arc. */
+        const val RED_FROM = 0.84f
         const val TEXT_AT_MS = 140f
         const val TEXT_MS = 380f
         const val SLIDE_AT_MS = 360f

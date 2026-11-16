@@ -140,6 +140,14 @@ class Prefs(context: Context) {
         get() = sp.getInt(KEY_BT_PROFILE_TRIED, 0)
         set(value) = sp.edit().putInt(KEY_BT_PROFILE_TRIED, value).apply()
 
+    /**
+     * Cadrele CAN cu motorul pornit în orice ecran (scenele de mod oriunde). Oprit: doar pe
+     * Dashboard, în marșarier și până vine ora din bord, ca înainte de 2026-11-17.
+     */
+    var liveCanEverywhere: Boolean
+        get() = sp.getBoolean(KEY_LIVE_CAN_EVERYWHERE, true)
+        set(value) = sp.edit().putBoolean(KEY_LIVE_CAN_EVERYWHERE, value).apply()
+
     /** Marșarier: scena noastră în locul ferestrei KSW. */
     var reverseScene: Boolean
         get() = sp.getBoolean(KEY_REVERSE_SCENE, false)
@@ -337,6 +345,7 @@ class Prefs(context: Context) {
         const val THEME_RED = 1
         const val THEME_MONO = 2
         private const val KEY_REVERSE_SCENE = "reverse_scene"
+        private const val KEY_LIVE_CAN_EVERYWHERE = "live_can_everywhere"
         private const val KEY_MCU_CAMERA = "mcu_camera_type"
         private const val KEY_MCU_TRACK = "mcu_track"
         private const val KEY_MCU_RADAR = "mcu_radar"

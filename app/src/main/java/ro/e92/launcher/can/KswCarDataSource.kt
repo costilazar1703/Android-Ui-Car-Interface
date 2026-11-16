@@ -206,7 +206,9 @@ class KswCarDataSource(
         if (!engineRunning) clockGaveUp = false
         // Cu motorul pornit, în orice ecran: scenele de mod (sisteme, Drive Sport) citesc cadrele
         // 0x19E și 0x1D2 tot drumul (cerut 2026-11-17). Cu contactul pus și motorul oprit, nimic.
-        val wanted = reverse || waitingClock || engineRunning
+        // Comutatorul din Setări (Car & unit): oprit, cadrele merg doar cu Dashboard-ul deschis.
+        val wanted = reverse || waitingClock ||
+            (engineRunning && (Services.prefs.liveCanEverywhere || dashboardOpen))
         // Fără legătura cu EventCenter nu trimitem nimic și nu ținem minte nimic: altfel
         // „pornite" rămânea notat fără să fi plecat comanda (marșarier imediat după pornire).
         val binder = service ?: return

@@ -101,6 +101,16 @@ class SettingsScreen(
         val prefs = Services.prefs
         return listOfNotNull(
             DetailRow(
+                id = "car_live_can",
+                title = context.getString(R.string.set_live_can),
+                value = context.getString(if (prefs.liveCanEverywhere) R.string.on else R.string.off),
+                onActivate = {
+                    prefs.liveCanEverywhere = !prefs.liveCanEverywhere
+                    Services.kswCar?.updateCanForwarding()
+                    reloadDetail("car_live_can")
+                }
+            ),
+            DetailRow(
                 id = "car_bt_repair",
                 title = context.getString(R.string.set_bt_repair),
                 value = ksw.stackStatus() + " · " + KswSettings.btTypeLabel(prefs.btModuleType),
