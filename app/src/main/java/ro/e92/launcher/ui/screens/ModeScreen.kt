@@ -62,7 +62,8 @@ class ModeScreen(host: ScreenHost, private val scene: ModeScene) : Screen(host) 
             context,
             context.getString(titleRes(scene)),
             if (subtitle != 0) context.getString(subtitle) else null,
-            photo
+            photo,
+            if (scene == ModeScene.DRIFT) DRIFT_TOTAL_MS else ModeBannerView.TOTAL_MS
         ) { dismiss() }.apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
@@ -94,6 +95,10 @@ class ModeScreen(host: ScreenHost, private val scene: ModeScene) : Screen(host) 
         host.pop()
     }
 
+    private companion object {
+        const val DRIFT_TOTAL_MS = 4_500f
+    }
+
     private fun titleRes(scene: ModeScene) = when (scene) {
         ModeScene.DRIFT -> R.string.mode_drift
         ModeScene.NORMAL -> R.string.mode_normal
@@ -114,6 +119,8 @@ class ModeBannerView(
     private val title: String,
     private val subtitle: String?,
     photoRes: Int,
+    /** Cât stă pe ecran: Drift Mode 4,5 s, Normal Mode 2,5 s (cerut 2026-11-17). */
+    private val total: Float,
     private val onDone: () -> Unit
 ) : View(context) {
 
@@ -194,13 +201,13 @@ class ModeBannerView(
         val h = height.toFloat()
         if (w == 0f || h == 0f) return
         val now = if (startedAt == 0L) 0f else (SystemClock.uptimeMillis() - startedAt).toFloat()
-        val all = ease(now, 0f, FADE_IN_MS) * (1f - ease(now, TOTAL_MS - EXIT_MS, EXIT_MS))
+        val all = ease(now, 0f, FADE_IN_MS) * (1f - ease(now, total - EXIT_MS, EXIT_MS))
 
         // ---- fotografia: se așază încet, de la puțin mărită ----
         canvas.drawColor(Color.argb((255 * all).toInt(), 0, 0, 0))
         photo?.let { bmp ->
             val scale = maxOf(w / bmp.width, h / bmp.height) *
-                (PHOTO_START_SCALE - (PHOTO_START_SCALE - 1f) * ease(now, 0f, TOTAL_MS))
+                (PHOTO_START_SCALE - (PHOTO_START_SCALE - 1f) * ease(now, 0f, total))
             val pw = bmp.width * scale
             val ph = bmp.height * scale
             photoRect.set((w - pw) / 2f, (h - ph) / 2f, (w + pw) / 2f, (h + ph) / 2f)
@@ -265,8 +272,8 @@ class ModeBannerView(
                     0f, ty - big * 0.74f, 0f, ty,
                     // Hyper gray: gri metalic închis, ca jantele din fotografie.
                     intArrayOf(
-                        Color.rgb(158, 162, 169), Color.rgb(112, 117, 125), Color.rgb(56, 60, 67),
-                        Color.rgb(86, 91, 99), Color.rgb(124, 129, 137)
+                        Color.rgb(188, 192, 199), Color.rgb(142, 147, 155), Color.rgb(82, 87, 95),
+                        Color.rgb(114, 119, 127), Color.rgb(154, 159, 167)
                     ),
                     floatArrayOf(0f, 0.42f, 0.6f, 0.78f, 1f), Shader.TileMode.CLAMP
                 )
@@ -276,7 +283,10 @@ class ModeBannerView(
             rimPaint.alpha = (alpha * 0.75f).toInt()
             canvas.drawText(title, x - rim, ty - rim, rimPaint)
             titlePaint.alpha = alpha
+            // O strălucire slabă în jurul literelor, ca griul să nu se piardă pe fundalul închis.
+            titlePaint.setShadowLayer(h * 0.022f, 0f, 0f, Color.argb((alpha * 0.4f).toInt(), 200, 206, 216))
             canvas.drawText(title, x, ty, titlePaint)
+            titlePaint.clearShadowLayer()
         }
         if (subText != null && subIn > 0f) {
             subPaint.alpha = (255 * subIn * all).toInt()
@@ -309,7 +319,7 @@ class ModeBannerView(
         }
 
         if (!running) return
-        if (now >= TOTAL_MS) {
+        if (now >= total) {
             if (!finished) {
                 finished = true
                 running = false
@@ -807,7 +817,6 @@ class ModeCardView(
     }
 
     private companion object {
-        const val TOTAL_MS = ModeBannerView.TOTAL_MS
         const val SPORT_TOTAL_MS = 5_000f
         const val DRIVE_TOTAL_MS = 3_500f
         const val ENTER_MS = 380f
