@@ -8,6 +8,8 @@ import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.SweepGradient
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.RadialGradient
@@ -352,11 +354,16 @@ class ModeBannerView(
 }
 
 /**
- * Cardul de mod de condus, ca la navigațiile noi: sticlă închisă jos pe mijloc, un cadran mic
- * cu acul care urcă (DS) sau coboară (D), numele modului și selectorul D / DS cu bucata aprinsă
- * care alunecă la modul nou. Ecranul de dedesubt rămâne vizibil și primește atingerile.
+ * Cardul de mod de condus, jos pe mijloc, peste ecranul curent (care rămâne vizibil și primește
+ * atingerile). Sticlă închisă cu:
+ *  - o lumină care aleargă o dată în jurul marginii, apoi rămâne o margine stinsă în culoarea modului;
+ *  - în stânga un ecuson animat: la DS trei săgeți care se aprind în val, la D o undă liniștită;
+ *  - la DS dâre de viteză care trec prin card la intrare, la D un halou care respiră;
+ *  - numele modului, selectorul D / DS cu bucata aprinsă care alunecă la modul nou;
+ *  - jos o linie subțire care se scurtează cât timp mai stă cardul pe ecran.
  *
- * Desenat pe ceasul propriu, cadru cu cadru, ca [ModeBannerView].
+ * Desenat pe ceasul propriu, cadru cu cadru, ca [ModeBannerView]: pe unitate scara animațiilor
+ * Android poate fi 0.
  */
 class ModeCardView(
     context: Context,
@@ -366,30 +373,27 @@ class ModeCardView(
 ) : View(context) {
 
     private val orange = ContextCompat.getColor(context, R.color.glow_core)
-    /** DS: portocaliul interfeței. D: gri-oțel rece, liniștit. */
+    /** DS: portocaliul interfeței. D: gri-oțel rece. */
     private val accent = if (sport) orange else Color.rgb(170, 184, 199)
 
     private val semibold = context.resources.getFont(R.font.inter_semibold)
     private val cardPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK }
-    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val arcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
     }
-    private val needlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeCap = Paint.Cap.ROUND }
     private val kickerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = semibold
-        letterSpacing = 0.3f
-        color = Color.rgb(128, 133, 141)
+        letterSpacing = 0.32f
     }
     private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = semibold
-        letterSpacing = 0.01f
-        color = Color.rgb(232, 234, 238)
+        letterSpacing = 0.005f
     }
-    private val segPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val segTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = semibold
         textAlign = Paint.Align.CENTER
@@ -400,11 +404,13 @@ class ModeCardView(
     }
     private val unitSweep = LinearGradient(
         -1f, -0.5f, 1f, 0.5f,
-        intArrayOf(Color.TRANSPARENT, Color.argb(200, 255, 255, 255), Color.TRANSPARENT), null, Shader.TileMode.CLAMP
+        intArrayOf(Color.TRANSPARENT, Color.argb(210, 255, 255, 255), Color.TRANSPARENT), null, Shader.TileMode.CLAMP
     )
     private val m = Matrix()
     private val card = RectF()
     private val r = RectF()
+    private val clip = Path()
+    private val wave = Path()
     private val kicker = context.getString(R.string.mode_kicker).uppercase()
 
     private var startedAt = 0L
@@ -430,143 +436,228 @@ class ModeCardView(
         val now = if (startedAt == 0L) 0f else (SystemClock.uptimeMillis() - startedAt).toFloat()
 
         val enter = ease(now, 0f, ENTER_MS)
+        val pop = back(now, 0f, ENTER_MS + 120f)
         val exit = ease(now, TOTAL_MS - EXIT_MS, EXIT_MS)
         val alpha = enter * (1f - exit)
         if (alpha <= 0f) return tick(now)
+        val a255 = (255 * alpha).toInt()
 
-        // ---- cardul: urcă din jos și se mărește puțin cât apare, coboară cât pleacă ----
+        // ---- așezare: jos pe mijloc; urcă cu un mic recul la intrare, coboară la ieșire ----
         val cw = CARD_W * u
         val ch = CARD_H * u
         val cx = w / 2f
-        val cy = h * CARD_Y + (1f - enter) * 26f * u + exit * 14f * u
-        val scale = 0.94f + 0.06f * enter
+        val cy = h - BOTTOM_GAP * u - ch / 2f + (1f - enter) * 30f * u + exit * 16f * u
+        val scale = 0.9f + 0.1f * pop
         canvas.save()
         canvas.scale(scale, scale, cx, cy)
         card.set(cx - cw / 2f, cy - ch / 2f, cx + cw / 2f, cy + ch / 2f)
         val rad = ch / 2f
 
-        // Umbra moale: câteva straturi din ce în ce mai largi (setShadowLayer pe forme nu merge
-        // cu accelerare hardware pe Android 8.1).
-        for (i in 1..6) {
-            shadowPaint.alpha = (16 * alpha).toInt()
+        // Umbra: straturi din ce în ce mai largi (setShadowLayer pe forme nu merge cu accelerare
+        // hardware pe Android 8.1).
+        for (i in 1..7) {
+            shadowPaint.alpha = (15 * alpha).toInt()
             val g = i * 4f * u
-            r.set(card.left - g, card.top - g + 6f * u, card.right + g, card.bottom + g + 6f * u)
+            r.set(card.left - g, card.top - g + 8f * u, card.right + g, card.bottom + g + 8f * u)
             canvas.drawRoundRect(r, rad + g, rad + g, shadowPaint)
         }
-        // Halou slab în culoarea modului, sub card.
-        // Elipsă turtită: cercul se desenează întreg, iar scara pe verticală îl aplatizează.
-        val glowR = cw * 0.5f
-        glowPaint.shader = RadialGradient(
+        // Haloul de dedesubt: la D respiră încet, la DS se aprinde puternic și se liniștește.
+        val breathe = if (sport) 0.55f + 0.45f * (1f - ease(now, 300f, 900f))
+        else 0.55f + 0.2f * kotlin.math.sin(now / 420f).toFloat()
+        val glowR = cw * 0.55f
+        fillPaint.shader = RadialGradient(
             cx, card.bottom, glowR,
-            intArrayOf(withAlpha(accent, (60 * alpha).toInt()), Color.TRANSPARENT), null, Shader.TileMode.CLAMP
+            intArrayOf(withAlpha(accent, (95 * alpha * breathe).toInt()), Color.TRANSPARENT), null, Shader.TileMode.CLAMP
         )
         canvas.save()
-        canvas.scale(1f, 0.28f, cx, card.bottom)
-        canvas.drawCircle(cx, card.bottom, glowR, glowPaint)
+        canvas.scale(1f, 0.3f, cx, card.bottom)
+        canvas.drawCircle(cx, card.bottom, glowR, fillPaint)
         canvas.restore()
+        fillPaint.shader = null
 
+        // ---- sticla ----
         cardPaint.shader = LinearGradient(
             0f, card.top, 0f, card.bottom,
-            Color.argb((242 * alpha).toInt(), 30, 32, 37), Color.argb((242 * alpha).toInt(), 12, 13, 16),
+            Color.argb((246 * alpha).toInt(), 34, 36, 41), Color.argb((246 * alpha).toInt(), 11, 12, 15),
             Shader.TileMode.CLAMP
         )
         canvas.drawRoundRect(card, rad, rad, cardPaint)
-        borderPaint.strokeWidth = 1.2f * u
-        borderPaint.shader = LinearGradient(
-            0f, card.top, 0f, card.bottom,
-            Color.argb((70 * alpha).toInt(), 255, 255, 255), Color.argb((14 * alpha).toInt(), 255, 255, 255),
-            Shader.TileMode.CLAMP
-        )
-        canvas.drawRoundRect(card, rad, rad, borderPaint)
 
-        // Linia de lumină de pe muchia de sus, în culoarea modului, se întinde din centru.
-        val lineIn = ease(now, LINE_AT_MS, LINE_MS)
-        if (lineIn > 0f) {
-            val half = cw * 0.36f * lineIn
-            borderPaint.shader = LinearGradient(
-                cx - half, 0f, cx + half, 0f,
-                intArrayOf(Color.TRANSPARENT, withAlpha(accent, (255 * alpha).toInt()), Color.TRANSPARENT),
-                null, Shader.TileMode.CLAMP
+        clip.reset()
+        clip.addRoundRect(card, rad, rad, Path.Direction.CW)
+        canvas.save()
+        canvas.clipPath(clip)
+        // Luciul de sus al sticlei.
+        fillPaint.shader = LinearGradient(
+            0f, card.top, 0f, card.top + ch * 0.5f,
+            Color.argb((22 * alpha).toInt(), 255, 255, 255), Color.TRANSPARENT, Shader.TileMode.CLAMP
+        )
+        canvas.drawRect(card.left, card.top, card.right, card.top + ch * 0.5f, fillPaint)
+        fillPaint.shader = null
+        if (sport) drawStreaks(canvas, now, u, alpha)
+        // Timpul rămas: o linie subțire pe fundul cardului care se scurtează spre centru.
+        val left = 1f - ((now - ENTER_MS) / (TOTAL_MS - EXIT_MS - ENTER_MS)).coerceIn(0f, 1f)
+        if (left > 0f) {
+            val half = (cw / 2f - rad) * left
+            fillPaint.color = withAlpha(accent, (150 * alpha).toInt())
+            canvas.drawRect(cx - half, card.bottom - 2.4f * u, cx + half, card.bottom, fillPaint)
+        }
+        canvas.restore()
+
+        // ---- marginea: o lumină aleargă o dată în jur, apoi rămâne stinsă în culoarea modului ----
+        strokePaint.strokeWidth = 1.4f * u
+        strokePaint.shader = null
+        strokePaint.color = Color.argb((40 * alpha).toInt(), 255, 255, 255)
+        canvas.drawRoundRect(card, rad, rad, strokePaint)
+        val run = ((now - RUN_AT_MS) / RUN_MS)
+        val settle = ease(now, RUN_AT_MS + RUN_MS * 0.7f, 500f)
+        strokePaint.color = withAlpha(accent, (90 * alpha * settle).toInt())
+        canvas.drawRoundRect(card, rad, rad, strokePaint)
+        if (run > 0f && run < 1f) {
+            val comet = SweepGradient(
+                cx, cy,
+                intArrayOf(Color.TRANSPARENT, Color.TRANSPARENT, withAlpha(accent, a255), Color.WHITE, Color.TRANSPARENT),
+                floatArrayOf(0f, 0.72f, 0.94f, 0.985f, 1f)
             )
-            borderPaint.strokeWidth = 2f * u
-            canvas.drawLine(cx - half, card.top + 0.6f * u, cx + half, card.top + 0.6f * u, borderPaint)
+            m.setRotate(-90f + 360f * ease(now, RUN_AT_MS, RUN_MS), cx, cy)
+            comet.setLocalMatrix(m)
+            strokePaint.shader = comet
+            strokePaint.strokeWidth = 2.6f * u
+            canvas.drawRoundRect(card, rad, rad, strokePaint)
+            strokePaint.shader = null
         }
 
-        // ---- cadranul din stânga: arc gri, arc colorat până la ac, acul ----
-        val dialR = ch * 0.3f
-        val dcx = card.left + rad
-        val dcy = cy + dialR * 0.12f
-        r.set(dcx - dialR, dcy - dialR, dcx + dialR, dcy + dialR)
-        arcPaint.strokeWidth = 4f * u
-        arcPaint.color = Color.argb((60 * alpha).toInt(), 255, 255, 255)
-        canvas.drawArc(r, ARC_START, ARC_SWEEP, false, arcPaint)
-        val needleIn = ease(now, NEEDLE_AT_MS, NEEDLE_MS)
-        // DS: acul urcă de jos aproape de capăt; D: coboară de sus la o treime.
-        val from = if (sport) 0.18f else 0.9f
-        val to = if (sport) 0.9f else 0.32f
-        val level = from + (to - from) * needleIn
-        arcPaint.color = withAlpha(accent, (255 * alpha).toInt())
-        canvas.drawArc(r, ARC_START, ARC_SWEEP * level, false, arcPaint)
-        val ang = Math.toRadians((ARC_START + ARC_SWEEP * level).toDouble())
-        needlePaint.color = Color.argb((255 * alpha).toInt(), 240, 242, 245)
-        needlePaint.strokeWidth = 2.6f * u
-        canvas.drawLine(
-            dcx, dcy,
-            dcx + (dialR * 0.82f * Math.cos(ang)).toFloat(), dcy + (dialR * 0.82f * Math.sin(ang)).toFloat(),
-            needlePaint
+        // ---- ecusonul din stânga ----
+        val bR = ch * 0.34f
+        val bcx = card.left + rad
+        fillPaint.shader = RadialGradient(
+            bcx, cy - bR * 0.3f, bR * 1.2f,
+            Color.argb((255 * alpha).toInt(), 44, 47, 54), Color.argb((255 * alpha).toInt(), 16, 17, 21),
+            Shader.TileMode.CLAMP
         )
-        needlePaint.color = withAlpha(accent, (255 * alpha).toInt())
-        canvas.drawCircle(dcx, dcy, 3.6f * u, needlePaint)
+        canvas.drawCircle(bcx, cy, bR, fillPaint)
+        fillPaint.shader = null
+        strokePaint.strokeWidth = 1.6f * u
+        strokePaint.color = withAlpha(accent, (130 * alpha).toInt())
+        canvas.drawCircle(bcx, cy, bR, strokePaint)
+        if (sport) drawChevrons(canvas, now, bcx, cy, bR, u, alpha) else drawWave(canvas, now, bcx, cy, bR, u, alpha)
 
-        // ---- textul: rândul mic și numele modului ----
-        val tx = dcx + dialR + 22f * u
-        kickerPaint.textSize = 12.5f * u
-        kickerPaint.alpha = (255 * alpha).toInt()
-        titlePaint.textSize = 27f * u
+        // ---- textul ----
+        val tx = bcx + bR + 22f * u
+        kickerPaint.textSize = 13f * u
+        kickerPaint.color = Color.rgb(128, 133, 141)
+        kickerPaint.alpha = a255
+        titlePaint.textSize = 35f * u
         val textIn = ease(now, TEXT_AT_MS, TEXT_MS)
-        val kickY = cy - 8f * u
-        val titleY = cy + 21f * u + (1f - textIn) * 8f * u
+        val kickY = cy - 11f * u
+        val titleY = cy + 25f * u + (1f - textIn) * 10f * u
         canvas.drawText(kicker, tx, kickY, kickerPaint)
         val titleW = titlePaint.measureText(title)
-        val layer = canvas.saveLayer(tx - 4f, titleY - 34f * u, tx + titleW + 4f, titleY + 10f * u, null)
+        val tTop = titleY - 38f * u
+        val tBottom = titleY + 10f * u
+        val layer = canvas.saveLayer(tx - 4f, tTop, tx + titleW + 4f, tBottom, null)
+        titlePaint.shader = LinearGradient(
+            0f, tTop, 0f, titleY,
+            Color.rgb(246, 247, 249), Color.rgb(196, 200, 207), Shader.TileMode.CLAMP
+        )
         titlePaint.alpha = (255 * alpha * textIn).toInt()
         canvas.drawText(title, tx, titleY, titlePaint)
         val sweep = (now - SWEEP_AT_MS) / SWEEP_MS
         if (sweep > 0f && sweep < 1f) {
             val band = titleW * 0.3f
             val sx = tx - band + (titleW + 2 * band) * sweep
-            m.setScale(band, 50f * u)
-            m.postTranslate(sx, titleY - 12f * u)
+            m.setScale(band, 56f * u)
+            m.postTranslate(sx, titleY - 14f * u)
             unitSweep.setLocalMatrix(m)
             sweepPaint.shader = unitSweep
-            sweepPaint.alpha = (255 * alpha).toInt()
-            canvas.drawRect(tx - 4f, titleY - 34f * u, tx + titleW + 4f, titleY + 10f * u, sweepPaint)
+            sweepPaint.alpha = a255
+            canvas.drawRect(tx - 4f, tTop, tx + titleW + 4f, tBottom, sweepPaint)
         }
         canvas.restoreToCount(layer)
 
-        // ---- selectorul D / DS din dreapta, cu bucata aprinsă care alunecă la modul nou ----
-        val segW = 50f * u
-        val segH = 30f * u
+        // ---- selectorul D / DS ----
+        val segW = 60f * u
+        val segH = 38f * u
         val gap = 4f * u
-        val sx2 = card.right - rad * 0.7f - segW * 2 - gap
+        val sx2 = card.right - rad * 0.62f - segW * 2 - gap
         val sy = cy - segH / 2f
         r.set(sx2 - 4f * u, sy - 4f * u, sx2 + segW * 2 + gap + 4f * u, sy + segH + 4f * u)
-        segPaint.color = Color.argb((120 * alpha).toInt(), 0, 0, 0)
-        canvas.drawRoundRect(r, r.height() / 2f, r.height() / 2f, segPaint)
-        val slide = ease(now, SLIDE_AT_MS, SLIDE_MS)
+        fillPaint.color = Color.argb((130 * alpha).toInt(), 0, 0, 0)
+        canvas.drawRoundRect(r, r.height() / 2f, r.height() / 2f, fillPaint)
+        val slide = back(now, SLIDE_AT_MS, SLIDE_MS)
         val fromX = if (sport) sx2 else sx2 + segW + gap
         val toX = if (sport) sx2 + segW + gap else sx2
         val px = fromX + (toX - fromX) * slide
         r.set(px, sy, px + segW, sy + segH)
-        segPaint.color = withAlpha(accent, (255 * alpha).toInt())
-        canvas.drawRoundRect(r, segH / 2f, segH / 2f, segPaint)
-        segTextPaint.textSize = 15f * u
+        fillPaint.color = withAlpha(accent, a255)
+        canvas.drawRoundRect(r, segH / 2f, segH / 2f, fillPaint)
+        segTextPaint.textSize = 16.5f * u
         val baseY = sy + segH / 2f + segTextPaint.textSize * 0.36f
-        drawSeg(canvas, "D", sx2 + segW / 2f, baseY, !sport, slide, alpha)
-        drawSeg(canvas, "DS", sx2 + segW * 1.5f + gap, baseY, sport, slide, alpha)
+        val lit = ease(now, SLIDE_AT_MS, SLIDE_MS)
+        drawSeg(canvas, "D", sx2 + segW / 2f, baseY, !sport, lit, alpha)
+        drawSeg(canvas, "DS", sx2 + segW * 1.5f + gap, baseY, sport, lit, alpha)
 
         canvas.restore()
         tick(now)
+    }
+
+    /** DS: trei săgeți spre dreapta; un val de lumină trece prin ele, de două ori, apoi rămân aprinse. */
+    private fun drawChevrons(canvas: Canvas, now: Float, cx: Float, cy: Float, r: Float, u: Float, alpha: Float) {
+        val size = r * 0.36f
+        val step = r * 0.36f
+        iconPaint.strokeWidth = 3.4f * u
+        for (i in 0..2) {
+            val x = cx - step + step * i - size * 0.2f
+            val phase = ((now - CHEV_AT_MS - i * 110f) / 640f)
+            val pulse = if (phase in 0f..2f) {
+                val p = phase % 1f
+                if (p < 0.35f) p / 0.35f else 1f - (p - 0.35f) / 0.65f
+            } else 0f
+            val on = ease(now, CHEV_AT_MS + i * 110f, 260f)
+            val base = 0.35f + 0.65f * on
+            val c = blend(accent, Color.WHITE, pulse * 0.7f)
+            iconPaint.color = withAlpha(c, (255 * alpha * base).toInt())
+            canvas.drawLine(x - size * 0.5f, cy - size, x + size * 0.5f, cy, iconPaint)
+            canvas.drawLine(x + size * 0.5f, cy, x - size * 0.5f, cy + size, iconPaint)
+        }
+    }
+
+    /** D: o undă lină care curge încet spre dreapta. */
+    private fun drawWave(canvas: Canvas, now: Float, cx: Float, cy: Float, r: Float, u: Float, alpha: Float) {
+        val half = r * 0.62f
+        val amp = r * 0.2f * ease(now, CHEV_AT_MS, 500f)
+        val shift = now / 380f
+        wave.reset()
+        var first = true
+        var x = -half
+        while (x <= half) {
+            val t = x / half
+            val fade = 1f - t * t
+            val y = cy + amp * fade * kotlin.math.sin(t * 3.4f - shift).toFloat()
+            if (first) wave.moveTo(cx + x, y) else wave.lineTo(cx + x, y)
+            first = false
+            x += 1.5f * u
+        }
+        iconPaint.strokeWidth = 3.2f * u
+        iconPaint.color = withAlpha(accent, (255 * alpha).toInt())
+        canvas.drawPath(wave, iconPaint)
+    }
+
+    /** DS: câteva dâre de lumină care trec prin card de la stânga la dreapta, la intrare. */
+    private fun drawStreaks(canvas: Canvas, now: Float, u: Float, alpha: Float) {
+        for ((i, y) in STREAK_Y.withIndex()) {
+            val t = (now - STREAK_AT_MS - i * 70f) / STREAK_MS
+            if (t <= 0f || t >= 1f) continue
+            val len = card.width() * 0.32f
+            val x = card.left - len + (card.width() + len) * ease(t * STREAK_MS, 0f, STREAK_MS)
+            val yy = card.top + card.height() * y
+            fillPaint.shader = LinearGradient(
+                x, 0f, x + len, 0f,
+                Color.TRANSPARENT, withAlpha(accent, (150 * alpha * (1f - t)).toInt()), Shader.TileMode.CLAMP
+            )
+            canvas.drawRect(x, yy - 0.8f * u, x + len, yy + 0.8f * u, fillPaint)
+        }
+        fillPaint.shader = null
     }
 
     /** Textul bucății: deschis pe culoarea aprinsă, gri pe fundal; trece de la una la alta cu glisarea. */
@@ -606,26 +697,33 @@ class ModeCardView(
         return 1f - (1f - t) * (1f - t) * (1f - t)
     }
 
+    /** Ca [ease], dar trece puțin de capăt și revine: un recul mic, ca la iOS. */
+    private fun back(now: Float, from: Float, length: Float): Float {
+        val t = ((now - from) / length).coerceIn(0f, 1f) - 1f
+        val s = 1.6f
+        return 1f + t * t * ((s + 1f) * t + s)
+    }
+
     private companion object {
         const val TOTAL_MS = ModeBannerView.TOTAL_MS
         const val ENTER_MS = 380f
         const val EXIT_MS = 320f
-        const val LINE_AT_MS = 220f
-        const val LINE_MS = 520f
-        const val NEEDLE_AT_MS = 260f
-        const val NEEDLE_MS = 700f
+        const val RUN_AT_MS = 180f
+        const val RUN_MS = 1_000f
+        const val CHEV_AT_MS = 260f
         const val TEXT_AT_MS = 140f
         const val TEXT_MS = 380f
-        const val SLIDE_AT_MS = 380f
-        const val SLIDE_MS = 420f
-        const val SWEEP_AT_MS = 650f
+        const val SLIDE_AT_MS = 360f
+        const val SLIDE_MS = 460f
+        const val SWEEP_AT_MS = 700f
         const val SWEEP_MS = 850f
+        const val STREAK_AT_MS = 120f
+        const val STREAK_MS = 520f
+        val STREAK_Y = floatArrayOf(0.26f, 0.5f, 0.71f, 0.38f)
 
-        const val CARD_W = 470f
-        const val CARD_H = 78f
-        /** Centrul cardului, ca parte din înălțimea ecranului: mijloc spre jos. */
-        const val CARD_Y = 0.875f
-        const val ARC_START = 135f
-        const val ARC_SWEEP = 270f
+        const val CARD_W = 620f
+        const val CARD_H = 100f
+        /** Distanța de la marginea de jos a ecranului; pe Dashboard cardul lasă cifrele vizibile. */
+        const val BOTTOM_GAP = 12f
     }
 }

@@ -183,7 +183,8 @@ class KswCarDataSource(
      *  - în marșarier, cu scena noastră pornită (senzori, volan), pe toată durata lui;
      *  - cu motorul pornit, până vine o dată ora din bord (0x2F8, la ~15 s), cel mult
      *    [CLOCK_WAIT_MS]; apoi ceasul numără singur ([ro.e92.launcher.core.GpsClock]);
-     *  - cu motorul pornit, cât e deschis ecranul cu ceasuri (tensiunea bateriei, 0x3B4).
+     *  - cu motorul pornit, în orice ecran (2026-11-17): stările DSC și Drive Sport pentru scenele
+     *    de mod, tensiunea bateriei pe ecranul cu ceasuri.
      * Cu contactul pus și motorul oprit nu pornim nimic. Aceeași comandă ca butonul din Factory.
      */
     fun updateCanForwarding(rpm: Int = lastRpm) {
@@ -203,7 +204,9 @@ class KswCarDataSource(
             EventLog.log(TAG, "ora din bord n-a venit în ${CLOCK_WAIT_MS / 1000} s - opresc cadrele CAN")
         }
         if (!engineRunning) clockGaveUp = false
-        val wanted = reverse || waitingClock || (engineRunning && dashboardOpen)
+        // Cu motorul pornit, în orice ecran: scenele de mod (sisteme, Drive Sport) citesc cadrele
+        // 0x19E și 0x1D2 tot drumul (cerut 2026-11-17). Cu contactul pus și motorul oprit, nimic.
+        val wanted = reverse || waitingClock || engineRunning
         // Fără legătura cu EventCenter nu trimitem nimic și nu ținem minte nimic: altfel
         // „pornite" rămânea notat fără să fi plecat comanda (marșarier imediat după pornire).
         val binder = service ?: return
