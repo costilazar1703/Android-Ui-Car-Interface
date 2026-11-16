@@ -132,11 +132,7 @@ class ModeBannerView(
     }
     private val titlePaint = titleStyle()
     private val depthPaint = titleStyle()
-    private val rimPaint = titleStyle().apply {
-        style = Paint.Style.STROKE
-        strokeJoin = Paint.Join.ROUND
-        color = Color.rgb(214, 218, 224)
-    }
+    private val rimPaint = titleStyle().apply { color = Color.rgb(190, 195, 203) }
     private var faceFor = 0f
 
     /** Rândul mic, ca „BMW iDRIVE" din salut: semibold, litere rărite, portocaliu. */
@@ -205,7 +201,7 @@ class ModeBannerView(
         titlePaint.textSize = big
         depthPaint.textSize = big
         rimPaint.textSize = big
-        rimPaint.strokeWidth = h * RIM_WIDTH
+        val rim = h * RIM_WIDTH
         subPaint.textSize = h * SUB_SIZE
         val x = w * TEXT_LEFT
         val titleW = titlePaint.measureText(title)
@@ -255,16 +251,18 @@ class ModeBannerView(
                     0f, ty - big * 0.74f, 0f, ty,
                     // Hyper gray: gri metalic închis, ca jantele din fotografie.
                     intArrayOf(
-                        Color.rgb(196, 200, 207), Color.rgb(142, 148, 157), Color.rgb(74, 79, 87),
-                        Color.rgb(112, 118, 127), Color.rgb(158, 163, 171)
+                        Color.rgb(158, 162, 169), Color.rgb(112, 117, 125), Color.rgb(56, 60, 67),
+                        Color.rgb(86, 91, 99), Color.rgb(124, 129, 137)
                     ),
                     floatArrayOf(0f, 0.42f, 0.6f, 0.78f, 1f), Shader.TileMode.CLAMP
                 )
             }
+            // Rama: o copie deschisă cu puțin mai sus-stânga, sub față. Un contur desenat cu
+            // STROKE arăta liniile dintre bucățile literelor, în interiorul lor.
+            rimPaint.alpha = (alpha * 0.75f).toInt()
+            canvas.drawText(title, x - rim, ty - rim, rimPaint)
             titlePaint.alpha = alpha
             canvas.drawText(title, x, ty, titlePaint)
-            rimPaint.alpha = (alpha * 0.38f).toInt()
-            canvas.drawText(title, x, ty, rimPaint)
         }
         if (subText != null && subIn > 0f) {
             subPaint.alpha = (255 * subIn * all).toInt()
@@ -335,7 +333,7 @@ class ModeBannerView(
         private const val TITLE_SKEW = -0.17f
         private const val DEPTH = 0.014f
         private const val DEPTH_STEPS = 7
-        private const val RIM_WIDTH = 0.0028f
+        private const val RIM_WIDTH = 0.0026f
         private const val SUB_GAP = 0.045f
         private const val LINE_PX = 3f
     }
