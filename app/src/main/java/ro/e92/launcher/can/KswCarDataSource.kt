@@ -191,9 +191,23 @@ class KswCarDataSource(
         lastRpm = rpm
         val reverse = Services.reverse.vehicleState.value.reverseGear == true && Services.prefs.reverseScene
         val nowMs = SystemClock.elapsedRealtime()
-        if (rpm >= ENGINE_ON_RPM) engineOnAt = nowMs
+        val wasRunning = engineOnAt != 0L && nowMs - engineOnAt < ENGINE_OFF_MS
+        if (rpm >= ENGINE_ON_RPM) {
+            if (!wasRunning) {
+                // Motorul tocmai a pornit: cadrele vin abia după [CAN_START_DELAY_MS], nu chiar în
+                // clipa pornirii, când demarorul trage din baterie (cerut 2026-11-17). Reverificăm
+                // singuri atunci, nu așteptăm următoarea citire de turație.
+                engineStartAt = nowMs
+                scope.launch {
+                    kotlinx.coroutines.delay(CAN_START_DELAY_MS + 50L)
+                    updateCanForwarding()
+                }
+            }
+            engineOnAt = nowMs
+        }
         // O citire de 0 rpm izolată nu oprește cadrele: motorul e oprit abia după [ENGINE_OFF_MS].
-        val engineRunning = engineOnAt != 0L && nowMs - engineOnAt < ENGINE_OFF_MS
+        val engineRunning = engineOnAt != 0L && nowMs - engineOnAt < ENGINE_OFF_MS &&
+            nowMs - engineStartAt >= CAN_START_DELAY_MS
         // Ora din bord: așteptăm cel mult [CLOCK_WAIT_MS] de la pornirea motorului. Dacă nu vine
         // (jurnalul nu se poate citi, de exemplu), renunțăm: nu ținem cadrele pornite tot drumul.
         val needClock = engineRunning && !ro.e92.launcher.core.GpsClock.hasCarTime()
@@ -358,6 +372,7 @@ class KswCarDataSource(
 
     private var canSentAt = 0L
     private var engineOnAt = 0L
+    private var engineStartAt = 0L
     private var clockWaitFrom = 0L
     private var clockGaveUp = false
 
@@ -430,6 +445,8 @@ class KswCarDataSource(
         const val ENGINE_ON_RPM = 300
         const val SPEED_FLOOR_KMH = 3
         const val ENGINE_OFF_MS = 10_000L
+        /** Cât așteptăm după pornirea motorului până cerem cadrele CAN. */
+        const val CAN_START_DELAY_MS = 2_000L
         const val CLOCK_WAIT_MS = 60_000L
         const val CAN_RETRY_MS = 3_000L
         /** Indicii setărilor 0x6A: ksw_Send8902BackcarMod_0x04 / 0x1b / 0x1c / 0x0c din EventCenter. */
