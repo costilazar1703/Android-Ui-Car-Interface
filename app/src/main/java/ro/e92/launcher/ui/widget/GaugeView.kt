@@ -57,6 +57,8 @@ class GaugeView @JvmOverloads constructor(
     private var labelStep = 40f
     private var redlineFrom = Float.MAX_VALUE
     private var caption = ""
+    /** Cât de sus stă titlul, ca fracție din raza cadranului (de la centru în sus). */
+    private var captionLift = DEFAULT_CAPTION_LIFT
     private var unit = ""
     private var displayDivisor = 1f
     private var decimals = 0
@@ -140,9 +142,11 @@ class GaugeView @JvmOverloads constructor(
         labelSizeRatio: Float = DEFAULT_LABEL_SIZE,
         redlineFrom: Float = Float.MAX_VALUE,
         displayDivisor: Float = 1f,
-        decimals: Int = 0
+        decimals: Int = 0,
+        captionLift: Float = DEFAULT_CAPTION_LIFT
     ) {
         this.caption = caption
+        this.captionLift = captionLift
         this.unit = unit
         this.minValue = minValue
         this.maxValue = maxValue
@@ -299,7 +303,7 @@ class GaugeView @JvmOverloads constructor(
             letterSpacing = 0.2f
             color = CAPTION
         }
-        c.drawText(caption, centerX, centerY - dial * 0.38f, captionPaint)
+        c.drawText(caption, centerX, centerY - dial * captionLift, captionPaint)
         return out
     }
 
@@ -437,6 +441,7 @@ class GaugeView @JvmOverloads constructor(
         const val DEFAULT_START_ANGLE = 150f
         const val DEFAULT_SWEEP_ANGLE = 240f
         const val DEFAULT_LABEL_SIZE = 0.050f
+        const val DEFAULT_CAPTION_LIFT = 0.38f
 
         /** Inelul portocaliu din `gauge_face` e la ~0.83 din rază; interiorul începe sub el. */
         const val DIAL_RATIO = 0.80f

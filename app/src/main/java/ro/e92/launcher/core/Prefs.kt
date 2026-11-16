@@ -183,7 +183,9 @@ class Prefs(context: Context) {
         set(value) = sp.edit().putInt(KEY_MCU_HB, value.coerceIn(0, 1)).apply()
 
     var mcuOrigVideo: Int
-        get() = sp.getInt(KEY_MCU_ORIG_VIDEO, -1).coerceIn(-1, 1)
+        // Implicit 0 (2026-11-16): cu 1, la pornire MCU-ul intră scurt în „modul original" (A1 1A 02)
+        // și EventCenter deschide fereastra de video original BMW, care arată „No Signal".
+        get() = sp.getInt(KEY_MCU_ORIG_VIDEO, 0).coerceIn(-1, 1)
         set(value) = sp.edit().putInt(KEY_MCU_ORIG_VIDEO, value.coerceIn(-1, 1)).apply()
 
     /** La pornire, launcher-ul revine în față dacă îl acoperă ceva neatins de șofer. */
@@ -338,7 +340,8 @@ class Prefs(context: Context) {
         private const val KEY_MCU_CAMERA = "mcu_camera_type"
         private const val KEY_MCU_TRACK = "mcu_track"
         private const val KEY_MCU_RADAR = "mcu_radar"
-        private const val KEY_MCU_ORIG_VIDEO = "mcu_orig_video"
+        /** Cheie nouă: pe unitate rămăsese -1 de la probele din 15 nov. */
+        private const val KEY_MCU_ORIG_VIDEO = "mcu_orig_video_v2"
         private const val KEY_MCU_HB = "mcu_heartbeat"
         private const val KEY_MCU_AFTER_R = "mcu_after_reverse"
         private const val KEY_START_GUARD = "start_guard"

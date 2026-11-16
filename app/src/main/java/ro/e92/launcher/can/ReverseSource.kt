@@ -354,6 +354,16 @@ class ReverseSource(
             // Implicit pornite (2026-11-16): cât ecranul KSW tot apare de la al doilea R, e mai
             // util cu senzori și volan decât gol. Opțiunea oprită le repune pe 1.
             val p = Services.prefs
+            // „Video original BMW": cu 1, EventCenter deschide la pornire fereastra lui de video
+            // original, care fără ecran BMW arată „No Signal" peste tot (2026-11-16). Cu 0
+            // pornește în schimb aplicația KSW de meniu original, pe care launcher-ul o închide.
+            if (p.mcuOrigVideo >= 0) {
+                val want = if (p.reverseScene) p.mcuOrigVideo.toString() else "1"
+                if (KswSettings.read(context, ORIG_VIDEO) != want) {
+                    KswSettings.write(context, ORIG_VIDEO, want)
+                    EventLog.log(TAG, "$ORIG_VIDEO → $want")
+                }
+            }
             for ((key, value) in listOf(RADAR to p.mcuRadar, TRACK to p.mcuTrack)) {
                 val want = if (p.reverseScene) value.toString() else "1"
                 if (KswSettings.read(context, key) != want) {
@@ -420,6 +430,7 @@ class ReverseSource(
         const val RADAR_ACTION = "com.szchoiceway.eventcenter.MCU_CAR_CAN_RADAR_INFO"
         const val RADAR_DATA = "com.szchoiceway.eventcenter.CAR_CAN_DATA"
         const val CAMERA_SELECTION = "KESAIWEI_SYS_CAMERA_SELECTION"
+        const val ORIG_VIDEO = "KSW_ORIGINAL_CAR_VIDEO_DISPLAY"
         const val RADAR = "KESAIWEI_SYS_RADAR"
         const val TRACK = "KESAIWEI_SYS_REVERSING_TRACK"
         const val CAMERA_NONE = "0"

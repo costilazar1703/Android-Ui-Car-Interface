@@ -84,7 +84,9 @@ class DashboardScreen(host: ScreenHost) : Screen(host) {
             labelStep = 40f,
             redlineFrom = 110f,
             startAngle = 180f,
-            sweepAngle = 180f
+            sweepAngle = 180f,
+            // Mai jos: „COOLANT” e lung și la 0.38 intra peste cifrele 40 și 80 (2026-11-16).
+            captionLift = 0.2f
         )
 
         screenScope.launch {
