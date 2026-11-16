@@ -135,7 +135,7 @@ class ModeBannerView(
     private val rimPaint = titleStyle().apply {
         style = Paint.Style.STROKE
         strokeJoin = Paint.Join.ROUND
-        color = Color.WHITE
+        color = Color.rgb(214, 218, 224)
     }
     private var faceFor = 0f
 
@@ -248,21 +248,22 @@ class ModeBannerView(
                 depthPaint.alpha = alpha
                 canvas.drawText(title, x + depth * f, ty + depth * f, depthPaint)
             }
-            // Fața metalică: alb sus, o dungă de umbră sub mijloc, lumină din nou la bază.
+            // Fața metalică: lumină sus, o dungă de umbră sub mijloc, lumină din nou la bază.
             if (faceFor != ty) {
                 faceFor = ty
                 titlePaint.shader = LinearGradient(
                     0f, ty - big * 0.74f, 0f, ty,
+                    // Hyper gray: gri metalic închis, ca jantele din fotografie.
                     intArrayOf(
-                        Color.WHITE, Color.rgb(232, 235, 240), Color.rgb(158, 165, 176),
-                        Color.rgb(205, 210, 218), Color.rgb(240, 242, 246)
+                        Color.rgb(196, 200, 207), Color.rgb(142, 148, 157), Color.rgb(74, 79, 87),
+                        Color.rgb(112, 118, 127), Color.rgb(158, 163, 171)
                     ),
                     floatArrayOf(0f, 0.42f, 0.6f, 0.78f, 1f), Shader.TileMode.CLAMP
                 )
             }
             titlePaint.alpha = alpha
             canvas.drawText(title, x, ty, titlePaint)
-            rimPaint.alpha = (alpha * 0.55f).toInt()
+            rimPaint.alpha = (alpha * 0.38f).toInt()
             canvas.drawText(title, x, ty, rimPaint)
         }
         if (subText != null && subIn > 0f) {
