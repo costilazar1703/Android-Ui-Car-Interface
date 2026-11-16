@@ -120,12 +120,24 @@ class ModeBannerView(
         xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
     }
 
-    /** Același font subțire ca „Welcome back", puțin stins ca reflexul alb să se vadă pe el. */
-    private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(226, 228, 232)
-        typeface = context.resources.getFont(R.font.inter_display_light)
-        letterSpacing = 0.01f
+    /**
+     * Titlul în relief: litere groase, aplecate, cu față metalică, ramă deschisă și o
+     * grosime portocalie trasă în jos-dreapta. Cele trei vopsele au aceeași formă de literă.
+     */
+    private fun titleStyle() = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = context.resources.getFont(R.font.inter_semibold)
+        isFakeBoldText = true
+        textSkewX = TITLE_SKEW
+        letterSpacing = 0.015f
     }
+    private val titlePaint = titleStyle()
+    private val depthPaint = titleStyle()
+    private val rimPaint = titleStyle().apply {
+        style = Paint.Style.STROKE
+        strokeJoin = Paint.Join.ROUND
+        color = Color.WHITE
+    }
+    private var faceFor = 0f
 
     /** Rândul mic, ca „BMW iDRIVE" din salut: semibold, litere rărite, portocaliu. */
     private val subPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -191,6 +203,9 @@ class ModeBannerView(
         // ---- așezare: titlu, linie, rând mic; totul aliniat la stânga ----
         val big = h * TITLE_SIZE
         titlePaint.textSize = big
+        depthPaint.textSize = big
+        rimPaint.textSize = big
+        rimPaint.strokeWidth = h * RIM_WIDTH
         subPaint.textSize = h * SUB_SIZE
         val x = w * TEXT_LEFT
         val titleW = titlePaint.measureText(title)
@@ -204,14 +219,51 @@ class ModeBannerView(
         val lineIn = ease(now, LINE_AT_MS, LINE_MS)
         val subIn = ease(now, SUB_AT_MS, SUB_MS)
 
-        textRect.set(x, top - big * 0.2f, x + titleW, if (subText != null) subBase + h * 0.02f else lineY)
+        val depth = h * DEPTH
+        textRect.set(x, top - big * 0.2f, x + titleW + depth * 2f, if (subText != null) subBase + h * 0.02f else lineY)
+        // Umbra se desenează sub strat, ca reflexul alb să prindă doar literele, nu și umbra.
+        if (titleIn > 0f) {
+            val sa = (255 * titleIn * all).toInt()
+            depthPaint.color = Color.BLACK
+            depthPaint.alpha = sa
+            depthPaint.setShadowLayer(h * 0.03f, 0f, h * 0.012f, Color.argb(sa, 0, 0, 0))
+            canvas.drawText(title, x + depth, titleBase + (1f - titleIn) * h * 0.03f + depth, depthPaint)
+            depthPaint.clearShadowLayer()
+        }
         val layer = canvas.saveLayer(
             textRect.left - 8f, textRect.top - 8f, textRect.right + 8f, textRect.bottom + 8f, null
         )
         if (titleIn > 0f) {
-            titlePaint.alpha = (255 * titleIn * all).toInt()
             // Urcă puțin cât apare, ca salutul de la pornire.
-            canvas.drawText(title, x, titleBase + (1f - titleIn) * h * 0.03f, titlePaint)
+            val ty = titleBase + (1f - titleIn) * h * 0.03f
+            val alpha = (255 * titleIn * all).toInt()
+            // Grosimea: copii suprapuse, din ce în ce mai închise spre fund; ultima aruncă umbra.
+            for (i in DEPTH_STEPS downTo 1) {
+                val f = i / DEPTH_STEPS.toFloat()
+                depthPaint.color = Color.rgb(
+                    (Color.red(accent) * (0.78f - 0.6f * f)).toInt(),
+                    (Color.green(accent) * (0.78f - 0.6f * f)).toInt(),
+                    (Color.blue(accent) * (0.78f - 0.6f * f)).toInt()
+                )
+                depthPaint.alpha = alpha
+                canvas.drawText(title, x + depth * f, ty + depth * f, depthPaint)
+            }
+            // Fața metalică: alb sus, o dungă de umbră sub mijloc, lumină din nou la bază.
+            if (faceFor != ty) {
+                faceFor = ty
+                titlePaint.shader = LinearGradient(
+                    0f, ty - big * 0.74f, 0f, ty,
+                    intArrayOf(
+                        Color.WHITE, Color.rgb(232, 235, 240), Color.rgb(158, 165, 176),
+                        Color.rgb(205, 210, 218), Color.rgb(240, 242, 246)
+                    ),
+                    floatArrayOf(0f, 0.42f, 0.6f, 0.78f, 1f), Shader.TileMode.CLAMP
+                )
+            }
+            titlePaint.alpha = alpha
+            canvas.drawText(title, x, ty, titlePaint)
+            rimPaint.alpha = (alpha * 0.55f).toInt()
+            canvas.drawText(title, x, ty, rimPaint)
         }
         if (subText != null && subIn > 0f) {
             subPaint.alpha = (255 * subIn * all).toInt()
@@ -278,8 +330,12 @@ class ModeBannerView(
         private const val TEXT_LEFT = 0.066f
         private const val TITLE_SIZE = 0.17f
         private const val SUB_SIZE = 0.042f
-        private const val LINE_GAP = 0.05f
+        private const val LINE_GAP = 0.062f
+        private const val TITLE_SKEW = -0.17f
+        private const val DEPTH = 0.014f
+        private const val DEPTH_STEPS = 7
+        private const val RIM_WIDTH = 0.0028f
         private const val SUB_GAP = 0.045f
-        private const val LINE_PX = 2f
+        private const val LINE_PX = 3f
     }
 }
