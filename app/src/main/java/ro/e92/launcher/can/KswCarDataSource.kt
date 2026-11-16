@@ -279,6 +279,33 @@ class KswCarDataSource(
         return true
     }
 
+    /**
+     * Cere MCU-ului setările și starea lui, cu aceeași cerere ca EventCenter la pornire
+     * (sendKSW_0x00_0x68(1, 0)). Doar citire: răspunsul (cadrul 0x13) apare în /events ca „MCU ←".
+     */
+    fun requestMcuInfo(): Boolean {
+        val binder = service ?: return false
+        val cmd = byteArrayOf(0xF2.toByte(), 0x00, 0x68, 0x02, 0x01, 0x00)
+        scope.launch { transact(binder, TX_SEND_MCU) { it.writeByteArray(cmd) } }
+        EventLog.log(TAG, "MCU: cer starea (0x68 01 00)")
+        return true
+    }
+
+    /**
+     * Probă: sursa curentă a MCU-ului, ca sendKSW_0x00_0x67 din EventCenter. La ieșirea din
+     * primul R MCU-ul trece singur pe sursa 1 (cadrul 0x15 02 01 01) și de atunci comută pe
+     * cameră la fiecare R. Doar valorile pe care le folosește și EventCenter pentru ce ascultă
+     * șoferul: 1 muzică, 4 muzică Bluetooth, 7 telefon (CarPlay).
+     */
+    fun sendSourceMode(mode: Int): Boolean {
+        if (mode !in SOURCE_MODES) return false
+        val binder = service ?: return false
+        val cmd = byteArrayOf(0xF2.toByte(), 0x00, 0x67, 0x01, mode.toByte())
+        scope.launch { transact(binder, TX_SEND_MCU) { it.writeByteArray(cmd) } }
+        EventLog.log(TAG, "MCU: sursă $mode (0x67)")
+        return true
+    }
+
     private var sawReverse = false
 
     /** Probă: după ieșirea din R, modul „original" (vezi [ro.e92.launcher.core.Prefs.mcuAfterReverse]). */
@@ -409,6 +436,7 @@ class KswCarDataSource(
         val MCU_STATE_UNKNOWN_REVERSE = byteArrayOf(0xF2.toByte(), 0x00, 0x76, 0x03, 0xFF.toByte(), 0xFF.toByte(), 0x01)
         const val HEARTBEAT_MS = 250L
         const val AFTER_R_DELAY_MS = 800L
+        val SOURCE_MODES = setOf(1, 4, 7)
         const val MCU_SET_CAMERA = 0x0B
         const val MCU_SET_TRACK = 0x16
         const val MCU_SET_RADAR = 0x17

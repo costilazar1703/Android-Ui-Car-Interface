@@ -80,3 +80,26 @@ Every time the driver selects R, show our reverse scene and never the KSW/MCU re
 2. Which MCU command or Factory option disables the MCU's own reverse video switching?
 3. Is "aftermarket reverse" on these units triggered by a harness wire or by CAN?
 4. Any other way to keep the display on the Android/ARM output during reverse?
+
+## Update 2026-11-16: what the earlier dumps prove
+
+Checked against dumps taken on the unit while the KSW reverse picture was on screen (2026-11-07).
+
+- **Not an Android window.** `dumpsys SurfaceFlinger` and `dumpsys window` list only our launcher
+  as visible. EventCenter's `BackcarEvent` (the class that owns a "No Signal" tip) logs nothing on R2+.
+- **Not the kernel fast-reverse driver either.** The kernel has a Rockchip-style `Vehicle` driver
+  (RN6752 decoder, reverse GPIO 103, misc device `/dev/vehicle`; EventCenter writes "99" to it at
+  boot: "android already up, set vehicle in bottom"). `dmesg` covering the reverses shows no Vehicle
+  activity after boot, so it is idle during reverse.
+- So the picture comes from **video hardware driven by the MCU**, after the SoC output.
+- The frame `F2 00 15 02 01 01` at the first R exit was also seen on 2026-11-07. In EventCenter it
+  means "MCU asks: ARM view, source 1 (music)": the MCU changes its own source once, at the first
+  R exit, and EventCenter then opens the KSW music player. EventCenter's heartbeat already reported
+  interface = 1 (ARM) during that first R, so "the MCU was in original view" is not supported.
+- Android can ask the MCU for its settings with `F2 00 68 02 01 00` (EventCenter does it at boot);
+  the MCU answers with frame `0x13`. Read-only. Comparing the answer before the first R and after
+  it should show which MCU state changes.
+- Factory app: camera selection offers only Install / 360 / Original (no "none"), plus
+  "Automatic transmission / Manual gear" (`F2 00 70 02 09 00|01`). No "reverse source CAN/wire".
+- The only `0x69` sub-commands in EventCenter: 16 power off, 18 view (01 ARM, 02 original),
+  19 navigation sound, 20 play state.

@@ -290,6 +290,9 @@ object DiagServer {
      * video original), fiecare cu valorile ei permise. Nimic altceva nu pleacă pe aici: nici
      * setări Factory (0x70), nici tipul mașinii, nici cadre libere.
      */
+    /** Aceleași valori ca [ro.e92.launcher.can.KswCarDataSource.sendSourceMode]. */
+    private val MCU_SOURCE_MODES = setOf(1, 4, 7)
+
     private fun mcu(query: Map<String, String>): String {
         val p = Services.prefs
         // Mod de afișare al MCU-ului: doar „original" sau „arm", trimis o dată, nu se salvează.
@@ -297,6 +300,20 @@ object DiagServer {
             if (view != "original" && view != "arm") return "view=$view: permis original sau arm, nimic trimis\n"
             val sent = Services.kswCar?.sendViewMode(view == "original") == true
             return "view=$view trimis=${if (sent) 1 else 0}\n"
+        }
+        // Doar citire: MCU-ul își raportează setările (cadrul 0x13), ca la pornire.
+        if (query["query"] == "1") {
+            val sent = Services.kswCar?.requestMcuInfo() == true
+            return "query trimis=${if (sent) 1 else 0} - raspunsul apare in /events ca MCU <-\n"
+        }
+        // Sursa MCU-ului: doar 1 (muzica), 4 (muzica Bluetooth), 7 (telefon), trimisa o data.
+        query["src"]?.let { raw ->
+            val mode = raw.toIntOrNull()
+            if (mode == null || mode !in MCU_SOURCE_MODES) {
+                return "src=$raw: permis 1, 4 sau 7, nimic trimis\n"
+            }
+            val sent = Services.kswCar?.sendSourceMode(mode) == true
+            return "src=$mode trimis=${if (sent) 1 else 0}\n"
         }
         val allowed = linkedMapOf("camera" to 0..3, "track" to 0..1, "radar" to 0..1, "origvideo" to -1..1, "hb" to 0..1, "after" to 0..2)
         // Întâi verificăm tot: o valoare greșită nu schimbă nimic.
@@ -480,7 +497,7 @@ object DiagServer {
           GET  /info                 unitate + tot ce arată ecranul Diagnostic
           GET  /bt                   starea Bluetooth, cheie=valoare
           GET  /sim?reverse=1&cm=150,40,18,60   simulează marșarierul; /sim?wifi=0..3|off|real
-          GET  /mcu?camera=0..3&radar=0|1&track=0|1&origvideo=-1|0|1&hb=0|1   setările de marșarier ale MCU-ului; /mcu?view=original|arm; after=0|1|2 (original la ieșirea din R)
+          GET  /mcu?camera=0..3&radar=0|1&track=0|1&origvideo=-1|0|1&hb=0|1   setările de marșarier ale MCU-ului; /mcu?view=original|arm; after=0|1|2 (original la ieșirea din R); query=1 (starea MCU); src=1|4|7
           GET  /bt/engine?set=e92    motorul Bluetooth: e92 sau ksw
           GET  /bt/do?c=playpause    connect, repair, pair, playpause, next, previous
           GET  /keys                 ultimele taste primite

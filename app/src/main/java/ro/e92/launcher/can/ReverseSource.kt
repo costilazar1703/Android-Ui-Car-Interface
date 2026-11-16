@@ -144,7 +144,53 @@ class ReverseSource(
         }
     }
 
+    private var bootLogged = false
+    private var lastNote = ""
+    private var lastNoteAt = 0L
+
+    /** „f2 00 15 02 01 01 e6" → „15 02 01 01": fără antet și fără suma de control. */
+    private fun compact(frame: String): String =
+        frame.trim().split(' ').map { it.removePrefix("0x") }.drop(2).dropLast(1).joinToString(" ")
+
+    /**
+     * O singură dată pe pornire: ce și-au spus EventCenter și MCU-ul înainte să pornim noi
+     * (setările trimise MCU-ului și starea raportată de el). Ajunge în /events, deci se poate
+     * citi după o repornire fără adb.
+     */
+    private fun logBootHandshake() {
+        if (bootLogged) return
+        bootLogged = true
+        runCatching {
+            val dump = ProcessBuilder(
+                "logcat", "-d", "-v", "brief", "-e", BOOT_FILTER, "EventService:I", "*:S"
+            ).redirectErrorStream(true).start()
+            var count = 0
+            dump.inputStream.bufferedReader().forEachLine { line ->
+                if (count >= BOOT_MAX) return@forEachLine
+                val note = BOOT_IN.find(line)?.let { "← " + compact(it.groupValues[1]) }
+                    ?: BOOT_OUT.find(line)?.let { "→ " + compact(it.groupValues[1]) }
+                    ?: return@forEachLine
+                EventLog.log(TAG, "MCU la pornire $note")
+                count++
+            }
+            dump.destroy()
+        }.onFailure { EventLog.log(TAG, "MCU la pornire: ${it.message}") }
+    }
+
+    /** Cadrele de stare din mers; același cadru repetat în [NOTE_REPEAT_MS] se scrie o dată. */
+    private fun noteMcu(line: String) {
+        val note = MCU_IN.find(line)?.let { "← " + compact(it.groupValues[1]) }
+            ?: MCU_OUT.find(line)?.let { "→ " + compact(it.groupValues[1]) }
+            ?: return
+        val now = SystemClock.elapsedRealtime()
+        if (note == lastNote && now - lastNoteAt < NOTE_REPEAT_MS) return
+        lastNote = note
+        lastNoteAt = now
+        EventLog.log(TAG, "MCU $note")
+    }
+
     private fun follow() {
+        logBootHandshake()
         val started = ProcessBuilder(
             "logcat", "-v", "brief", "-T", "1", "-e", LOG_FILTER, "EventService:I", "*:S"
         ).redirectErrorStream(true).start()
@@ -153,6 +199,7 @@ class ReverseSource(
         try {
             started.inputStream.bufferedReader().forEachLine { line ->
                 FRAME.find(line)?.let { publish(it.groupValues[2] == "1", it.groupValues[1]) }
+                noteMcu(line)
                 CAN_FRAME.find(line)?.let { match ->
                     val id = match.groupValues[1].toInt(16)
                     val bytes = BYTE.findAll(match.groupValues[2]).map { it.groupValues[1].toInt(16) }.toList()
@@ -329,9 +376,27 @@ class ReverseSource(
         const val TAG = "Reverse"
         val FRAME = Regex("""0xf2 0x00 0x11 0x02 0x0([123]) 0x0([01])""")
         const val LOG_FILTER =
-            "0xf2 0x00 0x11 0x02|0xA1_0x1DEvent: stringBuilder.toString\\(\\) = 0x(01c2|00c4|0304|0316|0338|02f8|03b4) "
+            "0xf2 0x00 0x11 0x02|0xA1_0x1DEvent: stringBuilder.toString\\(\\) = 0x(01c2|00c4|0304|0316|0338|02f8|03b4) |bydata = 0xf2 0x00 0x1[035] |bydata = 0xf2 0x00 0xa1 0x02 0x1a |ES s send: 0xf2 0x00 0x6[79] "
         val CAN_FRAME = Regex("""0xA1_0x1DEvent: .*= 0x([0-9a-f]{4}) \S+ \S+ 0x[0-9a-f]+ ((?:0x[0-9a-f]{2} ?)+)""")
         val BYTE = Regex("""0x([0-9a-f]{2})""")
+
+        /**
+         * Cadre de stare ale MCU-ului, pentru diagnoza marșarierului: 0x10 (alimentare și biți de
+         * cameră), 0x13 (setările MCU-ului, răspuns la cererea 0x68 01 00), 0x15 (schimbare de mod
+         * și sursă cerută de MCU; vine la ieșirea din primul R), A1 1A (intrare/ieșire din modul
+         * original). 0x11 are jurnalul lui, la marșarier.
+         */
+        val MCU_IN = Regex("""bydata = ((?:0xf2 0x00 0x1[02-9] |0xf2 0x00 0xa1 0x02 0x1a )(?:0x[0-9a-f]{2} ?)*)""")
+        /** La pornire le vrem pe toate, inclusiv marșarierele (0x11) de dinainte să pornim noi. */
+        val BOOT_IN = Regex("""bydata = ((?:0xf2 0x00 0x1[0-9] |0xf2 0x00 0xa1 0x02 0x1a )(?:0x[0-9a-f]{2} ?)*)""")
+        /** Ce trimite EventCenter (și noi, prin el) ca sursă (0x67) și mod de afișare (0x69). */
+        val MCU_OUT = Regex("""ES s send: (0xf2 0x00 0x6[79] (?:0x[0-9a-f]{2} ?)*)""")
+        /** La pornire: și setările (0x61, 0x63, 0x6A, 0x70) pe care EventCenter le trimite MCU-ului. */
+        val BOOT_OUT = Regex("""ES s send: (0xf2 0x00 (?:0x6[1379a]|0x70) (?:0x[0-9a-f]{2} ?)*)""")
+        const val BOOT_FILTER =
+            "bydata = 0xf2 0x00 0x1[0-9] |bydata = 0xf2 0x00 0xa1 0x02 0x1a |ES s send: 0xf2 0x00 0x6[1379a] |ES s send: 0xf2 0x00 0x70 "
+        const val BOOT_MAX = 80
+        const val NOTE_REPEAT_MS = 2_000L
 
         const val ID_SENSORS = 0x1C2
         const val ID_STEERING = 0x0C4
