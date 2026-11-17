@@ -153,7 +153,8 @@ class DriveModeStripView @JvmOverloads constructor(
             val x = i * (bar + gap)
             // La Sport, din ce în ce mai portocalii: prima stinsă și fără contrast, ultima exact
             // nuanța lui DS, cu contrastul cel mai mare (cerut 2026-11-17).
-            val k = i / 2f
+            // Prima pornește de la jumătate (cerut 2026-11-17: „prima ca a doua").
+            val k = 0.5f + 0.25f * i
             val strength = a * (if (glow) 0.3f + 0.7f * k else 0.45f + 0.275f * i)
 
             // Fără halou: la Sport barele sunt doar portocalii (cerut 2026-11-17).
