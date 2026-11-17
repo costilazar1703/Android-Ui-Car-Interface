@@ -11,17 +11,21 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Sursă bazată pe broadcast-urile aplicației vendor.
+ * Sursă bazată pe broadcast-urile serviciului vendor (EventCenter).
  *
- * NIMIC din configurația de mai jos nu e confirmat — sunt doar valorile cele mai
- * frecvente pe plăcile GS/ZXW. Faza 0.1 stabilește adevărul:
+ * Acțiunile și cheile KSW din [CanBroadcastConfig.DEFAULT] sunt cele pe care le ascultă
+ * aplicația Dashboard a unității (citite din EventCenter și ksw_dashboard decompilate):
+ * viteza și turațiile pe ZXW_CAN_SPEED_EVT / ZXW_CAN_ROTATING_SPEED_EVT, iar combustibilul,
+ * autonomia, temperatura exterioară și frâna de mână în pachetul ZXW_SENDBROADCAST8902MOD.
  *
- *   adb logcat | grep -iE "can|bus|speed|rpm|acc|mcu"
- *   adb shell dumpsys activity services | grep -iE "can|mcu"
+ * În mașină, datele de bord folosite de launcher vin în primul rând din [KswCarDataSource]
+ * (cererea de date de bord către MCU, ca aplicația Dashboard) și din [ReverseSource] (cadrele
+ * CAN brute: senzori, volan, manetă, Drive Sport, DSC, ceas, baterie). Sursa asta rămâne în
+ * lanț ca rezervă. Cheile generice de după cele KSW („speed", „rpm" etc.) sunt pentru alte
+ * plăci și nu sunt folosite pe unitatea din mașină.
  *
- * Când știi acțiunea și cheile reale, editează [CanBroadcastConfig] — restul codului
- * nu se schimbă. Ecranul de diagnostic loghează orice broadcast prins pe acțiunile
- * din listă, inclusiv extras necunoscute, ca să poți face maparea direct în mașină.
+ * Ecranul de diagnostic arată orice broadcast prins pe acțiunile din listă, cu toate
+ * extras-urile, ca o cheie nouă să poată fi mapată direct în mașină.
  */
 class BroadcastCanDataSource(
     private val context: Context,
@@ -203,8 +207,7 @@ class BroadcastCanDataSource(
 }
 
 /**
- * Configurația de mapare broadcast → [VehicleState].
- * Un singur loc de editat după Faza 0.1.
+ * Configurația de mapare broadcast → [VehicleState], într-un singur loc.
  */
 data class CanBroadcastConfig(
     val actions: List<String>,
@@ -227,10 +230,10 @@ data class CanBroadcastConfig(
         private const val KSW_8902 = "com.szchoiceway.eventcenter.EventUtils.ZXW_SENDBROADCAST8902MOD"
 
         /**
-         * Primele intrări din fiecare listă sunt ale unității KSW din mașină,
-         * citite din aplicațiile ei (EventCenter, ksw_dashboard): sunt exact
-         * acțiunile și cheile pe care le ascultă dashboard-ul vendorului. Restul
-         * rămân PRESUPUNERI pentru alte plăci (GS/ZXW).
+         * Primele intrări din fiecare listă sunt ale unității KSW din mașină, citite din
+         * aplicațiile ei (EventCenter, ksw_dashboard): exact acțiunile și cheile pe care le
+         * ascultă dashboard-ul vendorului. Restul sunt valori uzuale pe alte plăci (GS/ZXW),
+         * păstrate pentru alte unități.
          */
         val DEFAULT = CanBroadcastConfig(
             actions = listOf(
@@ -247,9 +250,8 @@ data class CanBroadcastConfig(
             rpmKeys = listOf("$KSW.ZXW_CAN_ROTATING_SPEED_EVT_EXTRA", "${KSW_8902}_fadongjizhuansu", "rpm", "engine_rpm", "revs"),
             handbrakeKeys = listOf("${KSW_8902}_shousha", "handbrake", "parking_brake", "brake"),
             reverseKeys = listOf("reverse", "back_car", "rear_gear"),
-            // Tot presupuneri, ca si restul. Daca unitatea chiar retransmite
-            // butonul Sport, numele cheii se citeste din ecranul de Diagnostic,
-            // care afiseaza acum TOATE extras-urile primite, nu doar cele stiute.
+            // În mașină modul Sport se citește din CAN (0x1D2, în ReverseSource), nu de aici.
+            // Cheile de mai jos sunt pentru alte plăci.
             sportKeys = listOf("sport", "sport_mode", "drive_mode", "dme_sport", "mode_sport"),
             boostKeys = listOf("boost", "boost_bar", "boost_pressure", "turbo_boost"),
             oilTempKeys = listOf("oil_temp", "oil_temperature", "engine_oil_temp"),
