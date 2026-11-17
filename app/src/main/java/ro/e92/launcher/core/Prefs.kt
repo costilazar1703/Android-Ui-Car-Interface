@@ -116,6 +116,15 @@ class Prefs(context: Context) {
         get() = sp.getInt(KEY_UNIT_VOLUME, DEFAULT_UNIT_VOLUME)
         set(value) = sp.edit().putInt(KEY_UNIT_VOLUME, value).apply()
 
+    /**
+     * Volumul salutului de la pornire, pe scara volumului principal KSW (0-40). Pe durata
+     * salutului unitatea e pusă la valoarea asta și apoi revine, deci nu depinde de cât de
+     * încet e dată unitatea (cerut 2026-11-17).
+     */
+    var greetingVolume: Int
+        get() = sp.getInt(KEY_GREETING_VOLUME, DEFAULT_GREETING_VOLUME)
+        set(value) = sp.edit().putInt(KEY_GREETING_VOLUME, value).apply()
+
     /** Launcher-ul ține oprită „reluarea ultimei surse" a unității la pornire. */
     var blockKswReopen: Boolean
         get() = sp.getBoolean(KEY_BLOCK_KSW_REOPEN, true)
@@ -323,6 +332,8 @@ class Prefs(context: Context) {
         const val BT_ENGINE_KSW = "ksw"
         const val BT_ENGINE_E92 = "e92"
         private const val KEY_UNIT_VOLUME = "unit_volume"
+        private const val KEY_GREETING_VOLUME = "greeting_volume"
+        const val DEFAULT_GREETING_VOLUME = 25
         private const val KEY_BLOCK_KSW_REOPEN = "block_ksw_reopen"
         private const val KEY_BT_MUSIC_ONLY = "bt_music_only"
         // Cheie nouă: încercările vechi au trimis `PROFILE=`, pe care stiva îl refuză.

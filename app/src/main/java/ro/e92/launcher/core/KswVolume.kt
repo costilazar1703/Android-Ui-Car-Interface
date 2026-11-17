@@ -67,6 +67,15 @@ object KswVolume {
         sendNow(context, v)
     }
 
+    /**
+     * Pune volumul principal acum, FĂRĂ să-l salveze: la pornirea următoare unitatea revine la
+     * volumul ei. Pentru salut, care îl ridică doar cât vorbește.
+     */
+    fun setLive(context: Context, value: Int) = sendNow(context, value.coerceIn(0, MAX))
+
+    /** Treptele volumului salutului din Car & unit. */
+    val GREETING_STEPS = listOf(10, 15, 20, 25, 30, 35, 40)
+
     /** Butoanele + și - din Button mapping. */
     fun step(context: Context, delta: Int) {
         val now = current(context) ?: return

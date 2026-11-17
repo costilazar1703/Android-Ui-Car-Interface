@@ -78,7 +78,8 @@ class SettingsScreen(
         // rămâne la patru rânduri de mărimea normală.
         NAV_CAR -> carUnitRows() +
             DetailRow(id = "hdr_launcher", title = context.getString(R.string.set_nav_launcher), header = true) +
-            launcherRows()
+            launcherRows() +
+            greetingRows()
         NAV_LAUNCHER -> launcherRows()
         // System cuprinde și Assigned apps și Button mapping (2026-11-17): SETUP are trei rânduri,
         // cu Brightness la mijloc. NAV_APPS și NAV_BUTTONS deschid tot aici.
@@ -256,6 +257,32 @@ class SettingsScreen(
                     prefs.startGuard = !prefs.startGuard
                     reloadDetail("car_start_guard")
                 }
+            )
+        )
+    }
+
+    /**
+     * Ultimele din Car & unit: salutul de la pornire. Volumul lui, pe scara unității, nu depinde
+     * de cât e dată unitatea; „Play greeting" îl pornește ca să-l reglezi (cerut 2026-11-17).
+     */
+    private fun greetingRows(): List<DetailRow> {
+        val prefs = Services.prefs
+        return listOf(
+            DetailRow(
+                id = "car_greeting_volume",
+                title = context.getString(R.string.set_greeting_volume),
+                value = "${prefs.greetingVolume} / ${KswVolume.MAX}",
+                onActivate = {
+                    val steps = KswVolume.GREETING_STEPS
+                    val i = steps.indexOf(prefs.greetingVolume)
+                    prefs.greetingVolume = steps[(if (i < 0) 0 else i + 1) % steps.size]
+                    reloadDetail("car_greeting_volume")
+                }
+            ),
+            DetailRow(
+                id = "car_greeting_play",
+                title = context.getString(R.string.set_greeting_play),
+                onActivate = { ro.e92.launcher.media.GreetingSound.play(context, force = true) }
             )
         )
     }

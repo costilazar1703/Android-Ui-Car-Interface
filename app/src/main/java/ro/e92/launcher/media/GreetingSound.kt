@@ -21,9 +21,25 @@ object GreetingSound {
 
     private const val TAG = "Greeting"
 
-    fun play(context: Context) {
+    /** Salutul curent, ca o a doua apăsare din setări să nu-l suprapună. */
+    private var player: MediaPlayer? = null
+    /** Volumul unității dinainte de salut, de pus la loc când se termină. */
+    private var restoreTo: Int? = null
+
+    /** [force] = din setări („Play greeting"): pornește oricare ar fi numele. */
+    fun play(context: Context, force: Boolean = false) {
         val name = Services.prefs.greetingName.trim()
-        if (!name.equals(Prefs.DEFAULT_GREETING_NAME, ignoreCase = true)) return
+        if (!force && !name.equals(Prefs.DEFAULT_GREETING_NAME, ignoreCase = true)) return
+        stop(context)
+        // Volumul salutului nu depinde de cât de încet e unitatea: o punem la volumul ales
+        // doar cât vorbește, fără să-l salvăm, apoi revine.
+        val app = context.applicationContext
+        val now = ro.e92.launcher.core.KswVolume.current(app)
+        val wanted = Services.prefs.greetingVolume
+        if (now != null && now != wanted) {
+            restoreTo = now
+            ro.e92.launcher.core.KswVolume.setLive(app, wanted)
+        }
         runCatching {
             val afd = context.resources.openRawResourceFd(R.raw.greeting_bmw)
             MediaPlayer().apply {
@@ -35,11 +51,27 @@ object GreetingSound {
                 )
                 setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
                 afd.close()
-                setOnCompletionListener { it.release() }
-                setOnErrorListener { mp, _, _ -> mp.release(); true }
+                setOnCompletionListener { done(app) }
+                setOnErrorListener { _, _, _ -> done(app); true }
                 prepare()
                 start()
-            }
-        }.onFailure { EventLog.log(TAG, "salutul vocal nu pornește: ${it.message}") }
+            }.also { player = it }
+        }.onFailure {
+            EventLog.log(TAG, "salutul vocal nu pornește: ${it.message}")
+            done(app)
+        }
+    }
+
+    fun stop(context: Context) {
+        if (player == null && restoreTo == null) return
+        runCatching { player?.stop() }
+        done(context.applicationContext)
+    }
+
+    private fun done(context: Context) {
+        runCatching { player?.release() }
+        player = null
+        restoreTo?.let { ro.e92.launcher.core.KswVolume.setLive(context, it) }
+        restoreTo = null
     }
 }
