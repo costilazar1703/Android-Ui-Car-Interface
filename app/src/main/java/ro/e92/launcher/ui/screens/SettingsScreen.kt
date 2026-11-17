@@ -58,20 +58,17 @@ class SettingsScreen(
 
     override fun navEntries(): List<NavEntry> = listOf(
         NavEntry(NAV_CAR, context.getString(R.string.set_nav_car)),
-        NavEntry(NAV_BUTTONS, context.getString(R.string.set_nav_buttons)),
         NavEntry(NAV_SYSTEM, context.getString(R.string.set_nav_system))
     )
 
     override fun detailTitle(navId: String): String = when (navId) {
         NAV_CAR -> context.getString(R.string.set_nav_car)
-        NAV_BUTTONS -> context.getString(R.string.set_nav_buttons)
         NAV_LAUNCHER -> context.getString(R.string.set_nav_launcher)
         else -> context.getString(R.string.set_nav_system)
     }.uppercase()
 
     override fun detailHint(navId: String): String = when (navId) {
         NAV_CAR -> context.getString(R.string.set_car_hint)
-        NAV_BUTTONS -> context.getString(R.string.set_keymap_hint)
         NAV_SYSTEM, NAV_APPS -> context.getString(R.string.set_assigned_hint)
         else -> ""
     }
@@ -82,13 +79,14 @@ class SettingsScreen(
         NAV_CAR -> carUnitRows() +
             DetailRow(id = "hdr_launcher", title = context.getString(R.string.set_nav_launcher), header = true) +
             launcherRows()
-        NAV_BUTTONS -> keymapRows()
         NAV_LAUNCHER -> launcherRows()
-        // System cuprinde și Assigned apps (2026-11-17): meniul SETUP are loc de Brightness.
-        // NAV_APPS, din rândurile „Settings" ale altor meniuri, deschide tot aici.
+        // System cuprinde și Assigned apps și Button mapping (2026-11-17): SETUP are trei rânduri,
+        // cu Brightness la mijloc. NAV_APPS și NAV_BUTTONS deschid tot aici.
         else -> systemRows() +
             DetailRow(id = "hdr_assigned", title = context.getString(R.string.set_nav_assigned), header = true) +
-            assignedAppRows()
+            assignedAppRows() +
+            DetailRow(id = "hdr_buttons", title = context.getString(R.string.set_nav_buttons), header = true) +
+            keymapRows()
     }
 
     // ----------------------------------------------------------- car & unit

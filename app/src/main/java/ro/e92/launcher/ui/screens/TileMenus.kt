@@ -508,12 +508,7 @@ class SettingsMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
             slider = brightness,
             onActivate = { brightness.adjusting = !brightness.adjusting }
         ),
-        WheelEntry(
-            id = "set_buttons",
-            icon = R.drawable.ic_menu_car_info,
-            title = context.getString(R.string.set_nav_buttons),
-            onActivate = { host.push(SettingsScreen(host, SettingsScreen.NAV_BUTTONS)) }
-        ),
+        // Button mapping a trecut și el în System, sub Assigned apps (2026-11-17).
         WheelEntry(
             id = "set_system",
             icon = R.drawable.ic_menu_settings,
