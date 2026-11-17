@@ -114,7 +114,8 @@ class DriveModeStripView @JvmOverloads constructor(
         drawBox(canvas, boxLeft, boxTop, boxRight, boxBottom, accent, now, lit)
 
         val letterBase = (boxTop + boxBottom) / 2f + letterPaint.textSize * 0.36f
-        val letterX = boxLeft + boxW * 0.56f
+        // D e mai îngust: stă puțin mai la stânga, ca să pară centrat sub ramă.
+        val letterX = boxLeft + boxW * (if (now) 0.56f else 0.5f)
         val old = previous
         if (old != null && t < 160f) {
             letterPaint.color = withAlpha(if (old) orange else light, 1f - t / 160f)
@@ -150,16 +151,12 @@ class DriveModeStripView @JvmOverloads constructor(
         val gap = 3.5f * dp
         for (i in 0..2) {
             val x = i * (bar + gap)
-            val strength = a * (if (glow) 0.62f + 0.19f * i else 0.45f + 0.275f * i)
+            // La Sport, din ce în ce mai portocalii: prima stinsă și fără contrast, ultima exact
+            // nuanța lui DS, cu contrastul cel mai mare (cerut 2026-11-17).
+            val k = i / 2f
+            val strength = a * (if (glow) 0.3f + 0.7f * k else 0.45f + 0.275f * i)
 
-            // Haloul (doar la Sport): același paralelogram, mai lat și foarte transparent.
-            if (glow) {
-                for ((grow, alpha) in BAR_GLOW) {
-                    bar(x - grow * dp, top - grow * dp, bottom + grow * dp, bar + 2 * grow * dp, skew)
-                    fill.color = withAlpha(color, alpha * strength)
-                    canvas.drawPath(path, fill)
-                }
-            }
+            // Fără halou: la Sport barele sunt doar portocalii (cerut 2026-11-17).
             // Umbra din spate, decalată spre dreapta-jos.
             bar(x + 1.4f * dp, top + 1.4f * dp, bottom + 1.4f * dp, bar, skew)
             fill.color = Color.argb((150 * strength).toInt(), 0, 0, 0)
@@ -170,9 +167,9 @@ class DriveModeStripView @JvmOverloads constructor(
             fill.shader = LinearGradient(
                 0f, top, 0f, bottom,
                 intArrayOf(
-                    withAlpha(blend(color, Color.WHITE, 0.45f), strength),
+                    withAlpha(blend(color, Color.WHITE, if (glow) 0.3f * k else 0.45f), strength),
                     withAlpha(color, strength),
-                    withAlpha(blend(color, Color.BLACK, 0.55f), strength)
+                    withAlpha(blend(color, Color.BLACK, if (glow) 0.45f * (1f - k) else 0.55f), strength)
                 ),
                 floatArrayOf(0f, 0.45f, 1f), Shader.TileMode.CLAMP
             )
@@ -217,16 +214,15 @@ class DriveModeStripView @JvmOverloads constructor(
         path.quadTo(cx, t, cx + rc, t)
         path.lineTo(r, t)
 
-        if (glow) {
-            stroke.strokeWidth = 5f * dp
-            stroke.color = withAlpha(accent, 0.12f * lit)
-            canvas.drawPath(path, stroke)
-        }
+        // Umbra ramei, la ambele moduri: portocalie la Sport, gri la Comfort.
+        stroke.strokeWidth = 5f * dp
+        stroke.color = withAlpha(accent, (if (glow) 0.12f else 0.16f) * lit)
+        canvas.drawPath(path, stroke)
         stroke.strokeWidth = 1f * dp
         stroke.shader = LinearGradient(
             l, 0f, r, 0f,
-            withAlpha(if (glow) accent else Color.WHITE, if (glow) 0.95f else 0.55f),
-            withAlpha(if (glow) accent else Color.WHITE, 0.03f),
+            withAlpha(accent, 0.95f),
+            withAlpha(accent, 0.03f),
             Shader.TileMode.CLAMP
         )
         canvas.drawPath(path, stroke)
@@ -273,7 +269,5 @@ class DriveModeStripView @JvmOverloads constructor(
         const val CORNER = 5f
         /** Grosimea în dp și opacitatea fiecărui strat al liniei de jos: miezul, apoi haloul. */
         val GLOW = listOf(8f to 0.06f, 4.5f to 0.12f, 1.4f to 0.95f)
-        /** Haloul barelor la Sport: cât se lățesc (dp) și cât de opace sunt. */
-        val BAR_GLOW = listOf(3f to 0.08f, 1.5f to 0.16f)
     }
 }
