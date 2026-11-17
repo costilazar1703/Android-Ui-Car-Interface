@@ -10,8 +10,8 @@ import ro.e92.launcher.core.Services
 
 /**
  * Salutul vocal de la pornire (2026-11-17): un sunet de pornire ca la mașinile noi, apoi vocea
- * „Welcome back, Mr. Lazar", într-un singur fișier (res/raw/greeting_bmw.mp3). Vocea începe la
- * ~1,5 s, odată cu textul salutului din [ro.e92.launcher.ui.widget.BootIntroView].
+ * „Welcome back, Mr. Lazar", într-un singur fișier (res/raw/greeting_bmw.mp3): un pad cald de 3 s care
+ * urmează intrarea din [ro.e92.launcher.ui.widget.BootIntroView], apoi vocea, puțin încetinită.
  *
  * Se aude doar cu radioul mașinii pe sursa unității, ca orice sunet al ei. Nu cere focus audio,
  * ca să nu oprească muzica de pe telefon. Vocea spune un nume fix: dacă numele din setări e altul,
