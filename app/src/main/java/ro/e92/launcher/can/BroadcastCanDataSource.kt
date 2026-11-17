@@ -18,11 +18,13 @@ import kotlinx.coroutines.flow.asStateFlow
  * viteza și turațiile pe ZXW_CAN_SPEED_EVT / ZXW_CAN_ROTATING_SPEED_EVT, iar combustibilul,
  * autonomia, temperatura exterioară și frâna de mână în pachetul ZXW_SENDBROADCAST8902MOD.
  *
- * În mașină, datele de bord folosite de launcher vin în primul rând din [KswCarDataSource]
- * (cererea de date de bord către MCU, ca aplicația Dashboard) și din [ReverseSource] (cadrele
- * CAN brute: senzori, volan, manetă, Drive Sport, DSC, ceas, baterie). Sursa asta rămâne în
- * lanț ca rezervă. Cheile generice de după cele KSW („speed", „rpm" etc.) sunt pentru alte
- * plăci și nu sunt folosite pe unitatea din mașină.
+ * Confirmat în mașină: captura din 2026-11-04 (launcher-ul asculta broadcast-urile unității)
+ * are mii de pachete ZXW_SENDBROADCAST8902MOD cu valori reale în cheile _ShunShiSuDu (viteza),
+ * _fadongjizhuansu (turațiile), _youLiang (combustibilul), _xushilicheng (autonomia),
+ * _huanjinwendu (temperatura exterioară) și _shousha (frâna de mână). Aceleași date vin și din
+ * [KswCarDataSource] (cererea de date de bord către MCU); [ReverseSource] adaugă cadrele CAN
+ * brute (senzori, volan, manetă, Drive Sport, DSC, ceas, baterie). Cheile generice de după cele
+ * KSW („speed", „rpm" etc.) sunt pentru alte plăci și nu sunt folosite pe unitatea din mașină.
  *
  * Ecranul de diagnostic arată orice broadcast prins pe acțiunile din listă, cu toate
  * extras-urile, ca o cheie nouă să poată fi mapată direct în mașină.
@@ -231,9 +233,9 @@ data class CanBroadcastConfig(
 
         /**
          * Primele intrări din fiecare listă sunt ale unității KSW din mașină, citite din
-         * aplicațiile ei (EventCenter, ksw_dashboard): exact acțiunile și cheile pe care le
-         * ascultă dashboard-ul vendorului. Restul sunt valori uzuale pe alte plăci (GS/ZXW),
-         * păstrate pentru alte unități.
+         * aplicațiile ei (EventCenter, ksw_dashboard) și văzute în mașină: exact acțiunile și
+         * cheile pe care le ascultă dashboard-ul vendorului. Restul sunt valori uzuale pe alte
+         * plăci (GS/ZXW), păstrate pentru alte unități.
          */
         val DEFAULT = CanBroadcastConfig(
             actions = listOf(
