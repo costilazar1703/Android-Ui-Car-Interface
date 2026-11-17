@@ -25,6 +25,9 @@ import kotlinx.coroutines.launch
  * are nevoie de 10 Hz. Dacă lași View-ul să filtreze, tot plătești invalidate-urile.
  */
 @OptIn(FlowPreview::class)
+/** Sub atât, viteza se arată 0: senzorii raportează 1-2 km/h cu mașina pe loc. */
+private const val SPEED_FLOOR_KMH = 3
+
 class VehicleRepository(
     private val scope: CoroutineScope,
     sources: List<CanDataSource>
@@ -132,7 +135,8 @@ class VehicleRepository(
         _activeSourceId.value = speedFrom
 
         return VehicleState(
-            speedKmh = speed,
+            // Pe loc, plăcile KSW și adaptorul OBD raportează 1-2 km/h: sub 3 arătăm 0 (2026-11-17).
+            speedKmh = speed?.let { if (it < SPEED_FLOOR_KMH) 0 else it },
             rpm = rpm,
             handbrake = handbrake,
             doorsOpen = doors,

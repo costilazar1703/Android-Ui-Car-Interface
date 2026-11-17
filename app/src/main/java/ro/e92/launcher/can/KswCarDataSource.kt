@@ -40,6 +40,9 @@ import ro.e92.launcher.core.Services
  *   15-16 combustibil, litri · 17-18 temperatura de afară ×10, cu semn
  *   19    bit 2 = grade Fahrenheit
  */
+/** Luminozitatea minimă din meniu: sub atât ecranul abia se mai vede. */
+const val KSW_BRIGHTNESS_MIN = 10
+
 class KswCarDataSource(
     private val context: Context,
     private val scope: CoroutineScope
@@ -290,6 +293,30 @@ class KswCarDataSource(
      * R trece pe ARM (cadrul 0x15 0x01) și de atunci comută pe cameră la fiecare R.
      * Doar din DiagServer /mcu?view=original|arm, la probe în mașină.
      */
+    /**
+     * Luminozitatea ecranului, 0-100, cu aceeași comandă ca bara din setările KSW
+     * (sendKSW_0x00_0x6C): MCU-ul primește `F2 00 6C 01 <valoare>`.
+     *
+     * Doar AUXILIAR, pe loc (cerut 2026-11-17: „la soare am nevoie de mai multă lumină"): nu scriem
+     * nimic în presetul KSW salvat, deci reglajele lui de zi și de noapte (cu farurile) rămân cum
+     * erau, iar la următoarea pornire EventCenter retrimite luminozitatea lui obișnuită.
+     */
+    fun sendBrightness(value: Int): Boolean {
+        val v = value.coerceIn(KSW_BRIGHTNESS_MIN, 100)
+        auxBrightness = v
+        val binder = service ?: return false
+        val cmd = byteArrayOf(0xF2.toByte(), 0x00, 0x6C, 0x01, v.toByte())
+        scope.launch { transact(binder, TX_SEND_MCU) { it.writeByteArray(cmd) } }
+        return true
+    }
+
+    /** Ultima luminozitate aleasă din meniu în pornirea asta; altfel presetul KSW (50 implicit). */
+    fun brightness(): Int = auxBrightness
+        ?: ro.e92.launcher.core.KswSettings.read(context, BRIGHTNESS_KEY)?.toIntOrNull()?.coerceIn(0, 100) ?: 50
+
+    @Volatile
+    private var auxBrightness: Int? = null
+
     fun sendViewMode(original: Boolean): Boolean {
         val binder = service ?: return false
         val cmd = byteArrayOf(0xF2.toByte(), 0x00, 0x69, 0x02, 0x12, if (original) 0x02 else 0x01)
@@ -445,6 +472,7 @@ class KswCarDataSource(
         const val ENGINE_ON_RPM = 300
         const val SPEED_FLOOR_KMH = 3
         const val ENGINE_OFF_MS = 10_000L
+        const val BRIGHTNESS_KEY = "COM.SZCHOICEWAY_BRIGHTNESS_SETTINGS"
         /** Cât așteptăm după pornirea motorului până cerem cadrele CAN. */
         const val CAN_START_DELAY_MS = 2_000L
         const val CLOCK_WAIT_MS = 60_000L

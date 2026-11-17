@@ -459,6 +459,38 @@ class SettingsMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
 
     override val menuTitle: String get() = context.getString(R.string.menu_settings)
 
+    private val apply: Runnable = Runnable {
+        Services.kswCar?.sendBrightness(brightness.value)
+    }
+
+    /** Luminozitatea ecranului, ca bara de volum din Media; cel mult o comandă la [APPLY_MS]. */
+    private val brightness: WheelSlider by lazy {
+        WheelSlider(
+            max = 100,
+            value = Services.kswCar?.brightness() ?: 50,
+            min = ro.e92.launcher.can.KSW_BRIGHTNESS_MIN
+        ) {
+            root?.removeCallbacks(apply)
+            root?.postDelayed(apply, APPLY_MS)
+        }
+    }
+
+    override fun onAction(action: LauncherAction): Boolean {
+        if (!brightness.adjusting) return false
+        return when (action) {
+            LauncherAction.ROTARY_CW, LauncherAction.TILT_RIGHT -> { brightness.step(+5); true }
+            LauncherAction.ROTARY_CCW, LauncherAction.TILT_LEFT -> { brightness.step(-5); true }
+            LauncherAction.SELECT, LauncherAction.BACK -> { brightness.adjusting = false; true }
+            else -> false
+        }
+    }
+
+    override fun onHide() {
+        super.onHide()
+        brightness.adjusting = false
+        if (root?.removeCallbacks(apply) == true) apply.run()
+    }
+
     override fun entries(): List<WheelEntry> = listOf(
         // Primul: reparațiile unității (Bluetooth, volum, tip mașină).
         WheelEntry(
@@ -467,11 +499,14 @@ class SettingsMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
             title = context.getString(R.string.set_nav_car),
             onActivate = { host.push(SettingsScreen(host, SettingsScreen.NAV_CAR)) }
         ),
+        // Al doilea: luminozitatea, bară trasă cu degetul sau din rotiță (cerut 2026-11-17).
+        // Assigned apps a trecut în System.
         WheelEntry(
-            id = "set_apps",
-            icon = R.drawable.ic_menu_car_info,
-            title = context.getString(R.string.set_nav_assigned),
-            onActivate = { host.push(SettingsScreen(host, SettingsScreen.NAV_APPS)) }
+            id = "set_brightness",
+            icon = R.drawable.ic_menu_settings,
+            title = context.getString(R.string.set_brightness),
+            slider = brightness,
+            onActivate = { brightness.adjusting = !brightness.adjusting }
         ),
         WheelEntry(
             id = "set_buttons",
@@ -486,6 +521,10 @@ class SettingsMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
             onActivate = { host.push(SettingsScreen(host, SettingsScreen.NAV_SYSTEM)) }
         )
     )
+
+    private companion object {
+        const val APPLY_MS = 120L
+    }
 }
 
 // ------------------------------------------------------------------ comun ---

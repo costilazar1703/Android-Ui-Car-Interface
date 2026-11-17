@@ -58,6 +58,61 @@
         app:layout_constraintStart_toEndOf="@id/rail"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- Modul de condus (Drive Mode / Dynamic Sport), centrat sub mașină, cât îl știm din CAN. -->
+    <LinearLayout
+        android:id="@+id/modeBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="36dp"
+        android:background="@drawable/bg_widget_card"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingTop="11dp"
+        android:paddingEnd="22dp"
+        android:paddingBottom="11dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/carSpin"
+        app:layout_constraintStart_toStartOf="@id/carSpin"
+        tools:visibility="visible">
+
+        <View
+            android:id="@+id/modeBar"
+            android:layout_width="4dp"
+            android:layout_height="34dp" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter_semibold"
+                android:includeFontPadding="false"
+                android:letterSpacing="0.12"
+                android:singleLine="true"
+                android:text="@string/home_driving_mode"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/modeName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:fontFamily="@font/inter_semibold"
+                android:includeFontPadding="false"
+                android:singleLine="true"
+                android:textColor="@color/text_primary"
+                android:textSize="19sp"
+                tools:text="Dynamic Sport" />
+        </LinearLayout>
+    </LinearLayout>
+
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/gWidgets"
         android:layout_width="wrap_content"

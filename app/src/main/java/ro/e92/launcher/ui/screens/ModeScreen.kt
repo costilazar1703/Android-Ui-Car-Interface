@@ -599,8 +599,9 @@ class ModeCardView(
         fillPaint.color = Color.argb((130 * alpha).toInt(), 0, 0, 0)
         canvas.drawRoundRect(r, r.height() / 2f, r.height() / 2f, fillPaint)
         val slide = back(now, SLIDE_AT_MS, SLIDE_MS)
-        val fromX = if (sport) sx2 else sx2 + segW + gap
-        val toX = if (sport) sx2 + segW + gap else sx2
+        // DS în stânga, D în dreapta (cerut 2026-11-17).
+        val fromX = if (sport) sx2 + segW + gap else sx2
+        val toX = if (sport) sx2 else sx2 + segW + gap
         val px = fromX + (toX - fromX) * slide
         r.set(px, sy, px + segW, sy + segH)
         fillPaint.color = withAlpha(accent, a255)
@@ -608,8 +609,8 @@ class ModeCardView(
         segTextPaint.textSize = 16.5f * u
         val baseY = sy + segH / 2f + segTextPaint.textSize * 0.36f
         val lit = ease(now, SLIDE_AT_MS, SLIDE_MS)
-        drawSeg(canvas, "D", sx2 + segW / 2f, baseY, !sport, lit, alpha)
-        drawSeg(canvas, "DS", sx2 + segW * 1.5f + gap, baseY, sport, lit, alpha)
+        drawSeg(canvas, "DS", sx2 + segW / 2f, baseY, sport, lit, alpha)
+        drawSeg(canvas, "D", sx2 + segW * 1.5f + gap, baseY, !sport, lit, alpha)
 
         canvas.restore()
         tick(now)

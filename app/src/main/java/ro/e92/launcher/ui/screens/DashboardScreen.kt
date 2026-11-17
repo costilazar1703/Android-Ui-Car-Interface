@@ -67,13 +67,17 @@ class DashboardScreen(host: ScreenHost) : Screen(host) {
         binding.gaugeBoost.configure(
             caption = "BOOST",
             unit = "bar",
+            // Și vacuum, ca la cadranul vechi: de la -1 bar (2026-11-17).
+            minValue = -1f,
             maxValue = 2.5f,
             majorTickStep = 0.5f,
             minorPerMajor = 1,
             labelStep = 1f,
             decimals = 1,
             startAngle = 180f,
-            sweepAngle = 180f
+            sweepAngle = 180f,
+            // Aceeași înălțime ca „COOLANT" din dreapta.
+            captionLift = SMALL_CAPTION_LIFT
         )
         binding.gaugeOil.configure(
             caption = "COOLANT",
@@ -86,7 +90,7 @@ class DashboardScreen(host: ScreenHost) : Screen(host) {
             startAngle = 180f,
             sweepAngle = 180f,
             // Mai jos: „COOLANT” e lung și la 0.38 intra peste cifrele 40 și 80 (2026-11-16).
-            captionLift = 0.2f
+            captionLift = SMALL_CAPTION_LIFT
         )
 
         screenScope.launch {
@@ -185,6 +189,8 @@ class DashboardScreen(host: ScreenHost) : Screen(host) {
     }
 
     private companion object {
+        /** Etichetele cadranelor mici (BOOST, COOLANT), la aceeași înălțime. */
+        const val SMALL_CAPTION_LIFT = 0.2f
         /** Turbo și ulei, față de viteză și turații. */
         const val SMALL_RATIO = 0.48f
         const val GAP_DP = 14f

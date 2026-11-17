@@ -32,18 +32,21 @@ class WheelEntry(
 )
 
 /** Reglajul dintr-un rând: se trage cu degetul sau se mișcă din rotiță, vezi [step]. */
-class WheelSlider(val max: Int, var value: Int, val onChange: (Int) -> Unit) {
+class WheelSlider(val max: Int, var value: Int, val min: Int = 0, val onChange: (Int) -> Unit) {
     internal var view: ro.e92.launcher.ui.widget.VolumeLineView? = null
     internal var label: android.widget.TextView? = null
 
     internal fun chosen(level: Int) {
-        value = level
-        label?.text = level.toString()
-        onChange(level)
+        val v = level.coerceIn(min, max)
+        // Trasă cu degetul sub minim: bara revine la minim.
+        if (v != level) view?.setValue(v)
+        value = v
+        label?.text = v.toString()
+        onChange(v)
     }
 
     fun step(delta: Int) {
-        val next = (value + delta).coerceIn(0, max)
+        val next = (value + delta).coerceIn(min, max)
         if (next == value) return
         view?.setValue(next)
         chosen(next)

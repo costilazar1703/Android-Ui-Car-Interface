@@ -104,10 +104,13 @@ class MockCanDataSource(private val scope: CoroutineScope) : CanDataSource {
 
     /** Turbo doar cât accelerezi; la croazieră abia o zecime de bar. */
     private fun computeBoost(): Float {
-        val accel = (speed - prevSpeed).coerceAtLeast(0f)
+        val delta = speed - prevSpeed
+        val accel = delta.coerceAtLeast(0f)
         prevSpeed = speed
         // Uleiul se încălzește încet spre ~100 °C, ca la un diesel în mers.
         oilTemp += (100f - oilTemp) * 0.0004f
+        // Frâna de motor: vacuum în galerie.
+        if (delta < -0.05f) return (-0.25f + delta * 0.9f).coerceAtLeast(-0.8f)
         return (0.1f + accel * 1.4f).coerceAtMost(1.6f)
     }
 
