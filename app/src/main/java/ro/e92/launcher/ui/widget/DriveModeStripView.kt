@@ -37,7 +37,7 @@ class DriveModeStripView @JvmOverloads constructor(
 
     private val letterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = context.resources.getFont(R.font.inter_semibold)
-        textSize = 30f * dp
+        textSize = 26f * dp
         letterSpacing = 0.02f
         textAlign = Paint.Align.CENTER
     }
@@ -92,13 +92,13 @@ class DriveModeStripView @JvmOverloads constructor(
         drawFloorLine(canvas, w, lineY, accent, if (now) 1f else 0.6f, lit)
 
         // ---- stânga: barele 3D ----
-        val barTop = lineY - 44f * dp
+        val barTop = lineY - 39f * dp
         val barBottom = lineY - 9f * dp
         drawBars(canvas, barTop, barBottom, if (now) orange else steel, now, inT)
 
         // ---- lângă bare: DRIVING MODE și modul ----
         val tx = BARS_W * dp + 12f * dp
-        canvas.drawText(kicker, tx, barTop + 13f * dp, kickerPaint)
+        canvas.drawText(kicker, tx, barTop + 11f * dp, kickerPaint)
         val name = context.getString(if (now) R.string.mode_strip_sport else R.string.mode_strip_drive)
         namePaint.color = withAlpha(if (now) Color.WHITE else light, 0.35f + 0.65f * inT)
         canvas.drawText(name, tx + slide * 0.5f, barBottom - 1f * dp, namePaint)
@@ -109,8 +109,8 @@ class DriveModeStripView @JvmOverloads constructor(
         val boxW = BOX_W * dp
         val boxRight = w - 1f * dp
         val boxLeft = boxRight - boxW
-        val boxTop = barTop - 2f * dp
-        val boxBottom = barBottom + 3f * dp
+        val boxTop = barTop
+        val boxBottom = barBottom + 2f * dp
         drawBox(canvas, boxLeft, boxTop, boxRight, boxBottom, accent, now, lit)
 
         val letterBase = (boxTop + boxBottom) / 2f + letterPaint.textSize * 0.36f
@@ -201,25 +201,21 @@ class DriveModeStripView @JvmOverloads constructor(
         path.close()
     }
 
-    /** Rama literei: latura stângă înclinată ca barele, colțurile din dreapta ușor rotunjite. */
+    /**
+     * Rama literei: doar latura stângă (înclinată ca barele) și cea de sus, care se stinge spre
+     * dreapta (cerut 2026-11-17: fără laturile de jos și din dreapta).
+     */
     private fun drawBox(canvas: Canvas, l: Float, t: Float, r: Float, b: Float, accent: Int, glow: Boolean, lit: Float) {
-        val skew = 10f * dp
-        val rad = 6f * dp
+        val skew = 9f * dp
+        // Colțul din stânga sus, ușor rotunjit (cerut 2026-11-17).
+        val cx = l + skew
+        val len = kotlin.math.hypot(skew, b - t)
+        val rc = CORNER * dp
         path.reset()
-        path.moveTo(l + skew, t)
-        path.lineTo(r - rad, t)
-        path.quadTo(r, t, r, t + rad)
-        path.lineTo(r, b - rad)
-        path.quadTo(r, b, r - rad, b)
-        path.lineTo(l, b)
-        path.close()
-
-        fill.shader = LinearGradient(
-            0f, t, 0f, b,
-            Color.argb(200, 28, 30, 35), Color.argb(200, 10, 11, 14), Shader.TileMode.CLAMP
-        )
-        canvas.drawPath(path, fill)
-        fill.shader = null
+        path.moveTo(l, b)
+        path.lineTo(cx - skew / len * rc, t + (b - t) / len * rc)
+        path.quadTo(cx, t, cx + rc, t)
+        path.lineTo(r, t)
 
         if (glow) {
             stroke.strokeWidth = 5f * dp
@@ -228,9 +224,9 @@ class DriveModeStripView @JvmOverloads constructor(
         }
         stroke.strokeWidth = 1f * dp
         stroke.shader = LinearGradient(
-            l, t, r, b,
-            withAlpha(if (glow) accent else Color.WHITE, if (glow) 0.95f else 0.5f),
-            withAlpha(if (glow) accent else Color.WHITE, if (glow) 0.35f else 0.12f),
+            l, 0f, r, 0f,
+            withAlpha(if (glow) accent else Color.WHITE, if (glow) 0.95f else 0.55f),
+            withAlpha(if (glow) accent else Color.WHITE, 0.03f),
             Shader.TileMode.CLAMP
         )
         canvas.drawPath(path, stroke)
@@ -272,7 +268,9 @@ class DriveModeStripView @JvmOverloads constructor(
         /** Lățimea grupului de bare (dp), de unde începe textul. */
         const val BARS_W = 38f
         /** Lățimea ramei literei (dp): încape și DS. */
-        const val BOX_W = 74f
+        const val BOX_W = 62f
+        /** Raza colțului din stânga sus al ramei (dp). */
+        const val CORNER = 5f
         /** Grosimea în dp și opacitatea fiecărui strat al liniei de jos: miezul, apoi haloul. */
         val GLOW = listOf(8f to 0.06f, 4.5f to 0.12f, 1.4f to 0.95f)
         /** Haloul barelor la Sport: cât se lățesc (dp) și cât de opace sunt. */
