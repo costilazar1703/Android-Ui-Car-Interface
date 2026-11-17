@@ -189,21 +189,13 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
 
     // ------------------------------------------------------------- widget-uri
 
-    /** Caseta din stânga-jos: modul cutiei citit din CAN; ascunsă cât nu-l știm. */
+    /** Modul cutiei sub mașină; ascuns cât nu-l știm. Prima valoare apare fără animație. */
     private fun renderDriveMode(sport: Boolean?) {
-        if (sport == null) {
-            binding.modeBox.visibility = View.GONE
-            return
-        }
-        binding.modeBox.visibility = View.VISIBLE
-        binding.modeName.setText(if (sport) R.string.mode_sport else R.string.mode_drive)
-        val color = if (sport) androidx.core.content.ContextCompat.getColor(context, R.color.glow_core)
-        else android.graphics.Color.rgb(170, 184, 199)
-        binding.modeBar.background = android.graphics.drawable.GradientDrawable().apply {
-            cornerRadius = 4f * context.resources.displayMetrics.density
-            setColor(color)
-        }
+        binding.modeStrip.setMode(sport, animate = modeShown)
+        modeShown = sport != null
     }
+
+    private var modeShown = false
 
     private fun renderMedia() {
         val media = Services.media.snapshot.value

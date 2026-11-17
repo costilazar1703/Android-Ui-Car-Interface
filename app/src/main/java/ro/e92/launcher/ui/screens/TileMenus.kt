@@ -267,13 +267,7 @@ class BluetoothMenuScreen(host: ScreenHost) : WheelMenuScreen(host) {
             title = context.getString(R.string.bt_settings),
             onActivate = { host.push(BluetoothScreen(host, BluetoothScreen.NAV_SETTINGS)) }
         ),
-        WheelEntry(
-            id = "bt_music",
-            icon = R.drawable.ic_menu_media,
-            title = context.getString(R.string.bt_audio),
-            value = Services.media.snapshot.value.title.orEmpty(),
-            onActivate = { host.push(MediaScreen(host)) }
-        ),
+        // „Audio" a plecat (2026-11-17): muzica are meniul ei, Media.
         // Cere a doua apăsare: un reset din greșeală rupe muzica și legătura.
         WheelEntry(
             id = "bt_reset",

@@ -275,6 +275,8 @@
     <string name="media_volume">Volume</string>
     <string name="set_brightness">Brightness</string>
     <string name="home_driving_mode">DRIVING MODE</string>
+    <string name="mode_strip_drive">DRIVE MODE</string>
+    <string name="mode_strip_sport">DYNAMIC SPORT</string>
     <string name="nav_this_drive">This drive</string>
     <string name="nav_this_drive_value">%1$d min · %2$.1f km</string>
 

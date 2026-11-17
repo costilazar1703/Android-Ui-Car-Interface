@@ -154,7 +154,10 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
         // Rândurile au mărimea din vechiul meniu de trei, în toate meniurile, și stau jos;
         // un meniu cu mai multe rânduri crește în sus, spre locul liber de sub bara de stare.
         binding.gContentTop.setGuidelinePercent(TOP_MIN)
-        val rowHeight = rowHeightPx()
+        // Meniurile scurte (cele din Home: Media, BT, Car, Dash, Setup au câte trei rânduri)
+        // primesc rânduri mai înalte și text mai mare (cerut 2026-11-17).
+        val big = rows.size <= MIN_ON_PAGE
+        val rowHeight = rowHeightPx(if (big) TOP_FOR_THREE_BIG else TOP_FOR_THREE)
         pageSize = rowsThatFit(rowHeight)
         pageCount = maxOf(1, (rows.size + pageSize - 1) / pageSize)
         pageWidth = viewportWidth
@@ -183,6 +186,19 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
                 val rowBinding = ItemMenuBinding.inflate(inflater, column, false)
                 rowBinding.menuIcon.setImageResource(entry.icon)
                 rowBinding.menuTitle.text = entry.title
+                if (big) {
+                    rowBinding.menuTitle.textSize = BIG_TITLE_SP
+                    rowBinding.menuValue.textSize = BIG_VALUE_SP
+                    rowBinding.menuIcon.layoutParams = rowBinding.menuIcon.layoutParams.apply {
+                        val s = (BIG_ICON_DP * context.resources.displayMetrics.density).toInt()
+                        width = s
+                        height = s
+                    }
+                    // Titlul mai mare e mai lat: bara sau conținutul din rând pornesc mai la dreapta.
+                    (rowBinding.menuSlider.layoutParams as ViewGroup.MarginLayoutParams).marginStart =
+                        context.resources.getDimensionPixelSize(R.dimen.menu_slider_start) +
+                            (BIG_SLIDER_SHIFT_DP * context.resources.displayMetrics.density).toInt()
+                }
                 rowBinding.menuValue.text = entry.value
                 entry.slider?.let { slider ->
                     val line = ro.e92.launcher.ui.widget.VolumeLineView(context, slider.max).apply {
@@ -260,14 +276,14 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
     }
 
     /** Înălțimea unui rând: cea din vechiul meniu de trei (lista pornea de la [TOP_FOR_THREE]). */
-    private fun rowHeightPx(): Int {
+    private fun rowHeightPx(topForThree: Float): Int {
         // Mărimea rândurilor e cea aleasă cu bara de jos încă pe ecran (2026-11-08). Bara a
         // dispărut, deci scădem înălțimea ei: rândurile rămân la fel, doar urcă mai puțin.
         val removedBar = context.resources.getDimensionPixelSize(R.dimen.bottom_chips_space)
         val parentHeight = binding.root.height - removedBar
         val bottom = binding.pageDots.top - removedBar
         val gap = rowGapPx()
-        return ((bottom - parentHeight * TOP_FOR_THREE - (MIN_ON_PAGE - 1) * gap) / MIN_ON_PAGE)
+        return ((bottom - parentHeight * topForThree - (MIN_ON_PAGE - 1) * gap) / MIN_ON_PAGE)
             .toInt().coerceAtLeast(1)
     }
 
@@ -354,6 +370,12 @@ abstract class WheelMenuScreen(host: ScreenHost) : Screen(host) {
         const val MIN_ON_PAGE = 3
         /** Unde începea lista de trei rânduri: de acolo vine înălțimea unui rând. */
         const val TOP_FOR_THREE = 0.36f
+        /** La meniurile de trei rânduri lista pornește mai sus: rânduri mai înalte. */
+        const val TOP_FOR_THREE_BIG = 0.24f
+        const val BIG_TITLE_SP = 22f
+        const val BIG_VALUE_SP = 16f
+        const val BIG_ICON_DP = 34f
+        const val BIG_SLIDER_SHIFT_DP = 40f
         /** Cât de sus poate urca lista, sub bara de stare. */
         const val TOP_MIN = 0.02f
 
