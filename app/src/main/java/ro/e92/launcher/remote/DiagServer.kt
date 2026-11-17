@@ -352,7 +352,8 @@ object DiagServer {
             steer = query["steer"]?.toIntOrNull(),
             gear = query["gear"]?.toIntOrNull(16),
             drift = query["drift"]?.let { it == "1" },
-            sport = query["sport"]?.let { it == "1" }
+            sport = query["sport"]?.let { it == "1" },
+            lever = query["lever"]?.firstOrNull()?.uppercaseChar()?.takeIf { it in "PRND" }
         )
         // /sim?mode=drift|normal|sport|drive: scena de mod, direct.
         query["mode"]?.let { name ->

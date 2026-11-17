@@ -103,8 +103,16 @@ class ReverseSource(
     private val _modeEvents = MutableSharedFlow<ModeScene>(extraBufferCapacity = 4)
     val modeEvents: SharedFlow<ModeScene> = _modeEvents.asSharedFlow()
 
-    private val dscTrack = ModeTrack()
-    private val sportTrack = ModeTrack()
+    /**
+     * Poziția manetei, din același cadru 0x1D2, octetul 0 (capturile din curte, 2026-11-07):
+     * E1 = P, D2 = R, B4 = N, 78 = D. Null = încă necitită.
+     */
+    private val _lever = MutableStateFlow<Char?>(null)
+    val lever: StateFlow<Char?> = _lever.asStateFlow()
+
+    private val dscTrack = ModeTrack<Boolean>()
+    private val sportTrack = ModeTrack<Boolean>()
+    private val leverTrack = ModeTrack<Char>()
     private var lastGear = -1
 
     private var lastRawLogAt = 0L
@@ -251,8 +259,11 @@ class ReverseSource(
             ID_DSC_STATE -> if (b.size >= 2) {
                 dscTrack.read(b[1] and DSC_OFF_BIT != 0)?.let { (on, live) -> setDrift(on, live) }
             }
-            ID_GEARBOX -> if (b.size >= 5 && b[0] == GEARBOX_D) {
-                sportTrack.read(b[4] and 0x0F != 0)?.let { (on, live) -> setSport(on, live) }
+            ID_GEARBOX -> if (b.size >= 5) {
+                LEVER[b[0]]?.let { pos -> leverTrack.read(pos)?.let { (p, live) -> setLever(p, live) } }
+                if (b[0] == GEARBOX_D) {
+                    sportTrack.read(b[4] and 0x0F != 0)?.let { (on, live) -> setSport(on, live) }
+                }
             }
             ID_CAR_TIME -> onCarTime(b)
             ID_BATTERY -> if (b.size >= 2) {
@@ -318,17 +329,30 @@ class ReverseSource(
     }
 
     /**
+     * Maneta s-a mutat. Din P sau N în D aduce cardul Comfort (o trecere lină pe Home, nu un text
+     * schimbat brusc). Ieșirea din D anulează și Sport: cutia revine în D normal.
+     */
+    private fun setLever(pos: Char, live: Boolean) {
+        val old = _lever.value
+        if (old == pos) return
+        EventLog.log(TAG, "manetă: $pos" + if (live) "" else " (la prima citire)")
+        _lever.value = pos
+        if (pos != 'D' && _sportMode.value == true) _sportMode.value = false
+        if (live && pos == 'D' && (old == 'P' || old == 'N')) _modeEvents.tryEmit(ModeScene.DRIVE)
+    }
+
+    /**
      * O stare citită din cadre repetate: se schimbă abia după [STABLE_FRAMES] cadre la fel,
      * iar după o pauză mai lungă de [STATE_GAP_MS] prima valoare e doar punct de plecare.
      */
-    private class ModeTrack {
+    private class ModeTrack<T> {
         private var lastAt = 0L
-        private var candidate: Boolean? = null
+        private var candidate: T? = null
         private var same = 0
         private var fresh = true
 
         /** Întoarce (valoarea, e schimbare văzută în direct) când valoarea s-a așezat. */
-        fun read(value: Boolean): Pair<Boolean, Boolean>? {
+        fun read(value: T): Pair<T, Boolean>? {
             val now = SystemClock.elapsedRealtime()
             if (now - lastAt > STATE_GAP_MS) {
                 fresh = true
@@ -347,7 +371,10 @@ class ReverseSource(
     }
 
     /** Pentru probe fără mașină, din DiagServer: valorile brute ale cadrelor. */
-    fun simulateCan(raw: List<Int>?, steer: Int?, gear: Int?, drift: Boolean?, sport: Boolean? = null) {
+    fun simulateCan(
+        raw: List<Int>?, steer: Int?, gear: Int?, drift: Boolean?, sport: Boolean? = null, lever: Char? = null
+    ) {
+        lever?.let { setLever(it, _lever.value != null) }
         raw?.let { onSensors(it) }
         steer?.let { onCan(ID_STEERING, listOf(it and 0xFF, (it shr 8) and 0xFF)) }
         gear?.let { onGear(it) }
@@ -484,6 +511,7 @@ class ReverseSource(
         const val DSC_OFF_BIT = 0x10
         const val ID_GEARBOX = 0x1D2
         const val GEARBOX_D = 0x78
+        val LEVER = mapOf(0xE1 to 'P', 0xD2 to 'R', 0xB4 to 'N', 0x78 to 'D')
         const val STABLE_FRAMES = 3
         const val STATE_GAP_MS = 3_000L
 

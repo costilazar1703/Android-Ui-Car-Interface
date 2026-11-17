@@ -58,6 +58,16 @@
         app:layout_constraintStart_toEndOf="@id/rail"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- Sistemele dezactivate: „DRIFT MODE" discret, deasupra mașinii. -->
+    <ro.e92.launcher.ui.widget.DriftBadgeView
+        android:id="@+id/driftBadge"
+        android:layout_width="260dp"
+        android:layout_height="30dp"
+        android:layout_marginTop="14dp"
+        app:layout_constraintEnd_toEndOf="@id/carSpin"
+        app:layout_constraintStart_toStartOf="@id/carSpin"
+        app:layout_constraintTop_toTopOf="@id/carSpin" />
+
     <!-- Modul de condus sub mașină, fără card: literă mare, numele modului, linia podelei. -->
     <ro.e92.launcher.ui.widget.DriveModeStripView
         android:id="@+id/modeStrip"

@@ -71,7 +71,9 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
         setupTouch()
         screenScope.launch { Services.media.snapshot.collect { renderMedia() } }
         screenScope.launch { Services.kswBt.state.collect { renderBluetooth(); renderMedia() } }
-        screenScope.launch { Services.reverse.sportMode.collect { renderDriveMode(it) } }
+        screenScope.launch { Services.reverse.sportMode.collect { renderDriveMode() } }
+        screenScope.launch { Services.reverse.lever.collect { renderDriveMode() } }
+        screenScope.launch { Services.reverse.driftMode.collect { binding.driftBadge.setOn(it == true) } }
         // Linia de progres: de două ori pe secundă, doar cât e Home pe ecran.
         screenScope.launch {
             while (true) {
@@ -190,12 +192,22 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
     // ------------------------------------------------------------- widget-uri
 
     /** Modul cutiei sub mașină; ascuns cât nu-l știm. Prima valoare apare fără animație. */
-    private fun renderDriveMode(sport: Boolean?) {
-        binding.modeStrip.setMode(sport, animate = modeShown)
-        modeShown = sport != null
+    private fun renderDriveMode() {
+        val lever = Services.reverse.lever.value
+        val sport = Services.reverse.sportMode.value
+        val gear = when (lever) {
+            // N e tot un fel de parcare (cerut 2026-11-17); în R rămâne ce era (e oricum scena de marșarier).
+            'P', 'N' -> ro.e92.launcher.ui.widget.DriveModeStripView.Gear.PARK
+            'R' -> shownGear
+            'D' -> if (sport == true) ro.e92.launcher.ui.widget.DriveModeStripView.Gear.SPORT else ro.e92.launcher.ui.widget.DriveModeStripView.Gear.COMFORT
+            else -> sport?.let { if (it) ro.e92.launcher.ui.widget.DriveModeStripView.Gear.SPORT else ro.e92.launcher.ui.widget.DriveModeStripView.Gear.COMFORT }
+        }
+        binding.modeStrip.setMode(gear, animate = shownGear != null)
+        shownGear = gear
     }
 
-    private var modeShown = false
+    private var shownGear: ro.e92.launcher.ui.widget.DriveModeStripView.Gear? = null
+
 
     /**
      * Zona peste care apare cardul de mod pe Home, în coordonatele ferestrei: lățimea zonei cu

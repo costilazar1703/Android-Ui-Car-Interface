@@ -59,24 +59,26 @@ class DriveModeStripView @JvmOverloads constructor(
     }
     private val path = Path()
 
-    private val kicker = context.getString(R.string.home_driving_mode)
+    /** Ce arată afișajul: maneta în P (sau N), D (Comfort) sau D cu Sport. */
+    enum class Gear(val letter: String) { PARK("P"), COMFORT("D"), SPORT("DS") }
 
-    private var sport: Boolean? = null
-    private var previous: Boolean? = null
+    private var mode: Gear? = null
+    private var previousMode: Gear? = null
     private var changedAt = 0L
 
     /** [animate] = schimbare văzută acum; prima valoare se arată direct. */
-    fun setMode(value: Boolean?, animate: Boolean) {
-        if (value == sport) return
-        previous = sport
-        sport = value
+    fun setMode(value: Gear?, animate: Boolean) {
+        if (value == mode) return
+        previousMode = mode
+        mode = value
         visibility = if (value == null) GONE else VISIBLE
-        changedAt = if (animate && previous != null) SystemClock.uptimeMillis() else 0L
+        changedAt = if (animate && previousMode != null) SystemClock.uptimeMillis() else 0L
         invalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
-        val now = sport ?: return
+        val gear = mode ?: return
+        val now = gear == Gear.SPORT
         val w = width.toFloat()
         val h = height.toFloat()
         val t = if (changedAt == 0L) ANIM_MS else (SystemClock.uptimeMillis() - changedAt).toFloat()
@@ -98,14 +100,22 @@ class DriveModeStripView @JvmOverloads constructor(
 
         // ---- lângă bare: DRIVING MODE și modul ----
         val tx = BARS_W * dp + 12f * dp
+        // În P scrie TRANSMISSION / PARKING (cerut 2026-11-17), altfel DRIVING MODE / modul.
+        val kicker = context.getString(if (gear == Gear.PARK) R.string.home_transmission else R.string.home_driving_mode)
         canvas.drawText(kicker, tx, barTop + 11f * dp, kickerPaint)
-        val name = context.getString(if (now) R.string.mode_strip_sport else R.string.mode_strip_drive)
+        val name = context.getString(
+            when (gear) {
+                Gear.PARK -> R.string.mode_strip_park
+                Gear.COMFORT -> R.string.mode_strip_drive
+                Gear.SPORT -> R.string.mode_strip_sport
+            }
+        )
         namePaint.color = withAlpha(if (now) Color.WHITE else light, 0.35f + 0.65f * inT)
         canvas.drawText(name, tx + slide * 0.5f, barBottom - 1f * dp, namePaint)
         val textEnd = tx + maxOf(namePaint.measureText(name), kickerPaint.measureText(kicker))
 
         // ---- dreapta: D / DS într-o ramă fină, cu latura stângă înclinată ----
-        val letter = if (now) "DS" else "D"
+        val letter = gear.letter
         val boxW = BOX_W * dp
         val boxRight = w - 1f * dp
         val boxLeft = boxRight - boxW
@@ -116,10 +126,10 @@ class DriveModeStripView @JvmOverloads constructor(
         val letterBase = (boxTop + boxBottom) / 2f + letterPaint.textSize * 0.36f
         // D e mai îngust: stă puțin mai la stânga, ca să pară centrat sub ramă.
         val letterX = boxLeft + boxW * (if (now) 0.56f else 0.5f)
-        val old = previous
+        val old = previousMode
         if (old != null && t < 160f) {
-            letterPaint.color = withAlpha(if (old) orange else light, 1f - t / 160f)
-            canvas.drawText(if (old) "DS" else "D", letterX, letterBase, letterPaint)
+            letterPaint.color = withAlpha(if (old == Gear.SPORT) orange else light, 1f - t / 160f)
+            canvas.drawText(old.letter, boxLeft + boxW * (if (old == Gear.SPORT) 0.56f else 0.5f), letterBase, letterPaint)
         }
         letterPaint.color = withAlpha(if (now) orange else light, inT)
         canvas.drawText(letter, letterX + slide, letterBase, letterPaint)
