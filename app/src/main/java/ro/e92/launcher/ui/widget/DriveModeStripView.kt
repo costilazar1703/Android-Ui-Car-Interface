@@ -85,13 +85,17 @@ class DriveModeStripView @JvmOverloads constructor(
         val old = previous
         if (old != null && t < 160f) {
             letterPaint.color = withAlpha(if (old) orange else Color.rgb(230, 232, 236), 1f - t / 160f)
-            canvas.drawText(if (old) "DS" else "D", 0f, letterBase, letterPaint)
+            canvas.drawText(if (old) "DS" else "D", LETTER_X * density, letterBase, letterPaint)
         }
         val inT = ease(t, 90f, 320f)
+        val slide = (1f - inT) * 11f * density
+
+        // ---- cele două bare oblice din față: gri la Comfort, portocalii la Sport ----
+        drawSlashes(canvas, letterBase, if (now) orange else steel, inT, slide)
+
         letterPaint.color = withAlpha(if (now) orange else Color.rgb(230, 232, 236), inT)
         val letter = if (now) "DS" else "D"
-        val slide = (1f - inT) * 11f * density
-        canvas.drawText(letter, slide, letterBase, letterPaint)
+        canvas.drawText(letter, LETTER_X * density + slide, letterBase, letterPaint)
 
         // ---- dreapta: DRIVING MODE mic, dedesubt numele modului ----
         val name = context.getString(if (now) R.string.mode_strip_sport else R.string.mode_strip_drive)
@@ -102,7 +106,7 @@ class DriveModeStripView @JvmOverloads constructor(
         canvas.drawText(name, w, nameBase, namePaint)
 
         // ---- linia fină dintre literă și text ----
-        val letterEnd = letterPaint.measureText(if (now) "DS" else "D") + 14f * density
+        val letterEnd = LETTER_X * density + letterPaint.measureText(if (now) "DS" else "D") + 14f * density
         val textStart = w - namePaint.measureText(name) - 16f * density
         if (textStart > letterEnd) {
             val midY = nameBase - namePaint.textSize * 0.36f
@@ -116,6 +120,32 @@ class DriveModeStripView @JvmOverloads constructor(
 
         if (t < ANIM_MS) postInvalidateOnAnimation()
     }
+
+    /** Două paralelograme înclinate, ca „//", înălțimea literei; al doilea mai stins. */
+    private fun drawSlashes(canvas: Canvas, base: Float, color: Int, a: Float, slide: Float) {
+        val top = base - 29f * density
+        val skew = 9f * density
+        val bar = 5f * density
+        for (i in 0..1) {
+            val x = slide + i * (bar + 4f * density)
+            slashPath.reset()
+            slashPath.moveTo(x + skew, top)
+            slashPath.lineTo(x + skew + bar, top)
+            slashPath.lineTo(x + bar, base)
+            slashPath.lineTo(x, base)
+            slashPath.close()
+            slashPaint.shader = LinearGradient(
+                0f, top, 0f, base,
+                withAlpha(color, a * (if (i == 0) 0.55f else 1f)),
+                withAlpha(color, a * (if (i == 0) 0.25f else 0.7f)),
+                Shader.TileMode.CLAMP
+            )
+            canvas.drawPath(slashPath, slashPaint)
+        }
+    }
+
+    private val slashPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val slashPath = android.graphics.Path()
 
     /** O linie care se stinge spre capete, cu un halou din câteva linii mai groase și mai slabe. */
     private fun drawFloorLine(canvas: Canvas, w: Float, y: Float, color: Int, strength: Float, reveal: Float) {
@@ -143,6 +173,8 @@ class DriveModeStripView @JvmOverloads constructor(
 
     private companion object {
         const val ANIM_MS = 700f
+        /** De unde începe litera, după cele două bare oblice (dp). */
+        const val LETTER_X = 30f
         /** Grosimea în dp și opacitatea fiecărui strat al liniei de jos: miezul, apoi haloul. */
         val GLOW = listOf(8f to 0.06f, 4.5f to 0.12f, 1.4f to 0.95f)
     }

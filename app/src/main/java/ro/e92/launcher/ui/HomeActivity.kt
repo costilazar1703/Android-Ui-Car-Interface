@@ -1124,7 +1124,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                 Services.reverse.modeEvents.collect { scene ->
                     if (Services.vehicle.state.value.reverseGear == true) return@collect
                     if (stack.current is ro.e92.launcher.ui.screens.ModeScreen) stack.pop()
-                    stack.push(ro.e92.launcher.ui.screens.ModeScreen(this@HomeActivity, scene))
+                    val anchor = (stack.current as? ro.e92.launcher.ui.screens.HomeWidgetsScreen)?.modeAnchor()
+                    stack.push(ro.e92.launcher.ui.screens.ModeScreen(this@HomeActivity, scene, anchor))
                 }
             }
         }

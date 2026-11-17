@@ -197,6 +197,24 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
 
     private var modeShown = false
 
+    /**
+     * Zona peste care apare cardul de mod pe Home, în coordonatele ferestrei: lățimea zonei cu
+     * mașina, fundul afișajului permanent al modului. Null dacă ecranul nu e încă așezat.
+     */
+    fun modeAnchor(): android.graphics.RectF? {
+        val car = binding.carSpin
+        val strip = binding.modeStrip
+        if (car.width == 0) return null
+        val loc = IntArray(2)
+        car.getLocationInWindow(loc)
+        val left = loc[0].toFloat()
+        val right = left + car.width
+        val rootLoc = IntArray(2)
+        binding.root.getLocationInWindow(rootLoc)
+        val bottom = rootLoc[1] + binding.root.height - (strip.layoutParams as ViewGroup.MarginLayoutParams).bottomMargin
+        return android.graphics.RectF(left, (bottom - strip.layoutParams.height).toFloat(), right, bottom.toFloat())
+    }
+
     private fun renderMedia() {
         val media = Services.media.snapshot.value
         val bt = Services.kswBt.state.value

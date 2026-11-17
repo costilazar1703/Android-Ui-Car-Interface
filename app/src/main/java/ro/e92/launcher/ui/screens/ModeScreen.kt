@@ -31,7 +31,15 @@ import ro.e92.launcher.ui.ScreenHost
  * Confirmarea de mod, peste ecranul curent: sisteme oprite sau normale, Drive Sport sau Drive.
  * Stă [ModeBannerView.TOTAL_MS] și dispare singură; orice tastă o închide și ajunge mai departe.
  */
-class ModeScreen(host: ScreenHost, private val scene: ModeScene) : Screen(host) {
+class ModeScreen(
+    host: ScreenHost,
+    private val scene: ModeScene,
+    /**
+     * Pe Home: zona de sub mașină (în coordonatele ferestrei) peste care stă cardul, acoperind
+     * afișajul permanent al modului cât rulează animația. Null = jos pe mijloc (Dashboard etc.).
+     */
+    private val anchor: android.graphics.RectF? = null
+) : Screen(host) {
 
     override val title: String get() = context.getString(titleRes(scene))
     override val isOverlay: Boolean get() = true
@@ -41,7 +49,7 @@ class ModeScreen(host: ScreenHost, private val scene: ModeScene) : Screen(host) 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup): View {
         // Drive Sport / Drive: doar un card jos pe mijloc, peste ecranul curent, care rămâne vizibil.
         if (scene == ModeScene.SPORT || scene == ModeScene.DRIVE) {
-            return ModeCardView(context, scene == ModeScene.SPORT, context.getString(titleRes(scene))) { dismiss() }
+            return ModeCardView(context, scene == ModeScene.SPORT, context.getString(titleRes(scene)), anchor) { dismiss() }
                 .apply {
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
@@ -379,8 +387,12 @@ class ModeCardView(
     context: Context,
     private val sport: Boolean,
     private val title: String,
+    /** Zona din fereastră peste care stă cardul; null = jos pe mijlocul ecranului. */
+    private val anchor: RectF?,
     private val onDone: () -> Unit
 ) : View(context) {
+
+    private val myLocation = IntArray(2)
 
     private val orange = ContextCompat.getColor(context, R.color.glow_core)
     /** DS: portocaliul interfeței. D: gri-oțel rece. */
@@ -457,10 +469,22 @@ class ModeCardView(
         val a255 = (255 * alpha).toInt()
 
         // ---- așezare: jos pe mijloc; urcă cu un mic recul la intrare, coboară la ieșire ----
-        val cw = CARD_W * u
         val ch = CARD_H * u
-        val cx = w / 2f
-        val cy = h - BOTTOM_GAP * u - ch / 2f + (1f - enter) * 30f * u + exit * 16f * u
+        val cw: Float
+        val cx: Float
+        val bottom: Float
+        if (anchor != null) {
+            // Pe Home: centrat pe zona de sub mașină, cu fundul pe fundul afișajului permanent.
+            getLocationInWindow(myLocation)
+            cw = minOf(CARD_W * u, anchor.width())
+            cx = anchor.centerX() - myLocation[0]
+            bottom = anchor.bottom - myLocation[1]
+        } else {
+            cw = CARD_W * u
+            cx = w / 2f
+            bottom = h - BOTTOM_GAP * u
+        }
+        val cy = bottom - ch / 2f + (1f - enter) * 30f * u + exit * 16f * u
         val scale = 0.9f + 0.1f * pop
         canvas.save()
         canvas.scale(scale, scale, cx, cy)
@@ -492,7 +516,9 @@ class ModeCardView(
         // ---- sticla ----
         cardPaint.shader = LinearGradient(
             0f, card.top, 0f, card.bottom,
-            Color.argb((246 * alpha).toInt(), 34, 36, 41), Color.argb((246 * alpha).toInt(), 11, 12, 15),
+            // Pe Home cardul acoperă de tot afișajul permanent de dedesubt.
+            Color.argb(((if (anchor != null) 255 else 246) * alpha).toInt(), 34, 36, 41),
+            Color.argb(((if (anchor != null) 255 else 246) * alpha).toInt(), 11, 12, 15),
             Shader.TileMode.CLAMP
         )
         canvas.drawRoundRect(card, rad, rad, cardPaint)
