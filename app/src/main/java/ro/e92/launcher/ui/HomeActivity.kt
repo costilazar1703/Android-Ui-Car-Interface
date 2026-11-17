@@ -730,6 +730,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         // negru, ca momentul de dinainte de contact.
         android.os.Looper.myQueue().addIdleHandler {
             view.start()
+            // Sunetul de pornire și vocea, odată cu animația (vocea vine când apare textul).
+            ro.e92.launcher.media.GreetingSound.play(this)
             false
         }
     }
