@@ -715,13 +715,13 @@ class ModeCardView(
         if (s <= 0f) return 0.02f
         return when {
             // Urcă lin, ca o turație care crește.
-            s < 1_200f -> 0.02f + 0.6f * smooth(s / 1_200f)
+            s < 750f -> 0.02f + 0.6f * smooth(s / 750f)
             // Schimbarea de treaptă: scade puțin.
-            s < 1_550f -> 0.62f - 0.1f * smooth((s - 1_200f) / 350f)
-            // Urcă din nou, până în zona roșie.
-            s < 2_850f -> 0.52f + 0.42f * smooth((s - 1_550f) / 1_300f)
+            s < 970f -> 0.62f - 0.1f * smooth((s - 750f) / 220f)
+            // Urcă din nou, până în zona roșie (gata înainte să înceapă ieșirea cardului).
+            s < 1_800f -> 0.52f + 0.42f * smooth((s - 970f) / 830f)
             // Stă în zona roșie, cu un tremur abia vizibil.
-            else -> 0.94f + 0.006f * kotlin.math.sin((s - 2_850f) / 55f).toFloat()
+            else -> 0.94f + 0.006f * kotlin.math.sin((s - 1_800f) / 55f).toFloat()
         }
     }
 
@@ -844,8 +844,9 @@ class ModeCardView(
     }
 
     private companion object {
-        const val SPORT_TOTAL_MS = 5_000f
-        const val DRIVE_TOTAL_MS = 3_500f
+        // Cardul de mod: 2,8 s la amândouă (cerut 2026-11-17).
+        const val SPORT_TOTAL_MS = 2_800f
+        const val DRIVE_TOTAL_MS = 2_800f
         const val ENTER_MS = 380f
         const val EXIT_MS = 320f
         const val RUN_AT_MS = 180f
