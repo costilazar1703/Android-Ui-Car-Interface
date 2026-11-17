@@ -715,13 +715,10 @@ class ModeCardView(
         if (s <= 0f) return 0.02f
         return when {
             // Urcă lin, ca o turație care crește.
-            s < 750f -> 0.02f + 0.6f * smooth(s / 750f)
-            // Schimbarea de treaptă: scade puțin.
-            s < 970f -> 0.62f - 0.1f * smooth((s - 750f) / 220f)
-            // Urcă din nou, până în zona roșie (gata înainte să înceapă ieșirea cardului).
-            s < 1_800f -> 0.52f + 0.42f * smooth((s - 970f) / 830f)
+            // Urcă liniar, fără oprire, până în zona roșie, la ~2,1 s de la apariție (cerut 2026-11-17).
+            s < CLIMB_MS -> 0.02f + 0.92f * (s / CLIMB_MS)
             // Stă în zona roșie, cu un tremur abia vizibil.
-            else -> 0.94f + 0.006f * kotlin.math.sin((s - 1_800f) / 55f).toFloat()
+            else -> 0.94f + 0.006f * kotlin.math.sin((s - CLIMB_MS) / 55f).toFloat()
         }
     }
 
@@ -854,6 +851,8 @@ class ModeCardView(
         const val GAUGE_AT_MS = 200f
         /** Acul pornește după ce arcurile s-au tras. */
         const val NEEDLE_DELAY_MS = 350f
+        /** Cât urcă acul, după [NEEDLE_DELAY_MS]: ajunge în roșu la ~2,1 s. */
+        const val CLIMB_MS = 1_750f
         /** De unde începe zona roșie, ca parte din arc. */
         const val RED_FROM = 0.84f
         const val TEXT_AT_MS = 140f
