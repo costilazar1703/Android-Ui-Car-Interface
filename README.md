@@ -14,6 +14,12 @@ It runs on a KSW head unit with a 10.25" screen (1280x480), Android 8.1 and 2 GB
 |---|
 | ![Drift Mode](docs/mode-scenes/drift.png) |
 
+## Video
+
+Recorded in the car while driving: switching between Comfort, Dynamic Sport and Drift Mode, with the full-screen mode animations and the media player. Click the image to play it.
+
+<a href="docs/demo/e92-launcher-demo.mp4"><img src="docs/demo/e92-launcher-demo-thumb.jpg" alt="E92 Launcher running in the car" width="320"></a>
+
 ## What it does
 
 ### Controlled without touching the screen
