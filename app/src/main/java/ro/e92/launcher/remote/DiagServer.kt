@@ -339,6 +339,10 @@ object DiagServer {
 
     /** Pentru probe fără mașină: /sim?reverse=1&cm=150,40,18,60 /sim?wifi=0..3|off|real */
     private fun simulate(query: Map<String, String>): String {
+        // /sim?vol=up|down: ca butoanele de volum de pe volan (bara de pe ecran).
+        query["vol"]?.let {
+            ro.e92.launcher.core.KswVolume.step(app, if (it == "up") +1 else -1)
+        }
         query["wifi"]?.let {
             Services.net.simulatedLevel = if (it == "real") null else if (it == "off") -1 else it.toIntOrNull()
             Services.net.refresh()

@@ -137,6 +137,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         observeStatusBar()
         observeDriveMode()
         observeDriftMode()
+        observeVolume()
     }
 
     override fun onStart() {
@@ -1114,6 +1115,30 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                     val now = state.sportMode
                     if (now == true && previous == false) showDriveMode()
                     if (now != null) previous = now
+                }
+            }
+        }
+    }
+
+    /** Pastila de volum, peste orice ecran; nu intră în stiva de ecrane, deci nu mută focusul. */
+    private val volumePopup by lazy {
+        ro.e92.launcher.ui.widget.VolumePopupView(this).also {
+            binding.root.addView(
+                it,
+                android.view.ViewGroup.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+            it.elevation = 100f
+        }
+    }
+
+    private fun observeVolume() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                ro.e92.launcher.core.KswVolume.changes.collect { level ->
+                    volumePopup.show(level, ro.e92.launcher.core.KswVolume.MAX)
                 }
             }
         }

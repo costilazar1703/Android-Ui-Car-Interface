@@ -76,11 +76,27 @@ object KswVolume {
     /** Treptele volumului salutului din Car & unit. */
     val GREETING_STEPS = listOf(10, 15, 20, 25, 30, 35, 40)
 
-    /** Butoanele + și - din Button mapping. */
+    /**
+     * Volumul ales cu + / − (volan sau Button mapping), pentru bara de pe ecran. Vine și când
+     * nivelul e deja la capăt, ca bara să apară oricum.
+     */
+    private val _changes = kotlinx.coroutines.flow.MutableSharedFlow<Int>(extraBufferCapacity = 8)
+    val changes: kotlinx.coroutines.flow.SharedFlow<Int> = _changes
+
+    /** Fără KSW (emulator): nivelul ținut doar în memorie, ca bara să se poată proba. */
+    @Volatile private var simLevel = 25
+
+    /** Butoanele + și - (volan, Button mapping). */
     fun step(context: Context, delta: Int) {
-        val now = current(context) ?: return
+        val now = current(context)
+        if (now == null) {
+            simLevel = (simLevel + delta).coerceIn(0, MAX)
+            _changes.tryEmit(simLevel)
+            return
+        }
         val next = (now + delta).coerceIn(0, MAX)
         if (next != now) set(context, next)
+        _changes.tryEmit(next)
     }
 
     private fun sendNow(context: Context, value: Int) {
