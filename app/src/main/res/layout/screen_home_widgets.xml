@@ -28,6 +28,7 @@
 
     <!-- Rama barei: aceeași lumină în degrade ca rama widget-urilor. -->
     <View
+        android:id="@+id/railFrame"
         android:layout_width="1.5dp"
         android:layout_height="0dp"
         android:background="@drawable/bg_rail_frame"

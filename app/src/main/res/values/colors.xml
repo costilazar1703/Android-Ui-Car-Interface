@@ -32,6 +32,8 @@
     <color name="glow_mid">#4DD22D06</color>
     <color name="data_accent">#F04A12</color>
     <color name="glow_core">#D8380A</color>
+    <!-- Selecția în Dynamic Sport și Manual: griul titlurilor din bara din stânga (cerut 2026-11-19). -->
+    <color name="sport_select">#B8B8B8</color>
 
     <!-- Rotița iDrive din stânga -->
     <color name="wheel_rim_outer">#242424</color>

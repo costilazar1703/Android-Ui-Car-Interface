@@ -1123,11 +1123,14 @@ class HomeActivity : ComponentActivity(), ScreenHost {
     private fun observeDriftMode() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                Services.reverse.modeEvents.collect { scene ->
+                Services.reverse.modeEvents.collect { event ->
                     if (Services.vehicle.state.value.reverseGear == true) return@collect
                     if (stack.current is ro.e92.launcher.ui.screens.ModeScreen) stack.pop()
-                    val anchor = (stack.current as? ro.e92.launcher.ui.screens.HomeWidgetsScreen)?.modeAnchor()
-                    stack.push(ro.e92.launcher.ui.screens.ModeScreen(this@HomeActivity, scene, anchor))
+                    val home = stack.current as? ro.e92.launcher.ui.screens.HomeWidgetsScreen
+                    val anchor = home?.modeAnchor()
+                    stack.push(ro.e92.launcher.ui.screens.ModeScreen(this@HomeActivity, event, anchor))
+                    // Afișajul de sub card se schimbă cât cardul îl acoperă, ca să nu se vadă trecerea.
+                    if (anchor != null) home.swapModeUnderCard(event)
                 }
             }
         }

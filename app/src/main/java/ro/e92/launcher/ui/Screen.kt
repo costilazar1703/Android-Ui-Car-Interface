@@ -94,6 +94,12 @@ abstract class Screen(protected val host: ScreenHost) {
      */
     open val isOverlay: Boolean = false
 
+    /**
+     * Un pop-up mic peste ecranul curent (cardul de mod) nu schimbă titlul din bara de sus:
+     * acolo e pagina pe care ești. Scenele pe tot ecranul (Drift) îl schimbă.
+     */
+    open val keepsTitle: Boolean = false
+
     protected abstract fun onCreateView(inflater: LayoutInflater, container: ViewGroup): View
 
     fun createView(inflater: LayoutInflater, container: ViewGroup): View {

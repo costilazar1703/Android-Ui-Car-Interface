@@ -62,6 +62,8 @@ class KswCarDataSource(
     private var poller: Job? = null
     private var bound = false
     private var loggedFirstFrame = false
+    /** Consumul mediu din bord, brut (zecimi de l/100 km), la cadrul de dinainte. */
+    private var lastAvgRaw = -1
     private var systemMode = 0
     private var canForwarding: Boolean? = null
     private var lastRpm = 0
@@ -162,6 +164,7 @@ class KswCarDataSource(
         val rpm = u16(13)
         val fuel = u16(15)
         updateCanForwarding(rpm)
+        onAvgRaw(u16(7), rpm)
         if (rpm in 0..8000) ro.e92.launcher.media.PopsEngine.onRpm(rpm, speed)
         if (!loggedFirstFrame) {
             loggedFirstFrame = true
@@ -178,6 +181,25 @@ class KswCarDataSource(
             rpm = rpm.takeIf { it in 0..8000 },
             timestamp = SystemClock.elapsedRealtime()
         )
+    }
+
+    /**
+     * Resetarea consumului mediu din bord: valoarea validă dispare (bordul arată „--.-" până
+     * strânge iar date). Bănuiala nu e încă văzută în mașină, de aceea trecem în jurnal orice
+     * trecere între valid și invalid, cu valoarea brută. Doar cu motorul pornit: la contact
+     * cadrele pot veni goale până se trezește bordul.
+     */
+    private fun onAvgRaw(raw: Int, rpm: Int) {
+        val prev = lastAvgRaw
+        lastAvgRaw = raw
+        if (prev == -1 || prev == raw) return
+        val wasValid = prev in 1..999
+        val valid = raw in 1..999
+        if (wasValid == valid) return
+        EventLog.log(TAG, "consum mediu bord: %d → %d (brut), %d rpm".format(prev, raw, rpm))
+        if (wasValid && rpm in 400..8000) {
+            runCatching { ro.e92.launcher.core.Services.trip.onBoardAverageReset() }
+        }
     }
 
     /**

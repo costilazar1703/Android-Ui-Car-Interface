@@ -353,12 +353,18 @@ object DiagServer {
             gear = query["gear"]?.toIntOrNull(16),
             drift = query["drift"]?.let { it == "1" },
             sport = query["sport"]?.let { it == "1" },
-            lever = query["lever"]?.firstOrNull()?.uppercaseChar()?.takeIf { it in "PRND" }
+            lever = query["lever"]?.firstOrNull()?.uppercaseChar()?.takeIf { it in "PRND" },
+            manual = query["manual"]?.toIntOrNull()
         )
         // /sim?mode=drift|normal|sport|drive: scena de mod, direct.
         query["mode"]?.let { name ->
             ro.e92.launcher.can.ModeScene.values().firstOrNull { it.name.equals(name, ignoreCase = true) }
-                ?.let { Services.reverse.simulateScene(it) }
+                ?.let { scene ->
+                    val from = query["from"]?.let { f ->
+                        ro.e92.launcher.can.Selector.values().firstOrNull { it.name.equals(f, ignoreCase = true) }
+                    }
+                    Services.reverse.simulateScene(scene, from, query["m"]?.toIntOrNull() ?: 3)
+                }
         }
         query["reverse"]?.let { on ->
             val cm = query["cm"]?.split(",")?.mapNotNull { it.toIntOrNull() }

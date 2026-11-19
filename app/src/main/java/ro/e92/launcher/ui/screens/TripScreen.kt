@@ -27,16 +27,12 @@ class TripScreen(host: ScreenHost) : Screen(host) {
     private lateinit var binding: ScreenTripBinding
     private var long = false
 
-    /** Resetarea drumului lung cere a doua apăsare. */
-    private var resetArmed = false
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup): View =
         ScreenTripBinding.inflate(inflater, container, false).also { binding = it }.root
 
     override fun onShow() {
         binding.tripTabDrive.setOnClickListener { select(false) }
         binding.tripTabLong.setOnClickListener { select(true) }
-        binding.tripReset.setOnClickListener { reset() }
         render()
         screenScope.launch {
             while (isActive) {
@@ -49,34 +45,16 @@ class TripScreen(host: ScreenHost) : Screen(host) {
     override fun focusTargets(): List<FocusTarget> {
         val tabs = listOf(
             FocusTarget(ID_DRIVE, binding.tripTabDrive, onActivate = { select(false) }, right = ID_LONG),
-            FocusTarget(
-                ID_LONG, binding.tripTabLong, onActivate = { select(true) }, left = ID_DRIVE,
-                right = if (long) ID_RESET else null
-            )
+            FocusTarget(ID_LONG, binding.tripTabLong, onActivate = { select(true) }, left = ID_DRIVE)
         )
-        return if (long) {
-            tabs + FocusTarget(ID_RESET, binding.tripReset, onActivate = { reset() }, left = ID_LONG)
-        } else {
-            tabs
-        }
+        return tabs
     }
 
     private fun select(longTrip: Boolean) {
         if (long == longTrip) return
         long = longTrip
-        resetArmed = false
         render()
         host.rebuildFocus(if (long) ID_LONG else ID_DRIVE)
-    }
-
-    private fun reset() {
-        if (resetArmed) {
-            resetArmed = false
-            Services.trip.resetLongTrip()
-        } else {
-            resetArmed = true
-        }
-        render()
     }
 
     private fun render() {
@@ -87,16 +65,22 @@ class TripScreen(host: ScreenHost) : Screen(host) {
         val off = context.getColor(R.color.text_primary)
         b.tripTabDrive.setTextColor(if (long) off else on)
         b.tripTabLong.setTextColor(if (long) on else off)
-        b.tripReset.visibility = if (long) View.VISIBLE else View.GONE
-        b.tripReset.setText(if (resetArmed) R.string.trip_reset_confirm else R.string.trip_reset)
 
         set(b.tripDistance, String.format(Locale.US, "%.1f", t.distanceKm))
-        set(b.tripCons, car.avgConsumption?.let { String.format(Locale.US, "%.1f", it) } ?: DASH)
-        b.tripConsArc.value = car.avgConsumption
+        // Drumul acesta: consumul de la plecare. Drumul lung: consumul mediu din bord, cu
+        // care pornește odată (se resetează împreună).
+        val cons: Float? = if (long) car.avgConsumption else t.consumption?.toFloat()?.takeIf { it < 100f }
+        set(b.tripCons, cons?.let { String.format(Locale.US, "%.1f", it) } ?: DASH)
+        b.tripConsArc.value = cons
+        b.tripConsUnit.setText(if (long) R.string.trip_cons_unit else R.string.trip_cons_unit_drive)
         set(b.tripTime, duration(t.drivingMs))
         set(b.tripAvg, t.avgSpeedKmh?.let { "$it km/h" } ?: DASH)
         set(b.tripMax, if (t.maxSpeedKmh > 0) "${t.maxSpeedKmh} km/h" else DASH)
-        set(b.tripFuelUsed, if (t.fuelUsedL > 0) "${t.fuelUsedL} l" else DASH)
+        set(
+            b.tripFuelUsed,
+            t.fuelPrecise?.let { String.format(Locale.US, "%.1f l", it) }
+                ?: if (t.fuelUsedL > 0) "${t.fuelUsedL} l" else DASH
+        )
         set(b.tripRange, car.rangeKm?.let { "$it km" } ?: DASH)
         set(b.tripTank, car.fuel?.let { "$it l" } ?: DASH)
         set(b.tripBoardAvg, car.avgSpeedKmh?.let { String.format(Locale.US, "%.1f km/h", it) } ?: DASH)
@@ -116,7 +100,6 @@ class TripScreen(host: ScreenHost) : Screen(host) {
     private companion object {
         const val ID_DRIVE = "trip_drive"
         const val ID_LONG = "trip_long"
-        const val ID_RESET = "trip_reset"
         const val DASH = "—"
         const val REFRESH_MS = 1_000L
     }

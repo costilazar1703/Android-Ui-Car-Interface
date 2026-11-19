@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Etichetele din bara verticală în Dynamic Sport și Manual: gri ca în modul normal; selectată,
+     gri deschis. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/sport_select" android:state_activated="true" />
+    <item android:color="@color/home_rail_label" />
+</selector>

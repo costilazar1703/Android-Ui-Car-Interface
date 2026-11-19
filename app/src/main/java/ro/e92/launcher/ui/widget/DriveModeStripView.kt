@@ -17,7 +17,7 @@ import ro.e92.launcher.R
  * Modul cutiei pe Home, sub mașină („Integrated Gear Display", ales 2026-11-17), după schița
  * aleasă de utilizator:
  *  - în stânga, barele oblice cu aspect 3D (față în degrade, muchie luminată, umbră), apoi
- *    „DRIVING MODE" mic și dedesubt modul (COMFORT / DYNAMIC SPORT);
+ *    „TRANSMISSION" mic și dedesubt modul (PARKING / NEUTRAL / COMFORT / DYNAMIC SPORT);
  *  - în dreapta, D sau DS într-o ramă fină cu latura stângă înclinată ca barele;
  *  - între ele o linie fină, iar jos linia podelei, cu o strălucire discretă în culoarea modului.
  *
@@ -60,17 +60,23 @@ class DriveModeStripView @JvmOverloads constructor(
     private val path = Path()
 
     /** Ce arată afișajul: maneta în P (sau N), D (Comfort) sau D cu Sport. */
-    enum class Gear(val letter: String) { PARK("P"), COMFORT("D"), SPORT("DS") }
+    enum class Gear(val letter: String) { PARK("P"), NEUTRAL("N"), COMFORT("D"), SPORT("DS"), MANUAL("M") }
 
     private var mode: Gear? = null
     private var previousMode: Gear? = null
+    private var manualGear = 0
+    private var previousLetter = ""
     private var changedAt = 0L
 
-    /** [animate] = schimbare văzută acum; prima valoare se arată direct. */
-    fun setMode(value: Gear?, animate: Boolean) {
-        if (value == mode) return
+    private fun letterOf(g: Gear) = if (g == Gear.MANUAL) "M$manualGear" else g.letter
+
+    /** [animate] = schimbare văzută acum; prima valoare se arată direct. [gear] = treapta în manual. */
+    fun setMode(value: Gear?, animate: Boolean, gear: Int = 0) {
+        if (value == mode && (value != Gear.MANUAL || gear == manualGear)) return
+        previousLetter = mode?.let { letterOf(it) } ?: ""
         previousMode = mode
         mode = value
+        manualGear = gear
         visibility = if (value == null) GONE else VISIBLE
         changedAt = if (animate && previousMode != null) SystemClock.uptimeMillis() else 0L
         invalidate()
@@ -78,7 +84,7 @@ class DriveModeStripView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         val gear = mode ?: return
-        val now = gear == Gear.SPORT
+        val now = gear == Gear.SPORT || gear == Gear.MANUAL
         val w = width.toFloat()
         val h = height.toFloat()
         val t = if (changedAt == 0L) ANIM_MS else (SystemClock.uptimeMillis() - changedAt).toFloat()
@@ -98,24 +104,27 @@ class DriveModeStripView @JvmOverloads constructor(
         val barBottom = lineY - 9f * dp
         drawBars(canvas, barTop, barBottom, if (now) orange else steel, now, inT)
 
-        // ---- lângă bare: DRIVING MODE și modul ----
+        // ---- lângă bare: TRANSMISSION și modul ----
         val tx = BARS_W * dp + 12f * dp
-        // În P scrie TRANSMISSION / PARKING (cerut 2026-11-17), altfel DRIVING MODE / modul.
-        val kicker = context.getString(if (gear == Gear.PARK) R.string.home_transmission else R.string.home_driving_mode)
+        // TRANSMISSION în toate modurile (cerut 2026-11-19), dedesubt modul.
+        val kicker = context.getString(R.string.home_transmission)
         canvas.drawText(kicker, tx, barTop + 11f * dp, kickerPaint)
         val name = context.getString(
             when (gear) {
                 Gear.PARK -> R.string.mode_strip_park
+                Gear.NEUTRAL -> R.string.mode_strip_neutral
                 Gear.COMFORT -> R.string.mode_strip_drive
                 Gear.SPORT -> R.string.mode_strip_sport
+                Gear.MANUAL -> R.string.mode_strip_manual
             }
         )
-        namePaint.color = withAlpha(if (now) Color.WHITE else light, 0.35f + 0.65f * inT)
+        // DYNAMIC SPORT și MANUAL în portocaliu (cerut 2026-11-19), restul deschise.
+        namePaint.color = withAlpha(if (now) orange else light, 0.35f + 0.65f * inT)
         canvas.drawText(name, tx + slide * 0.5f, barBottom - 1f * dp, namePaint)
         val textEnd = tx + maxOf(namePaint.measureText(name), kickerPaint.measureText(kicker))
 
         // ---- dreapta: D / DS într-o ramă fină, cu latura stângă înclinată ----
-        val letter = gear.letter
+        val letter = letterOf(gear)
         val boxW = BOX_W * dp
         val boxRight = w - 1f * dp
         val boxLeft = boxRight - boxW
@@ -128,8 +137,9 @@ class DriveModeStripView @JvmOverloads constructor(
         val letterX = boxLeft + boxW * (if (now) 0.56f else 0.5f)
         val old = previousMode
         if (old != null && t < 160f) {
-            letterPaint.color = withAlpha(if (old == Gear.SPORT) orange else light, 1f - t / 160f)
-            canvas.drawText(old.letter, boxLeft + boxW * (if (old == Gear.SPORT) 0.56f else 0.5f), letterBase, letterPaint)
+            val oldOrange = old == Gear.SPORT || old == Gear.MANUAL
+            letterPaint.color = withAlpha(if (oldOrange) orange else light, 1f - t / 160f)
+            canvas.drawText(previousLetter, boxLeft + boxW * (if (oldOrange) 0.56f else 0.5f), letterBase, letterPaint)
         }
         letterPaint.color = withAlpha(if (now) orange else light, inT)
         canvas.drawText(letter, letterX + slide, letterBase, letterPaint)

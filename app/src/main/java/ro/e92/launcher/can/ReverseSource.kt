@@ -26,8 +26,20 @@ import ro.e92.launcher.core.KswSettings
 import ro.e92.launcher.core.Services
 import ro.e92.launcher.ui.HomeActivity
 
-/** Cele patru confirmări de mod, arătate de [ro.e92.launcher.ui.screens.ModeScreen]. */
-enum class ModeScene { DRIFT, NORMAL, SPORT, DRIVE }
+/** Confirmările de mod, arătate de [ro.e92.launcher.ui.screens.ModeScreen]. */
+enum class ModeScene { DRIFT, NORMAL, SPORT, DRIVE, NEUTRAL, PARK, MANUAL }
+
+/**
+ * Pozițiile schimbătorului, ca pe cardul de mod: P R N D pe rând, DS deasupra lui D, iar
+ * manualul (M1…M6) tot acolo, fiindcă se intră din DS.
+ */
+enum class Selector { P, R, N, D, DS, M }
+
+/** Ce arată afișajul permanent de pe Home: poziția și treapta în manual. */
+data class ModeDisplay(val selector: Selector, val gear: Int = 0)
+
+/** O confirmare de mod: [from] = de unde a venit maneta (null = nu știm), [gear] = treapta în M. */
+data class ModeEvent(val scene: ModeScene, val from: Selector? = null, val gear: Int = 0)
 
 /** Senzorul nu vede nimic. Mai mare decât orice prag din ParkSensorView. */
 const val NO_OBSTACLE_CM = 999
@@ -100,8 +112,62 @@ class ReverseSource(
      * (cadrele CAN vin doar cu ecranul Dashboard deschis) e doar punct de plecare: dacă modul
      * s-a schimbat cât nu ascultam, nu anunțăm nimic.
      */
-    private val _modeEvents = MutableSharedFlow<ModeScene>(extraBufferCapacity = 4)
-    val modeEvents: SharedFlow<ModeScene> = _modeEvents.asSharedFlow()
+    private val _modeEvents = MutableSharedFlow<ModeEvent>(extraBufferCapacity = 4)
+    val modeEvents: SharedFlow<ModeEvent> = _modeEvents.asSharedFlow()
+
+    /**
+     * Treapta în modul manual (1…6), null = nu e în manual. Cadrul încă nu e decodat: îl citim
+     * din mașină (vezi [onGearByte]); până atunci vine doar din /sim?manual=.
+     */
+    private val _manualGear = MutableStateFlow<Int?>(null)
+    val manualGear: StateFlow<Int?> = _manualGear.asStateFlow()
+
+    /**
+     * Afișajul permanent de pe Home. Se schimbă abia după ce a apărut cardul modului nou (care
+     * îl acoperă), nu odată cu maneta: în treacăt prin N nu apare nimic, iar în R rămâne cum era.
+     */
+    private val _display = MutableStateFlow<ModeDisplay?>(null)
+    val display: StateFlow<ModeDisplay?> = _display.asStateFlow()
+    private var displayJob: Job? = null
+
+    /** Arată cardul modului, iar afișajul de dedesubt trece pe modul nou după ce cardul a intrat. */
+    private fun showCard(e: ModeEvent) {
+        _modeEvents.tryEmit(e)
+        val sel = when (e.scene) {
+            ModeScene.PARK -> Selector.P
+            ModeScene.NEUTRAL -> Selector.N
+            ModeScene.DRIVE -> Selector.D
+            ModeScene.SPORT -> Selector.DS
+            ModeScene.MANUAL -> Selector.M
+            else -> return
+        }
+        displayJob?.cancel()
+        displayJob = scope.launch {
+            delay(DISPLAY_AFTER_CARD_MS)
+            _display.value = ModeDisplay(sel, e.gear)
+        }
+    }
+
+    /** Fără card (prima citire, treapta schimbată în manual): afișajul se pune direct. */
+    private fun showDirect() {
+        val sel = selectorNow() ?: return
+        if (sel == Selector.R) return
+        displayJob?.cancel()
+        _display.value = ModeDisplay(sel, _manualGear.value ?: 0)
+    }
+
+    /** Poziția de pe card de acum, din manetă, DS și manual. */
+    private fun selectorNow(): Selector? = when (_lever.value) {
+        'P' -> Selector.P
+        'R' -> Selector.R
+        'N' -> Selector.N
+        'D' -> when {
+            _manualGear.value != null -> Selector.M
+            _sportMode.value == true -> Selector.DS
+            else -> Selector.D
+        }
+        else -> null
+    }
 
     /**
      * Poziția manetei, din același cadru 0x1D2, octetul 0 (capturile din curte, 2026-11-07):
@@ -261,6 +327,7 @@ class ReverseSource(
             }
             ID_GEARBOX -> if (b.size >= 5) {
                 LEVER[b[0]]?.let { pos -> leverTrack.read(pos)?.let { (p, live) -> setLever(p, live) } }
+                onGearByte(b[1])
                 if (b[0] == GEARBOX_D) {
                     sportTrack.read(b[4] and 0x0F != 0)?.let { (on, live) -> setSport(on, live) }
                 }
@@ -318,14 +385,18 @@ class ReverseSource(
         if (_driftMode.value == on) return
         EventLog.log(TAG, "sisteme " + (if (on) "oprite" else "normale") + if (live) "" else " (la prima citire)")
         _driftMode.value = on
-        if (live) _modeEvents.tryEmit(if (on) ModeScene.DRIFT else ModeScene.NORMAL)
+        if (live) _modeEvents.tryEmit(ModeEvent(if (on) ModeScene.DRIFT else ModeScene.NORMAL))
     }
 
     private fun setSport(on: Boolean, live: Boolean) {
         if (_sportMode.value == on) return
         EventLog.log(TAG, (if (on) "Drive Sport" else "Drive") + if (live) "" else " (la prima citire)")
+        val from = selectorNow()
+        val fromGear = _manualGear.value ?: 0
         _sportMode.value = on
-        if (live) _modeEvents.tryEmit(if (on) ModeScene.SPORT else ModeScene.DRIVE)
+        // Ieșirea din DS închide și manualul: maneta s-a întors în D.
+        if (!on) _manualGear.value = null
+        if (live) showCard(ModeEvent(if (on) ModeScene.SPORT else ModeScene.DRIVE, from, fromGear)) else showDirect()
     }
 
     /**
@@ -336,10 +407,74 @@ class ReverseSource(
         val old = _lever.value
         if (old == pos) return
         EventLog.log(TAG, "manetă: $pos" + if (live) "" else " (la prima citire)")
+        // De unde vine cardul: poziția de dinainte. Dacă maneta a trecut doar în treacăt prin N
+        // (P → R → N → D), cardul pleacă de la ultima poziție în care a stat.
+        val from = if (old == 'N' && !neutralShown) lastSettled else selectorNow()
         _lever.value = pos
-        if (pos != 'D' && _sportMode.value == true) _sportMode.value = false
-        if (live && pos == 'D' && (old == 'P' || old == 'N')) _modeEvents.tryEmit(ModeScene.DRIVE)
+        if (pos != 'D') {
+            if (_sportMode.value == true) _sportMode.value = false
+            _manualGear.value = null
+        }
+        neutralJob?.cancel()
+        neutralJob = null
+        if (!live) {
+            showDirect()
+            return
+        }
+        when (pos) {
+            'D' -> showCard(ModeEvent(ModeScene.DRIVE, from))
+            'P' -> showCard(ModeEvent(ModeScene.PARK, from))
+            // Neutral doar dacă maneta stă în N: între R și D trece oricum prin N.
+            'N' -> {
+                neutralShown = false
+                lastSettled = from
+                neutralJob = scope.launch {
+                    delay(NEUTRAL_HOLD_MS)
+                    if (_lever.value == 'N') {
+                        neutralShown = true
+                        showCard(ModeEvent(ModeScene.NEUTRAL, from))
+                    }
+                }
+            }
+            // R: scena de marșarier, fără card.
+        }
     }
+
+    /**
+     * Manualul: intră din DS. Prima treaptă aduce cardul cu schimbătorul; treptele următoare
+     * schimbă doar afișajul de pe Home (un card la fiecare schimbare ar fi prea mult în mers).
+     */
+    private fun setManual(gear: Int?, live: Boolean) {
+        if (_manualGear.value == gear) return
+        EventLog.log(TAG, (if (gear == null) "ieșit din manual" else "manual M$gear") + if (live) "" else " (la prima citire)")
+        val from = selectorNow()
+        val wasManual = _manualGear.value != null
+        val oldGear = _manualGear.value ?: 0
+        _manualGear.value = gear
+        if (!live) return showDirect()
+        when {
+            gear != null && !wasManual -> showCard(ModeEvent(ModeScene.MANUAL, from, gear))
+            // Treapta următoare sau inferioară: fără card, doar afișajul.
+            gear != null -> showDirect()
+            _lever.value == 'D' ->
+                showCard(ModeEvent(if (_sportMode.value == true) ModeScene.SPORT else ModeScene.DRIVE, from, oldGear))
+        }
+    }
+
+    /**
+     * Octetul 1 din 0x1D2: 0C în P, R, N, D și DS în toate capturile de până acum. Bănuim că
+     * aici e treapta din manual; până o vedem în mașină, doar o trecem în jurnal când se schimbă.
+     */
+    private fun onGearByte(value: Int) {
+        if (value == lastGearByte) return
+        lastGearByte = value
+        if (value != GEAR_BYTE_NONE) EventLog.log(TAG, "0x1D2 octet 1: %02x".format(value))
+    }
+
+    private var lastGearByte = GEAR_BYTE_NONE
+    private var neutralJob: Job? = null
+    private var neutralShown = false
+    private var lastSettled: Selector? = null
 
     /**
      * O stare citită din cadre repetate: se schimbă abia după [STABLE_FRAMES] cadre la fel,
@@ -372,9 +507,12 @@ class ReverseSource(
 
     /** Pentru probe fără mașină, din DiagServer: valorile brute ale cadrelor. */
     fun simulateCan(
-        raw: List<Int>?, steer: Int?, gear: Int?, drift: Boolean?, sport: Boolean? = null, lever: Char? = null
+        raw: List<Int>?, steer: Int?, gear: Int?, drift: Boolean?, sport: Boolean? = null, lever: Char? = null,
+        manual: Int? = null
     ) {
         lever?.let { setLever(it, _lever.value != null) }
+        // manual=0 iese din manual; 1…6 = treapta.
+        manual?.let { setManual(it.takeIf { g -> g in 1..6 }, _lever.value != null) }
         raw?.let { onSensors(it) }
         steer?.let { onCan(ID_STEERING, listOf(it and 0xFF, (it shr 8) and 0xFF)) }
         gear?.let { onGear(it) }
@@ -384,8 +522,8 @@ class ReverseSource(
     }
 
     /** Scena cerută direct, pentru poze din emulator. */
-    fun simulateScene(scene: ModeScene) {
-        _modeEvents.tryEmit(scene)
+    fun simulateScene(scene: ModeScene, from: Selector? = null, gear: Int = 3) {
+        _modeEvents.tryEmit(ModeEvent(scene, from, gear))
     }
 
     private fun publish(on: Boolean, frameType: String = "?") {
@@ -511,8 +649,14 @@ class ReverseSource(
         const val DSC_OFF_BIT = 0x10
         const val ID_GEARBOX = 0x1D2
         const val GEARBOX_D = 0x78
+        /** Cât intră cardul de mod; abia apoi se schimbă afișajul de sub el. */
+        const val DISPLAY_AFTER_CARD_MS = 450L
+        /** Octetul 1 din 0x1D2 cât nu e manual (văzut în toate capturile). */
+        const val GEAR_BYTE_NONE = 0x0C
         val LEVER = mapOf(0xE1 to 'P', 0xD2 to 'R', 0xB4 to 'N', 0x78 to 'D')
         const val STABLE_FRAMES = 3
+        /** Cât trebuie să stea maneta în N până apare cardul Neutral. */
+        const val NEUTRAL_HOLD_MS = 1_200L
         const val STATE_GAP_MS = 3_000L
 
         const val RADAR_ACTION = "com.szchoiceway.eventcenter.MCU_CAR_CAN_RADAR_INFO"

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Linia din stânga rândului selectat în Dynamic Sport și Manual: gri deschis. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/sport_select" android:state_activated="true" />
+    <item android:drawable="@android:color/transparent" />
+</selector>

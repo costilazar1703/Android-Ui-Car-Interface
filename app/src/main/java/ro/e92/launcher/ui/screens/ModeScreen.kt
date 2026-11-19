@@ -21,7 +21,9 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import ro.e92.launcher.R
+import ro.e92.launcher.can.ModeEvent
 import ro.e92.launcher.can.ModeScene
+import ro.e92.launcher.can.Selector
 import ro.e92.launcher.focus.FocusTarget
 import ro.e92.launcher.input.LauncherAction
 import ro.e92.launcher.ui.Screen
@@ -33,7 +35,7 @@ import ro.e92.launcher.ui.ScreenHost
  */
 class ModeScreen(
     host: ScreenHost,
-    private val scene: ModeScene,
+    private val event: ModeEvent,
     /**
      * Pe Home: zona de sub mașină (în coordonatele ferestrei) peste care stă cardul, acoperind
      * afișajul permanent al modului cât rulează animația. Null = jos pe mijloc (Dashboard etc.).
@@ -41,15 +43,19 @@ class ModeScreen(
     private val anchor: android.graphics.RectF? = null
 ) : Screen(host) {
 
+    private val scene: ModeScene get() = event.scene
+
     override val title: String get() = context.getString(titleRes(scene))
     override val isOverlay: Boolean get() = true
+    /** Cardurile Transmission lasă în bara de sus pagina curentă; Drift și Normal o înlocuiesc. */
+    override val keepsTitle: Boolean get() = scene != ModeScene.DRIFT && scene != ModeScene.NORMAL
 
     private var dismissed = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup): View {
         // Drive Sport / Drive: doar un card jos pe mijloc, peste ecranul curent, care rămâne vizibil.
-        if (scene == ModeScene.SPORT || scene == ModeScene.DRIVE) {
-            return ModeCardView(context, scene == ModeScene.SPORT, context.getString(titleRes(scene)), anchor) { dismiss() }
+        if (scene != ModeScene.DRIFT && scene != ModeScene.NORMAL) {
+            return ModeCardView(context, event, context.getString(titleRes(scene)), anchor) { dismiss() }
                 .apply {
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
@@ -112,6 +118,9 @@ class ModeScreen(
         ModeScene.NORMAL -> R.string.mode_normal
         ModeScene.SPORT -> R.string.mode_sport
         ModeScene.DRIVE -> R.string.mode_drive
+        ModeScene.NEUTRAL -> R.string.mode_neutral
+        ModeScene.PARK -> R.string.mode_park
+        ModeScene.MANUAL -> R.string.mode_manual
     }
 }
 
@@ -385,12 +394,25 @@ class ModeBannerView(
  */
 class ModeCardView(
     context: Context,
-    private val sport: Boolean,
+    private val event: ModeEvent,
     private val title: String,
     /** Zona din fereastră peste care stă cardul; null = jos pe mijlocul ecranului. */
     private val anchor: RectF?,
     private val onDone: () -> Unit
 ) : View(context) {
+
+    private val scene = event.scene
+    /** DS și manualul sunt portocalii; P, N și D gri. */
+    private val sport = scene == ModeScene.SPORT || scene == ModeScene.MANUAL
+    private val to: Selector = when (scene) {
+        ModeScene.PARK -> Selector.P
+        ModeScene.NEUTRAL -> Selector.N
+        ModeScene.SPORT -> Selector.DS
+        ModeScene.MANUAL -> Selector.M
+        else -> Selector.D
+    }
+    /** De unde alunecă bucata aprinsă; null = apare direct pe poziția nouă. */
+    private val from: Selector? = event.from?.takeIf { it != to }
 
     private val myLocation = IntArray(2)
 
@@ -431,9 +453,15 @@ class ModeCardView(
     private val m = Matrix()
     private val card = RectF()
     private val r = RectF()
+    private val r2 = RectF()
     private val clip = Path()
     private val needle = Path()
     private val wave = Path()
+    private val tray = Path()
+    private val iconTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = semibold
+        textAlign = Paint.Align.CENTER
+    }
     private val kicker = context.getString(R.string.mode_kicker).uppercase()
 
     /** DS stă mai mult: turometrul are nevoie de timp să urce (cerut 2026-11-17). */
@@ -580,7 +608,23 @@ class ModeCardView(
         strokePaint.strokeWidth = 1.6f * u
         strokePaint.color = withAlpha(accent, (130 * alpha).toInt())
         canvas.drawCircle(bcx, cy, bR, strokePaint)
-        if (sport) drawGauge(canvas, now, bcx, cy, bR, u, alpha) else drawWave(canvas, now, bcx, cy, bR, u, alpha)
+        when (scene) {
+            ModeScene.SPORT -> drawGauge(canvas, now, bcx, cy, bR, u, alpha)
+            ModeScene.MANUAL -> drawShifter(canvas, now, bcx, cy, bR, u, alpha)
+            ModeScene.PARK -> drawPark(canvas, now, bcx, cy, bR, u, alpha)
+            ModeScene.NEUTRAL -> drawNeutral(canvas, now, bcx, cy, bR, u, alpha)
+            else -> drawWave(canvas, now, bcx, cy, bR, u, alpha)
+        }
+
+        // ---- schimbătorul, calculat înainte de text: titlul trebuie să încapă până la el ----
+        val segW = SEG_W * u
+        val segH = SEG_H * u
+        val gap = SEG_GAP * u
+        // P R N D pe verticală în dreapta, DS în stânga lui D. Coloana e mai înaltă decât cardul:
+        // se derulează până la poziția manetei, iar cardul o taie sus și jos.
+        val colX = card.right - rad * 1.05f - segW / 2f
+        val dsX = colX - segW - SEG_SIDE_GAP * u
+        val rowLeft = dsX - segW / 2f - 4f * u
 
         // ---- textul ----
         val tx = bcx + bR + 22f * u
@@ -588,6 +632,9 @@ class ModeCardView(
         kickerPaint.color = Color.rgb(128, 133, 141)
         kickerPaint.alpha = a255
         titlePaint.textSize = 35f * u
+        val room = rowLeft - 16f * u - (bcx + bR + 22f * u)
+        val natural = titlePaint.measureText(title)
+        if (natural > room && room > 0f) titlePaint.textSize *= room / natural
         val textIn = ease(now, TEXT_AT_MS, TEXT_MS)
         val kickY = cy - 11f * u
         val titleY = cy + 25f * u + (1f - textIn) * 10f * u
@@ -615,28 +662,108 @@ class ModeCardView(
         }
         canvas.restoreToCount(layer)
 
-        // ---- selectorul D / DS ----
-        val segW = 60f * u
-        val segH = 38f * u
-        val gap = 4f * u
-        val sx2 = card.right - rad * 0.62f - segW * 2 - gap
-        val sy = cy - segH / 2f
-        r.set(sx2 - 4f * u, sy - 4f * u, sx2 + segW * 2 + gap + 4f * u, sy + segH + 4f * u)
+        // ---- schimbătorul, ca maneta din mașină ----
+        // Bucata aprinsă stă pe rândul din mijloc al cardului, iar coloana P R N D alunecă sub ea
+        // (o derulare de la poziția veche la cea nouă). Spre DS bucata merge la stânga, lângă D.
+        val stepY = segH + gap
+        fun rowOf(s: Selector) = when (s) {
+            Selector.P -> 0
+            Selector.R -> 1
+            Selector.N -> 2
+            else -> 3
+        }
+        fun sideX(s: Selector) = if (s == Selector.DS || s == Selector.M) dsX else colX
+        val slideMs = SLIDE_MS + 70f * steps()
+        val slideT = if (from == null) 1f else smooth((now - SLIDE_AT_MS) / slideMs)
+        // Drumul în „coordonate de manetă": x = coloana sau DS, y = rândul (derularea).
+        val pts = gatePath(from ?: to, to, ::sideX) { rowOf(it) * stepY }
+        val pos = alongPath(pts, slideT)
+        val scroll = pos[1]
+        fun rowY(i: Int) = cy + i * stepY - scroll
+
+        canvas.save()
+        canvas.clipPath(clip)
+        val pad = 3f * u
+        tray.reset()
+        r.set(colX - segW / 2f - pad, rowY(0) - segH / 2f - pad, colX + segW / 2f + pad, rowY(3) + segH / 2f + pad)
+        tray.addRoundRect(r, segH / 2f + pad, segH / 2f + pad, Path.Direction.CW)
+        val side = Path()
+        r.set(dsX - segW / 2f - pad, rowY(3) - segH / 2f - pad, colX + segW / 2f + pad, rowY(3) + segH / 2f + pad)
+        side.addRoundRect(r, r.height() / 2f, r.height() / 2f, Path.Direction.CW)
+        tray.op(side, Path.Op.UNION)
         fillPaint.color = Color.argb((130 * alpha).toInt(), 0, 0, 0)
+        canvas.drawPath(tray, fillPaint)
+
+        val fromOrange = from == Selector.DS || from == Selector.M
+        val orangeAmt = when {
+            from == null -> if (sport) 1f else 0f
+            fromOrange == sport -> if (sport) 1f else 0f
+            sport -> slideT
+            else -> 1f - slideT
+        }
+        val pillColor = blend(Color.rgb(170, 184, 199), orange, orangeAmt)
+        val appear = if (from == null) ease(now, SLIDE_AT_MS, 300f) else 1f
+        val grow = if (from == null) 0.7f + 0.3f * back(now, SLIDE_AT_MS, 380f) else 1f
+        r.set(pos[0] - segW / 2f * grow, cy - segH / 2f * grow, pos[0] + segW / 2f * grow, cy + segH / 2f * grow)
+        fillPaint.color = withAlpha(pillColor, (a255 * appear).toInt())
         canvas.drawRoundRect(r, r.height() / 2f, r.height() / 2f, fillPaint)
-        val slide = back(now, SLIDE_AT_MS, SLIDE_MS)
-        // DS în stânga, D în dreapta (cerut 2026-11-17).
-        val fromX = if (sport) sx2 + segW + gap else sx2
-        val toX = if (sport) sx2 else sx2 + segW + gap
-        val px = fromX + (toX - fromX) * slide
-        r.set(px, sy, px + segW, sy + segH)
-        fillPaint.color = withAlpha(accent, a255)
-        canvas.drawRoundRect(r, segH / 2f, segH / 2f, fillPaint)
+
+        val onLit = blend(Color.rgb(16, 18, 22), Color.WHITE, orangeAmt)
         segTextPaint.textSize = 16.5f * u
-        val baseY = sy + segH / 2f + segTextPaint.textSize * 0.36f
-        val lit = ease(now, SLIDE_AT_MS, SLIDE_MS)
-        drawSeg(canvas, "DS", sx2 + segW / 2f, baseY, sport, lit, alpha)
-        drawSeg(canvas, "D", sx2 + segW * 1.5f + gap, baseY, !sport, lit, alpha)
+        val lift = segTextPaint.textSize * 0.36f
+        fun litAt(x: Float, y: Float): Float {
+            val d = kotlin.math.hypot(pos[0] - x, cy - y)
+            return (1f - d / stepY).coerceIn(0f, 1f) * appear
+        }
+        // Ce iese din rândul din mijloc se stinge spre marginile cardului.
+        fun fade(y: Float) = (1f - kotlin.math.abs(y - cy) / (ch * 0.75f)).coerceIn(0f, 1f)
+        for (s in listOf(Selector.P, Selector.R, Selector.N, Selector.D)) {
+            val y = rowY(rowOf(s))
+            drawCell(canvas, s.name, colX, y + lift, litAt(colX, y), onLit, alpha * fade(y))
+        }
+        // DS, iar la intrarea în manual DS se preface în M și treapta.
+        val dY = rowY(3)
+        val dsLit = litAt(dsX, dY)
+        val dsFade = alpha * fade(dY)
+        val manualIn = if (to == Selector.M) ease(now, SLIDE_AT_MS + (if (from == null) 0f else slideMs), 280f) else 0f
+        when {
+            to == Selector.M -> {
+                drawCell(canvas, "DS", dsX, dY + lift, dsLit, onLit, dsFade * (1f - manualIn))
+                drawCell(canvas, "M${event.gear}", dsX, dY + lift, dsLit, onLit, dsFade * manualIn)
+            }
+            from == Selector.M -> {
+                val k = ease(now, SLIDE_AT_MS, 220f)
+                drawCell(canvas, if (event.gear > 0) "M${event.gear}" else "M", dsX, dY + lift, dsLit, onLit, dsFade * (1f - k))
+                drawCell(canvas, "DS", dsX, dY + lift, dsLit, onLit, dsFade * k)
+            }
+            else -> drawCell(canvas, "DS", dsX, dY + lift, dsLit, onLit, dsFade)
+        }
+
+        // Săgețile, deasupra și dedesubtul lui DS: doar pe cardurile DS și Manual. Apar după ce
+        // bucata a ajuns în DS; la intrarea în manual clipesc o dată.
+        if (to == Selector.DS || to == Selector.M) {
+            val show = dsLit * ease(now, SLIDE_AT_MS + (if (from == null) 0f else slideMs * 0.8f), 260f)
+            if (show > 0f) {
+                val blink = if (to == Selector.M) kotlin.math.sin(Math.PI * manualIn).toFloat() else 0f
+                iconPaint.strokeWidth = 2.2f * u
+                iconPaint.color = withAlpha(
+                    blend(Color.rgb(200, 204, 211), orange, 0.55f + 0.45f * blink),
+                    (255 * alpha * show).toInt()
+                )
+                val aw = 6f * u
+                val ah = 4f * u
+                val off = segH / 2f + 8f * u
+                wave.reset()
+                wave.moveTo(dsX - aw, dY - off + ah / 2f)
+                wave.lineTo(dsX, dY - off - ah / 2f)
+                wave.lineTo(dsX + aw, dY - off + ah / 2f)
+                wave.moveTo(dsX - aw, dY + off - ah / 2f)
+                wave.lineTo(dsX, dY + off + ah / 2f)
+                wave.lineTo(dsX + aw, dY + off - ah / 2f)
+                canvas.drawPath(wave, iconPaint)
+            }
+        }
+        canvas.restore()
 
         canvas.restore()
         tick(now)
@@ -796,14 +923,165 @@ class ModeCardView(
         fillPaint.shader = null
     }
 
-    /** Textul bucății: deschis pe culoarea aprinsă, gri pe fundal; trece de la una la alta cu glisarea. */
-    private fun drawSeg(canvas: Canvas, label: String, x: Float, y: Float, target: Boolean, slide: Float, alpha: Float) {
-        val lit = if (target) slide else 1f - slide
-        val onLit = if (sport) Color.WHITE else Color.rgb(16, 18, 22)
-        val idle = Color.rgb(140, 145, 153)
-        segTextPaint.color = blend(idle, onLit, lit)
-        segTextPaint.alpha = (255 * alpha).toInt()
+    /** Textul unei poziții: gri pe fundal, iar cât trece bucata aprinsă peste ea, culoarea de pe ea. */
+    private fun drawCell(canvas: Canvas, label: String, x: Float, y: Float, lit: Float, onLit: Int, alpha: Float) {
+        if (alpha <= 0f) return
+        segTextPaint.color = blend(Color.rgb(140, 145, 153), onLit, lit)
+        segTextPaint.alpha = (255 * alpha.coerceIn(0f, 1f)).toInt()
         canvas.drawText(label, x, y, segTextPaint)
+    }
+
+    /** Câte poziții trece maneta, ca să alunece puțin mai mult când drumul e lung. */
+    private fun steps(): Int {
+        val f = from ?: return 0
+        fun col(s: Selector) = when (s) { Selector.P -> 0; Selector.R -> 1; Selector.N -> 2; else -> 3 }
+        fun row(s: Selector) = if (s == Selector.DS || s == Selector.M) 1 else 0
+        return kotlin.math.abs(col(f) - col(to)) + kotlin.math.abs(row(f) - row(to))
+    }
+
+    /** Punctele drumului: dacă se schimbă rândul, trece prin D (colțul dintre P R N D și DS). */
+    private fun gatePath(a: Selector, b: Selector, x: (Selector) -> Float, y: (Selector) -> Float): List<FloatArray> {
+        val pts = mutableListOf(floatArrayOf(x(a), y(a)))
+        val aTop = a == Selector.DS || a == Selector.M
+        val bTop = b == Selector.DS || b == Selector.M
+        if (aTop != bTop && a != Selector.D && b != Selector.D) pts.add(floatArrayOf(x(Selector.D), y(Selector.D)))
+        pts.add(floatArrayOf(x(b), y(b)))
+        return pts
+    }
+
+    /** Punctul aflat la fracțiunea [t] din lungimea drumului. */
+    private fun alongPath(pts: List<FloatArray>, t: Float): FloatArray {
+        var total = 0f
+        for (i in 1 until pts.size) total += kotlin.math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])
+        if (total <= 0f) return pts.last()
+        var left = total * t.coerceIn(0f, 1f)
+        for (i in 1 until pts.size) {
+            val a = pts[i - 1]
+            val b = pts[i]
+            val len = kotlin.math.hypot(b[0] - a[0], b[1] - a[1])
+            if (left <= len || i == pts.size - 1) {
+                val k = if (len == 0f) 1f else (left / len).coerceIn(0f, 1f)
+                return floatArrayOf(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k)
+            }
+            left -= len
+        }
+        return pts.last()
+    }
+
+    /**
+     * Manual: grila unui schimbător cu 6 trepte (trei culoare, legate la mijloc). Nuca pleacă din
+     * punctul mort, merge în culoarul treptei, urcă sau coboară cu un mic recul, iar drumul făcut
+     * rămâne aprins; cifra treptei se aprinde la sosire.
+     */
+    private fun drawShifter(canvas: Canvas, now: Float, cx: Float, cy: Float, r: Float, u: Float, alpha: Float) {
+        val reveal = ease(now, GAUGE_AT_MS, 380f)
+        if (reveal <= 0f) return
+        val colDx = r * 0.36f
+        val half = r * 0.40f
+        val gear = event.gear.coerceIn(1, 6)
+        val col = (gear - 1) / 2 - 1
+        val dir = if (gear % 2 == 1) -1f else 1f
+
+        wave.reset()
+        wave.moveTo(cx - colDx, cy)
+        wave.lineTo(cx + colDx, cy)
+        for (i in -1..1) {
+            wave.moveTo(cx + i * colDx, cy - half)
+            wave.lineTo(cx + i * colDx, cy + half)
+        }
+        iconPaint.strokeWidth = 2.2f * u
+        iconPaint.color = Color.argb((150 * alpha * reveal).toInt(), 225, 228, 234)
+        canvas.drawPath(wave, iconPaint)
+
+        val h = ease(now, KNOB_AT_MS, 260f)
+        val v = if (now < KNOB_AT_MS + 260f) 0f else back(now, KNOB_AT_MS + 260f, 360f)
+        val kx = cx + col * colDx * h
+        val ky = cy + dir * half * v
+        val arrived = ease(now, KNOB_AT_MS + 560f, 200f)
+
+        iconTextPaint.textSize = 9f * u
+        for (g in 1..6) {
+            val gx = cx + ((g - 1) / 2 - 1) * colDx
+            val gy = if (g % 2 == 1) cy - half - 4f * u else cy + half + 11f * u
+            val on = if (g == gear) arrived else 0f
+            iconTextPaint.color = blend(Color.rgb(120, 125, 133), orange, on)
+            iconTextPaint.alpha = (255 * alpha * reveal).toInt()
+            canvas.drawText(g.toString(), gx, gy, iconTextPaint)
+        }
+
+        // Drumul făcut, aprins.
+        iconPaint.color = withAlpha(accent, (255 * alpha).toInt())
+        iconPaint.strokeWidth = 2.6f * u
+        if (h > 0f) canvas.drawLine(cx, cy, kx, cy, iconPaint)
+        if (v != 0f) canvas.drawLine(kx, cy, kx, ky, iconPaint)
+
+        // Nuca.
+        val a = (255 * alpha * reveal).toInt()
+        fillPaint.color = withAlpha(accent, (70 * alpha * reveal).toInt())
+        canvas.drawCircle(kx, ky, 7.5f * u, fillPaint)
+        fillPaint.color = withAlpha(accent, a)
+        canvas.drawCircle(kx, ky, 4.6f * u, fillPaint)
+        fillPaint.color = Color.argb((180 * alpha * reveal).toInt(), 255, 255, 255)
+        canvas.drawCircle(kx - 1.3f * u, ky - 1.3f * u, 1.4f * u, fillPaint)
+    }
+
+    /**
+     * Parcare: un inel se închide în jurul lui P, ca o frână care se strânge; P intră cu un mic
+     * recul, apoi din inel pleacă rar câte o undă care se stinge: mașina stă.
+     */
+    private fun drawPark(canvas: Canvas, now: Float, cx: Float, cy: Float, r: Float, u: Float, alpha: Float) {
+        val ringR = r * 0.6f
+        val close = ease(now, GAUGE_AT_MS, 620f)
+        if (close <= 0f) return
+        iconPaint.strokeWidth = 2.6f * u
+        iconPaint.color = withAlpha(accent, (255 * alpha).toInt())
+        r2.set(cx - ringR, cy - ringR, cx + ringR, cy + ringR)
+        canvas.drawArc(r2, -90f, 360f * close, false, iconPaint)
+
+        val ripple = now - (GAUGE_AT_MS + 620f)
+        if (ripple > 0f) {
+            val ph = (ripple % RIPPLE_MS) / RIPPLE_MS
+            val rr = ringR + (r * 0.95f - ringR) * ease(ph * RIPPLE_MS, 0f, RIPPLE_MS)
+            iconPaint.strokeWidth = 1.4f * u
+            iconPaint.color = withAlpha(accent, (150 * alpha * (1f - ph)).toInt())
+            canvas.drawCircle(cx, cy, rr, iconPaint)
+        }
+
+        val pIn = ease(now, GAUGE_AT_MS + 380f, 300f)
+        if (pIn > 0f) {
+            val s = back(now, GAUGE_AT_MS + 380f, 420f)
+            iconTextPaint.textSize = 24f * u * (0.6f + 0.4f * s)
+            iconTextPaint.color = Color.rgb(238, 240, 244)
+            iconTextPaint.alpha = (255 * alpha * pIn).toInt()
+            canvas.drawText("P", cx, cy + iconTextPaint.textSize * 0.36f, iconTextPaint)
+        }
+    }
+
+    /**
+     * Neutru: o axă cu un semn la mijloc și un punct care alunecă liber, se leagănă tot mai
+     * puțin și se oprește în mijloc: nimic cuplat, mașina stă pe loc.
+     */
+    private fun drawNeutral(canvas: Canvas, now: Float, cx: Float, cy: Float, r: Float, u: Float, alpha: Float) {
+        val half = r * 0.6f
+        val reveal = ease(now, GAUGE_AT_MS, 400f)
+        if (reveal <= 0f) return
+        iconPaint.strokeWidth = 2f * u
+        iconPaint.color = Color.argb((140 * alpha).toInt(), 225, 228, 234)
+        canvas.drawLine(cx - half * reveal, cy, cx + half * reveal, cy, iconPaint)
+        iconPaint.color = Color.argb((90 * alpha * reveal).toInt(), 225, 228, 234)
+        canvas.drawLine(cx - half, cy - 4f * u, cx - half, cy + 4f * u, iconPaint)
+        canvas.drawLine(cx + half, cy - 4f * u, cx + half, cy + 4f * u, iconPaint)
+        canvas.drawLine(cx, cy - 7f * u, cx, cy + 7f * u, iconPaint)
+
+        val t = now - (GAUGE_AT_MS + 150f)
+        if (t <= 0f) return
+        val swing = half * 0.8f * kotlin.math.exp(-t / 520f) * kotlin.math.cos(t / 130f)
+        val dx = cx + swing.toFloat()
+        val appear = ease(now, GAUGE_AT_MS + 150f, 250f)
+        fillPaint.color = withAlpha(accent, (70 * alpha * appear).toInt())
+        canvas.drawCircle(dx, cy, 8f * u, fillPaint)
+        fillPaint.color = withAlpha(accent, (255 * alpha * appear).toInt())
+        canvas.drawCircle(dx, cy, 4.8f * u, fillPaint)
     }
 
     private fun tick(now: Float) {
@@ -859,6 +1137,17 @@ class ModeCardView(
         const val TEXT_MS = 380f
         const val SLIDE_AT_MS = 360f
         const val SLIDE_MS = 460f
+        /** Bucățile schimbătorului de pe card (dp la 480 px înălțime). */
+        const val SEG_W = 50f
+        const val SEG_H = 34f
+        /** Între P, R, N și D, pe verticală. */
+        const val SEG_GAP = 5f
+        /** Între DS și D. */
+        const val SEG_SIDE_GAP = 6f
+        /** Când pornește nuca la manual. */
+        const val KNOB_AT_MS = 450f
+        /** Cât durează o undă la parcare. */
+        const val RIPPLE_MS = 1_400f
         const val SWEEP_AT_MS = 700f
         const val SWEEP_MS = 850f
         const val STREAK_AT_MS = 120f

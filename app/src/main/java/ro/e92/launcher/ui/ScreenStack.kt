@@ -67,7 +67,7 @@ class ScreenStack(
 
         screen.show()
         focus.setTargets(screen.focusTargets())
-        onTitleChanged?.invoke(screen.title)
+        if (!screen.keepsTitle) onTitleChanged?.invoke(screen.title)
         onTopChanged?.invoke(screen)
         // Un overlay (salutul Drive Sport) se deseneaza PESTE ecranul curent si
         // il lasa vizibil - deci nu are voie sa-i schimbe fundalul. La pop, cel
@@ -105,7 +105,7 @@ class ScreenStack(
         val top = stack.lastOrNull() ?: return
         top.screen.show()
         focus.setTargets(top.screen.focusTargets(), focus.focusedId)
-        onTitleChanged?.invoke(top.screen.title)
+        if (!top.screen.keepsTitle) onTitleChanged?.invoke(top.screen.title)
         onTopChanged?.invoke(top.screen)
         onBackgroundChanged?.invoke(top.screen.backgroundRes)
     }

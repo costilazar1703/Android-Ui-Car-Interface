@@ -71,8 +71,7 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
         setupTouch()
         screenScope.launch { Services.media.snapshot.collect { renderMedia() } }
         screenScope.launch { Services.kswBt.state.collect { renderBluetooth(); renderMedia() } }
-        screenScope.launch { Services.reverse.sportMode.collect { renderDriveMode() } }
-        screenScope.launch { Services.reverse.lever.collect { renderDriveMode() } }
+        screenScope.launch { Services.reverse.display.collect { renderDriveMode() } }
         screenScope.launch { Services.reverse.driftMode.collect { binding.driftBadge.setOn(it == true) } }
         // Linia de progres: de două ori pe secundă, doar cât e Home pe ecran.
         screenScope.launch {
@@ -154,6 +153,7 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
             }
             // Linia portocalie din stânga rândului selectat, ca în iDrive 7.
             val marker = View(context).apply {
+                tag = TAG_MARKER
                 setBackgroundResource(R.drawable.bg_rail_marker)
                 isDuplicateParentStateEnabled = true
             }
@@ -165,6 +165,7 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
                 isDuplicateParentStateEnabled = true
             }
             column.addView(ImageView(context).apply {
+                tag = TAG_ICON
                 setImageResource(item.icon)
                 scaleType = ImageView.ScaleType.FIT_CENTER
                 contentDescription = null
@@ -172,6 +173,7 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
                 isDuplicateParentStateEnabled = true
             }, LinearLayout.LayoutParams((ICON_DP * density).toInt(), (ICON_DP * density).toInt()))
             column.addView(TextView(context).apply {
+                tag = TAG_LABEL
                 setText(item.label)
                 typeface = ResourcesCompat.getFont(context, R.font.inter_semibold)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, LABEL_SP)
@@ -193,20 +195,83 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
 
     /** Modul cutiei sub mașină; ascuns cât nu-l știm. Prima valoare apare fără animație. */
     private fun renderDriveMode() {
-        val lever = Services.reverse.lever.value
-        val sport = Services.reverse.sportMode.value
-        val gear = when (lever) {
-            // N e tot un fel de parcare (cerut 2026-11-17); în R rămâne ce era (e oricum scena de marșarier).
-            'P', 'N' -> ro.e92.launcher.ui.widget.DriveModeStripView.Gear.PARK
-            'R' -> shownGear
-            'D' -> if (sport == true) ro.e92.launcher.ui.widget.DriveModeStripView.Gear.SPORT else ro.e92.launcher.ui.widget.DriveModeStripView.Gear.COMFORT
-            else -> sport?.let { if (it) ro.e92.launcher.ui.widget.DriveModeStripView.Gear.SPORT else ro.e92.launcher.ui.widget.DriveModeStripView.Gear.COMFORT }
+        val d = Services.reverse.display.value
+        val gear = when (d?.selector) {
+            ro.e92.launcher.can.Selector.P -> ro.e92.launcher.ui.widget.DriveModeStripView.Gear.PARK
+            ro.e92.launcher.can.Selector.N -> ro.e92.launcher.ui.widget.DriveModeStripView.Gear.NEUTRAL
+            ro.e92.launcher.can.Selector.D -> ro.e92.launcher.ui.widget.DriveModeStripView.Gear.COMFORT
+            ro.e92.launcher.can.Selector.DS -> ro.e92.launcher.ui.widget.DriveModeStripView.Gear.SPORT
+            ro.e92.launcher.can.Selector.M -> ro.e92.launcher.ui.widget.DriveModeStripView.Gear.MANUAL
+            else -> shownGear
         }
-        binding.modeStrip.setMode(gear, animate = shownGear != null)
+        binding.modeStrip.setMode(gear, animate = shownGear != null, gear = d?.gear ?: 0)
+        applySportTheme(gear == ro.e92.launcher.ui.widget.DriveModeStripView.Gear.SPORT ||
+            gear == ro.e92.launcher.ui.widget.DriveModeStripView.Gear.MANUAL)
         shownGear = gear
     }
 
     private var shownGear: ro.e92.launcher.ui.widget.DriveModeStripView.Gear? = null
+
+    private var sportTheme: Boolean? = null
+
+    /**
+     * În Dynamic Sport și Manual Home-ul prinde o tentă portocalie (cerut 2026-11-19): ramele
+     * widget-urilor și a barei, iconițele din bară și din widget-uri, iar ce e alb în widget-uri
+     * (titlul piesei, telefonul, butoanele). Titlurile gri rămân gri; ceasul și autonomia, albe.
+     * Selecția are același stil ca în modul normal, în griul titlurilor din bara din stânga. Ce e selectat nu mai poate fi
+     * portocaliu printre portocalii, așa că trece în alb: iconița, eticheta și linia din stânga,
+     * peste o lumină portocalie mai puternică; la widget-uri, rama albă.
+     */
+    private fun applySportTheme(on: Boolean) {
+        if (sportTheme == on) return
+        sportTheme = on
+        val card = if (on) R.drawable.bg_widget_card_sport else R.drawable.bg_widget_card
+        binding.mediaCard.setBackgroundResource(card)
+        binding.btCard.setBackgroundResource(card)
+        binding.railFrame.setBackgroundResource(if (on) R.drawable.bg_rail_frame_sport else R.drawable.bg_rail_frame)
+        // Iconițele din widget-uri prind și ele tenta; textele rămân albe (cerut 2026-11-19).
+        val accent = if (on) android.content.res.ColorStateList.valueOf(ContextCompat.getColor(context, R.color.accent_focus)) else null
+        binding.mediaLogo.imageTintList = accent
+        binding.btIcon.imageTintList = accent
+        // Ce e alb în widget-uri trece pe portocaliu: titlul piesei, numele telefonului, butoanele.
+        // Titlurile gri (NOW PLAYING, DEVICE...) și rândurile secundare rămân gri.
+        val primary = if (on) ContextCompat.getColor(context, R.color.accent_focus) else ContextCompat.getColor(context, R.color.text_primary)
+        binding.mediaTitle.setTextColor(primary)
+        binding.btName.setTextColor(primary)
+        for (b in listOf(binding.mediaPrev, binding.mediaPlay, binding.mediaNext)) b.imageTintList = accent
+        val iconTint = ContextCompat.getColorStateList(context, if (on) R.color.home_rail_tint_sport else R.color.home_rail_tint)
+        val labelTint = ContextCompat.getColorStateList(context, if (on) R.color.home_rail_label_tint_sport else R.color.home_rail_label_tint)
+        for (row in railViews) {
+            row.setBackgroundResource(if (on) R.drawable.bg_rail_item_sport else R.drawable.bg_rail_item)
+            row.findViewWithTag<View>(TAG_MARKER)?.setBackgroundResource(
+                if (on) R.drawable.bg_rail_marker_sport else R.drawable.bg_rail_marker
+            )
+            row.findViewWithTag<ImageView>(TAG_ICON)?.imageTintList = iconTint
+            row.findViewWithTag<TextView>(TAG_LABEL)?.setTextColor(labelTint)
+        }
+    }
+
+    /**
+     * Cardul de mod a intrat peste afișaj: îl schimbăm pe modul nou fără animație, cât e acoperit
+     * de tot (cardul e opac după [SWAP_UNDER_CARD_MS]). Când cardul pleacă, modul nou e deja acolo.
+     * Ecranul e acoperit, deci observatorii lui sunt opriți: de aceea direct, nu prin flux.
+     */
+    fun swapModeUnderCard(event: ro.e92.launcher.can.ModeEvent) {
+        val gear = when (event.scene) {
+            ro.e92.launcher.can.ModeScene.PARK -> ro.e92.launcher.ui.widget.DriveModeStripView.Gear.PARK
+            ro.e92.launcher.can.ModeScene.NEUTRAL -> ro.e92.launcher.ui.widget.DriveModeStripView.Gear.NEUTRAL
+            ro.e92.launcher.can.ModeScene.DRIVE -> ro.e92.launcher.ui.widget.DriveModeStripView.Gear.COMFORT
+            ro.e92.launcher.can.ModeScene.SPORT -> ro.e92.launcher.ui.widget.DriveModeStripView.Gear.SPORT
+            ro.e92.launcher.can.ModeScene.MANUAL -> ro.e92.launcher.ui.widget.DriveModeStripView.Gear.MANUAL
+            else -> return
+        }
+        binding.modeStrip.postDelayed({
+            binding.modeStrip.setMode(gear, animate = false, gear = event.gear)
+            applySportTheme(gear == ro.e92.launcher.ui.widget.DriveModeStripView.Gear.SPORT ||
+                gear == ro.e92.launcher.ui.widget.DriveModeStripView.Gear.MANUAL)
+            shownGear = gear
+        }, SWAP_UNDER_CARD_MS)
+    }
 
 
     /**
@@ -327,6 +392,9 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
 
     companion object {
         private const val ID_MEDIA = "home_media"
+        private const val TAG_MARKER = "rail_marker"
+        private const val TAG_ICON = "rail_icon"
+        private const val TAG_LABEL = "rail_label"
         private const val ID_BT = "home_bt"
         private val WIDGET_IDS = setOf(ID_MEDIA, ID_BT)
         private const val ICON_DP = 46
@@ -344,3 +412,6 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
         )
     }
 }
+
+/** Cardul de mod e opac peste afișaj după ~380 ms; schimbăm afișajul puțin după. */
+private const val SWAP_UNDER_CARD_MS = 450L

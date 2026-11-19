@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rândul din bara verticală în Dynamic Sport și Manual: același stil ca în modul normal (o
+     lumină discretă și linia din stânga), dar în griul titlurilor din bara din stânga,
+     ca să se vadă printre iconițele portocalii. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_activated="true">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="0"
+                android:endColor="#00B8B8B8"
+                android:startColor="#33B8B8B8" />
+        </shape>
+    </item>
+    <item android:drawable="@android:color/transparent" />
+</selector>

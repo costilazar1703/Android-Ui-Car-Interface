@@ -27,7 +27,7 @@
     <string name="car_range_short">%1$d km</string>
     <string name="trip_title">Trip computer</string>
     <string name="trip_drive">This drive</string>
-    <string name="trip_long">Long trip</string>
+    <string name="trip_long">Long drive</string>
     <string name="trip_drive_hint">Starts again at every ignition</string>
     <string name="trip_long_hint">Adds up across stops until you reset it</string>
     <string name="trip_distance">Distance</string>
@@ -38,8 +38,6 @@
     <string name="trip_consumption">Average consumption</string>
     <string name="trip_range_now">Range now</string>
     <string name="trip_fuel_now">Fuel in tank</string>
-    <string name="trip_reset">Reset long trip</string>
-    <string name="trip_reset_confirm">Press again to confirm</string>
     <string name="alert_handbrake">Handbrake is on</string>
     <string name="alert_low_fuel">Low fuel · %1$d km left</string>
     <string name="alert_ice">%1$s outside · drive carefully</string>
@@ -156,10 +154,14 @@
     <string name="mode_normal">Normal Mode</string>
     <string name="mode_sport">Dynamic Sport</string>
     <string name="mode_drive">Comfort</string>
-    <string name="mode_kicker">Driving mode</string>
+    <string name="mode_kicker">Transmission</string>
+    <string name="mode_neutral">Neutral</string>
+    <string name="mode_park">Parking</string>
+    <string name="mode_manual">Manual</string>
     <string name="mode_traction_off">Traction Off</string>
     <string name="mode_traction_on">Traction On</string>
-    <string name="trip_cons_unit">l/100 km · car</string>
+    <string name="trip_cons_unit">l/100 km · long drive</string>
+    <string name="trip_cons_unit_drive">l/100 km · this drive</string>
     <string name="trip_board_avg">Car average speed</string>
     <string name="set_time_source">Clock source</string>
     <string name="time_source_mcu">Car (MCU)</string>
@@ -276,9 +278,10 @@
     <string name="bar_home">Home</string>
     <string name="media_volume">Volume</string>
     <string name="set_brightness">Brightness</string>
-    <string name="home_driving_mode">DRIVING MODE</string>
     <string name="mode_strip_drive">COMFORT</string>
     <string name="mode_strip_park">PARKING</string>
+    <string name="mode_strip_neutral">NEUTRAL</string>
+    <string name="mode_strip_manual">MANUAL</string>
     <string name="home_transmission">TRANSMISSION</string>
     <string name="home_drift_badge">DRIFT MODE</string>
     <string name="mode_strip_sport">DYNAMIC SPORT</string>
