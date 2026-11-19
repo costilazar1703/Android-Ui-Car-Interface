@@ -116,8 +116,8 @@ class ReverseSource(
     val modeEvents: SharedFlow<ModeEvent> = _modeEvents.asSharedFlow()
 
     /**
-     * Treapta în modul manual (1…6), null = nu e în manual. Cadrul încă nu e decodat: îl citim
-     * din mașină (vezi [onGearByte]); până atunci vine doar din /sim?manual=.
+     * Treapta în modul manual (1…6), null = nu e în manual. Din 0x1D2: octetul 4 = F2 în manual,
+     * octetul 1 = treapta (5C … AC), citite în mașină pe 2026-11-19; pe emulator din /sim?manual=.
      */
     private val _manualGear = MutableStateFlow<Int?>(null)
     val manualGear: StateFlow<Int?> = _manualGear.asStateFlow()
@@ -179,6 +179,9 @@ class ReverseSource(
     private val dscTrack = ModeTrack<Boolean>()
     private val sportTrack = ModeTrack<Boolean>()
     private val leverTrack = ModeTrack<Char>()
+    private val manualTrack = ModeTrack<Int>()
+    /** Butoanele de pe volan (0x1D6, octetul 0) la cadrul de dinainte, ca să prindem apăsarea. */
+    private var lastWheelKeys = -1
     private var lastGear = -1
 
     private var lastRawLogAt = 0L
@@ -329,15 +332,40 @@ class ReverseSource(
                 LEVER[b[0]]?.let { pos -> leverTrack.read(pos)?.let { (p, live) -> setLever(p, live) } }
                 onGearByte(b[1])
                 if (b[0] == GEARBOX_D) {
-                    sportTrack.read(b[4] and 0x0F != 0)?.let { (on, live) -> setSport(on, live) }
+                    // Octetul 4, nibble-ul de jos: 0 = D, 1 = DS, 2 = manual (proba din 2026-11-19).
+                    val mode = b[4] and 0x0F
+                    sportTrack.read(mode != 0)?.let { (on, live) -> setSport(on, live) }
+                    // În manual, octetul 1 = treapta: 5C = M1, 6C = M2 … AC = M6 (0C în rest).
+                    val gear = if (mode == GEARBOX_MANUAL) (b[1] shr 4) - 4 else 0
+                    manualTrack.read(gear.takeIf { it in 1..6 } ?: 0)?.let { (g, live) ->
+                        setManual(g.takeIf { it in 1..6 }, live)
+                    }
                 }
             }
             ID_CAR_TIME -> onCarTime(b)
+            ID_WHEEL_KEYS -> if (b.isNotEmpty()) onWheelKeys(b[0])
             ID_BATTERY -> if (b.size >= 2) {
                 // E9x PM: (b1 & 0x0F) << 8 | b0, câte 15 mV (2026-11-15, din capturi: 13,96-14,62 V în mers).
                 val raw = ((b[1] and 0x0F) shl 8) or b[0]
                 if (raw in 1..0xFFE) _batteryVolts.value = raw * 0.015f
             }
+        }
+    }
+
+    /**
+     * Butoanele de pe volan, 0x1D6 octetul 0 (proba din 2026-11-19): C0 liber, C8 volum +,
+     * C4 volum −. Unitatea KSW nu le mai folosește de la resetul ei, așa că volumul îl schimbăm
+     * noi (volumul principal KSW), câte o treaptă la fiecare apăsare, cu bara pe ecran.
+     */
+    private fun onWheelKeys(value: Int) {
+        val prev = lastWheelKeys
+        lastWheelKeys = value
+        if (prev == -1 || prev == value) return
+        val pressed = value and WHEEL_VOLUME_MASK
+        if (pressed == 0 || (prev and WHEEL_VOLUME_MASK) == pressed) return
+        val delta = if (pressed == WHEEL_VOLUME_UP) +1 else if (pressed == WHEEL_VOLUME_DOWN) -1 else return
+        scope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            ro.e92.launcher.core.KswVolume.step(context, delta)
         }
     }
 
@@ -461,10 +489,7 @@ class ReverseSource(
         }
     }
 
-    /**
-     * Octetul 1 din 0x1D2: 0C în P, R, N, D și DS în toate capturile de până acum. Bănuim că
-     * aici e treapta din manual; până o vedem în mașină, doar o trecem în jurnal când se schimbă.
-     */
+    /** Octetul 1 din 0x1D2 (treapta în manual), în jurnal când se schimbă. */
     private fun onGearByte(value: Int) {
         if (value == lastGearByte) return
         lastGearByte = value
@@ -610,7 +635,7 @@ class ReverseSource(
         const val TAG = "Reverse"
         val FRAME = Regex("""0xf2 0x00 0x11 0x02 0x0([123]) 0x0([01])""")
         const val LOG_FILTER =
-            "0xf2 0x00 0x11 0x02|0xA1_0x1DEvent: stringBuilder.toString\\(\\) = 0x(01c2|00c4|0304|0338|02f8|03b4|019e|01d2) |bydata = 0xf2 0x00 0x1[035] |bydata = 0xf2 0x00 0xa1 0x02 0x1a |ES s send: 0xf2 0x00 0x6[79] "
+            "0xf2 0x00 0x11 0x02|0xA1_0x1DEvent: stringBuilder.toString\\(\\) = 0x(01c2|00c4|0304|0338|02f8|03b4|019e|01d2|01d6) |bydata = 0xf2 0x00 0x1[035] |bydata = 0xf2 0x00 0xa1 0x02 0x1a |ES s send: 0xf2 0x00 0x6[79] "
         val CAN_FRAME = Regex("""0xA1_0x1DEvent: .*= 0x([0-9a-f]{4}) \S+ \S+ 0x[0-9a-f]+ ((?:0x[0-9a-f]{2} ?)+)""")
         val BYTE = Regex("""0x([0-9a-f]{2})""")
 
@@ -653,6 +678,13 @@ class ReverseSource(
         const val DISPLAY_AFTER_CARD_MS = 450L
         /** Octetul 1 din 0x1D2 cât nu e manual (văzut în toate capturile). */
         const val GEAR_BYTE_NONE = 0x0C
+        /** Octetul 4 din 0x1D2, nibble-ul de jos, în manual. */
+        const val GEARBOX_MANUAL = 2
+        /** Butoanele de pe volan. */
+        const val ID_WHEEL_KEYS = 0x1D6
+        const val WHEEL_VOLUME_MASK = 0x0C
+        const val WHEEL_VOLUME_UP = 0x08
+        const val WHEEL_VOLUME_DOWN = 0x04
         val LEVER = mapOf(0xE1 to 'P', 0xD2 to 'R', 0xB4 to 'N', 0x78 to 'D')
         const val STABLE_FRAMES = 3
         /** Cât trebuie să stea maneta în N până apare cardul Neutral. */

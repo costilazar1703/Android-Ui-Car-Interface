@@ -138,6 +138,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         observeDriveMode()
         observeDriftMode()
         observeVolume()
+        ro.e92.launcher.core.GpsClock.onJump = { runOnUiThread { updateClock() } }
     }
 
     override fun onStart() {
@@ -1185,7 +1186,14 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         clockDate.time = now
         binding.clock.text = clockFormat.format(clockDate)
         binding.dateText.text = dateFormat.format(clockDate)
+        // Minutul se schimbă odată cu minutul din bord, nu cu ceasul unității (TIME_TICK vine
+        // la minutul de sistem, care poate fi decalat cu până la un minut: ora de pe ecran
+        // rămânea în urma bordului, cerut 2026-11-19).
+        binding.clock.removeCallbacks(minuteTick)
+        binding.clock.postDelayed(minuteTick, 60_000L - now % 60_000L + 30L)
     }
+
+    private val minuteTick = Runnable { updateClock() }
 
     // --------------------------------------------------------- bluetooth
 

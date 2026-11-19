@@ -26,11 +26,28 @@ object GpsClock {
     @Volatile
     private var carElapsed = 0L
 
-    /** Ceasul din bord (cadrul CAN 0x2F8), cel pe care șoferul îl potrivește din mașină. */
+    /**
+     * Chemat când ora din bord sare față de cât numărăm noi (ai potrivit ceasul din bord), ca
+     * ecranul să se schimbe pe loc, nu abia la minutul următor.
+     */
+    @Volatile
+    var onJump: (() -> Unit)? = null
+
+    /**
+     * Ceasul din bord (cadrul CAN 0x2F8, la ~15 s cât merge motorul), cel pe care șoferul îl
+     * potrivește din mașină. Fiecare cadru îl ia de la capăt, deci ora de pe ecran urmează mereu
+     * bordul (cerut 2026-11-19).
+     */
     fun onCarTime(epochMillis: Long) {
+        val now = SystemClock.elapsedRealtime()
+        val predicted = if (carUtc == 0L) 0L else carUtc + (now - carElapsed)
         carUtc = epochMillis
-        carElapsed = SystemClock.elapsedRealtime()
+        carElapsed = now
+        if (predicted == 0L || kotlin.math.abs(epochMillis - predicted) > JUMP_MS) onJump?.invoke()
     }
+
+    /** Peste atât e o potrivire a ceasului, nu doar secundele care nu vin în cadru. */
+    private const val JUMP_MS = 20_000L
 
     /** Din [ro.e92.launcher.can.GpsSpeedDataSource], la fiecare fix. */
     fun onFix(utcMillis: Long) {
