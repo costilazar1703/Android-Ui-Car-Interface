@@ -46,6 +46,14 @@ class DriftBadgeView @JvmOverloads constructor(
         visibility = INVISIBLE
     }
 
+    /** În Dynamic Sport și Manual „DRIFT MODE" e portocaliu, ca restul Home-ului (cerut 2026-11-19). */
+    var sport = false
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
     fun setOn(value: Boolean) {
         if (value == on) return
         on = value
@@ -84,6 +92,7 @@ class DriftBadgeView @JvmOverloads constructor(
         canvas.drawBitmap(flag, null, flagDst, flagPaint)
         canvas.restore()
 
+        textPaint.color = if (sport) orange else Color.rgb(236, 237, 240)
         textPaint.alpha = (255 * a).toInt()
         canvas.drawText(text, x0 + flagW + FLAG_GAP * dp, base, textPaint)
 

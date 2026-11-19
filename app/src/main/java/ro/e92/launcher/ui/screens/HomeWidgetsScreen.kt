@@ -216,11 +216,10 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
 
     /**
      * În Dynamic Sport și Manual Home-ul prinde o tentă portocalie (cerut 2026-11-19): ramele
-     * widget-urilor și a barei, iconițele din bară și din widget-uri, iar ce e alb în widget-uri
-     * (titlul piesei, telefonul, butoanele). Titlurile gri rămân gri; ceasul și autonomia, albe.
-     * Selecția are același stil ca în modul normal, în griul titlurilor din bara din stânga. Ce e selectat nu mai poate fi
-     * portocaliu printre portocalii, așa că trece în alb: iconița, eticheta și linia din stânga,
-     * peste o lumină portocalie mai puternică; la widget-uri, rama albă.
+     * widget-urilor și a barei, iconițele din bară și cele două iconițe mari din widget-uri
+     * (nota, Bluetooth). Textele din widget-uri (piesa, telefonul) și butoanele trec pe gri;
+     * ceasul și autonomia rămân albe. Selecția are același stil ca în modul normal, în griul
+     * etichetelor din bara din stânga, ca să se vadă printre iconițele portocalii.
      */
     private fun applySportTheme(on: Boolean) {
         if (sportTheme == on) return
@@ -229,16 +228,18 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
         binding.mediaCard.setBackgroundResource(card)
         binding.btCard.setBackgroundResource(card)
         binding.railFrame.setBackgroundResource(if (on) R.drawable.bg_rail_frame_sport else R.drawable.bg_rail_frame)
-        // Iconițele din widget-uri prind și ele tenta; textele rămân albe (cerut 2026-11-19).
-        val accent = if (on) android.content.res.ColorStateList.valueOf(ContextCompat.getColor(context, R.color.accent_focus)) else null
-        binding.mediaLogo.imageTintList = accent
-        binding.btIcon.imageTintList = accent
-        // Ce e alb în widget-uri trece pe portocaliu: titlul piesei, numele telefonului, butoanele.
-        // Titlurile gri (NOW PLAYING, DEVICE...) și rândurile secundare rămân gri.
-        val primary = if (on) ContextCompat.getColor(context, R.color.accent_focus) else ContextCompat.getColor(context, R.color.text_primary)
+        // Iconițele mari din widget-uri (nota, Bluetooth): portocalii în sport, albe altfel.
+        val logo = if (on) android.content.res.ColorStateList.valueOf(ContextCompat.getColor(context, R.color.accent_focus)) else null
+        binding.mediaLogo.imageTintList = logo
+        binding.btIcon.imageTintList = logo
+        // Piesa, telefonul și butoanele: gri în sport (griul etichetelor din bară), albe altfel.
+        val grey = ContextCompat.getColor(context, R.color.home_rail_label)
+        val primary = if (on) grey else ContextCompat.getColor(context, R.color.text_primary)
         binding.mediaTitle.setTextColor(primary)
         binding.btName.setTextColor(primary)
-        for (b in listOf(binding.mediaPrev, binding.mediaPlay, binding.mediaNext)) b.imageTintList = accent
+        val buttons = if (on) android.content.res.ColorStateList.valueOf(grey) else null
+        for (b in listOf(binding.mediaPrev, binding.mediaPlay, binding.mediaNext)) b.imageTintList = buttons
+        binding.driftBadge.sport = on
         val iconTint = ContextCompat.getColorStateList(context, if (on) R.color.home_rail_tint_sport else R.color.home_rail_tint)
         val labelTint = ContextCompat.getColorStateList(context, if (on) R.color.home_rail_label_tint_sport else R.color.home_rail_label_tint)
         for (row in railViews) {
@@ -349,7 +350,8 @@ class HomeWidgetsScreen(host: ScreenHost) : Screen(host) {
                 else -> R.string.home_bt_connect
             }
         )
-        binding.btIcon.alpha = if (st.phoneConnected) 1f else 0.45f
+        // Albă și fără telefon (cerut 2026-11-19); textul de dedesubt spune oricum starea.
+        binding.btIcon.alpha = 1f
     }
 
     private fun appLabel(pkg: String?): String {
