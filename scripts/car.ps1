@@ -18,6 +18,11 @@
     .\scripts\car.ps1 scene-off            inapoi la ecranul KSW (tip camera KSW = 1)
     .\scripts\car.ps1 mcu -Label "camera=3"  setarile de marsarier ale placii (camera, radar, track, origvideo)
     .\scripts\car.ps1 kswapps -Label off   dezactiveaza playerele KSW care apar singure (on = la loc, status)
+    .\scripts\car.ps1 carplay-start -Label wireless
+                                           starea USB / AutoPlay / Wi-Fi si porneste jurnalul PE UNITATE
+                                           (merge si cand hotspot-ul cade in timpul CarPlay)
+    .\scripts\car.ps1 carplay-fetch -Label wireless
+                                           dupa incercare, cu hotspot-ul pornit: opreste jurnalul si il aduce
 
   Fara diacritice: PowerShell 5.1 citeste scripturile fara BOM ca ANSI.
 #>
@@ -36,6 +41,23 @@ if (-not $Apk) { $Apk = Join-Path $PSScriptRoot "..\app\build\outputs\apk\releas
 function Call([string] $base, [string] $path) {
     curl.exe -s --connect-timeout 2 --max-time 20 -H "X-Key: $Key" "$base$path"
 }
+
+function Shell([string] $base, [string] $cmd) {
+    $tmp = [System.IO.Path]::GetTempFileName()
+    [System.IO.File]::WriteAllText($tmp, $cmd)
+    curl.exe -s --connect-timeout 2 --max-time 30 -H "X-Key: $Key" --data-binary "@$tmp" "$base/shell"
+    Remove-Item $tmp -ErrorAction SilentlyContinue
+}
+
+# Ce se uita la CarPlay: modulul pe USB, aplicatiile AutoPlay/AutoKit, Wi-Fi-ul unitatii.
+$carplayState = @(
+    "echo '== USB =='; for d in /sys/bus/usb/devices/*; do [ -f `$d/idVendor ] && echo `"`$(basename `$d) `$(cat `$d/idVendor):`$(cat `$d/idProduct) `$(cat `$d/manufacturer 2>/dev/null) / `$(cat `$d/product 2>/dev/null)`"; done",
+    "echo '== aplicatii =='; pm list packages -f 2>/dev/null | grep -i -E 'manstep|autokit|autoplay|zlink|carlink|easyconn|carplay'",
+    "echo '== versiuni =='; for p in `$(pm list packages 2>/dev/null | grep -i -E 'manstep|autokit|zlink|carlink|easyconn' | cut -d: -f2); do echo `$p; dumpsys package `$p | grep -E 'versionName|firstInstallTime|lastUpdateTime|enabled=' | head -5; done",
+    "echo '== ruleaza =='; ps -A 2>/dev/null | grep -i -E 'manstep|autokit|zlink|carlink|easyconn'",
+    "echo '== implicit pentru USB =='; dumpsys usb 2>/dev/null | grep -i -E 'device|default|package|permission' | head -40",
+    "echo '== wifi =='; dumpsys wifi 2>/dev/null | grep -i -E 'Wi-Fi is|mWifiInfo|SSID|frequency' | head -10; ip addr 2>/dev/null | grep -E 'wlan|p2p|inet ' "
+)
 
 function Code([string] $base) {
     curl.exe -s -o NUL --connect-timeout 1 --max-time 3 -w "%{http_code}" -H "X-Key: $Key" "$base/help"
@@ -196,6 +218,34 @@ switch ($Command) {
             ForEach-Object { "  $($_.Count)  $($_.Name)" }
         Write-Output "Linii radar sau traseu:"
         Select-String -Path $log -Pattern 'setTrackData|radar KSW|RadarInfo|updateBackRadar' -ErrorAction SilentlyContinue | Select-Object -Last 10 | ForEach-Object { $_.Line }
+    }
+    "carplay-start" {
+        $out = Join-Path $PSScriptRoot "..\.unit-dump\carplay-$(Get-Date -Format yyyyMMdd-HHmm)-$Label"
+        New-Item -ItemType Directory -Force $out | Out-Null
+        Set-Content -Path (Join-Path $PSScriptRoot "..\.unit-dump\carplay-last.txt") -Value $out
+        $before = foreach ($c in $carplayState) { Shell $base $c }
+        $before | Out-File -Encoding utf8 (Join-Path $out "before.txt")
+        $before
+        # Jurnalul se scrie pe unitate: cand iPhone-ul intra pe Wi-Fi-ul adaptorului, hotspot-ul cade.
+        Shell $base "pkill -f e92-carplay 2>/dev/null; rm -f /sdcard/e92-carplay.log*; logcat -c; nohup logcat -v time -f /sdcard/e92-carplay.log -r 8192 -n 3 >/dev/null 2>&1 & sleep 1; ls -la /sdcard/e92-carplay.log"
+        Write-Output ""
+        Write-Output "Jurnalul ruleaza pe unitate. Acum: scoate/baga modulul din USB daca vrei, porneste AutoPlay,"
+        Write-Output "conecteaza iPhone-ul la CarPlay. Cand termini, porneste iar hotspot-ul si ruleaza carplay-fetch."
+    }
+    "carplay-fetch" {
+        $last = Join-Path $PSScriptRoot "..\.unit-dump\carplay-last.txt"
+        $out = if (Test-Path $last) { (Get-Content $last).Trim() } else { Join-Path $PSScriptRoot "..\.unit-dump\carplay-$(Get-Date -Format yyyyMMdd-HHmm)-$Label" }
+        New-Item -ItemType Directory -Force $out | Out-Null
+        $after = foreach ($c in $carplayState) { Shell $base $c }
+        $after | Out-File -Encoding utf8 (Join-Path $out "after.txt")
+        $after
+        Shell $base "pkill -f e92-carplay 2>/dev/null; ls -la /sdcard/e92-carplay.log*" 
+        # Doar liniile care conteaza, ca sa incapa intr-un raspuns.
+        $pattern = 'manstep|autokit|autoplay|carplay|iap|usb|UsbHost|UsbDevice|wifi|wlan|p2p|bluetooth|bt_|ActivityManager: (Start|Displayed|Killing)|FATAL|AndroidRuntime'
+        Shell $base "cat /sdcard/e92-carplay.log.3 /sdcard/e92-carplay.log.2 /sdcard/e92-carplay.log.1 /sdcard/e92-carplay.log 2>/dev/null | grep -i -E '$pattern' | tail -n 8000" |
+            Out-File -Encoding utf8 (Join-Path $out "logcat-filtrat.txt")
+        $lines = (Get-Content (Join-Path $out "logcat-filtrat.txt")).Count
+        Write-Output "Jurnal adus: $lines linii in $out"
     }
     "scene-on" { Call $base "/sim?scene=1"; Start-Sleep 2; Call $base "/events?n=5" }
     "scene-off" { Call $base "/sim?scene=0"; Start-Sleep 2; Call $base "/events?n=5" }
@@ -386,5 +436,5 @@ switch ($Command) {
         if ($s.audioConnected -eq "true") { Write-Output "Telefonul e deja legat: $($s.phone). Apasa play." }
         if ($yellow.Count -gt 0) { $yellow | ForEach-Object { Write-Output "  de retinut: $_" } }
     }
-    default { Write-Output "prepare | status | watch | play | revert | btcapture | rprobe | grant | reverse | scene-on | scene-off" }
+    default { Write-Output "prepare | status | watch | play | revert | btcapture | rprobe | grant | reverse | scene-on | scene-off | carplay-start | carplay-fetch" }
 }
