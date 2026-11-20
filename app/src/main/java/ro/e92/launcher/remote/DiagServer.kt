@@ -251,6 +251,22 @@ object DiagServer {
             "/sim" -> respond(out, 200, simulate(req.query))
             "/mcu" -> respond(out, 200, mcu(req.query))
             "/content" -> respond(out, 200, content(req.query["uri"].orEmpty()))
+            // /ksw?key=NUME: citește o setare KSW (SysVar); &set=VAL o scrie (pentru probe la mașină).
+            "/ksw" -> {
+                val key = req.query["key"].orEmpty()
+                if (key.isBlank()) respond(out, 400, "lipsește ?key=
+")
+                else {
+                    val set = req.query["set"]
+                    val before = ro.e92.launcher.core.KswSettings.read(app, key)
+                    if (set != null) {
+                        val ok = ro.e92.launcher.core.KswSettings.write(app, key, set)
+                        ro.e92.launcher.core.EventLog.log("Diag", "setare KSW $key: $before → $set" + if (ok) "" else " (eșuat)")
+                    }
+                    respond(out, 200, "$key: $before" + (if (set != null) " → ${ro.e92.launcher.core.KswSettings.read(app, key)}" else "") + "
+")
+                }
+            }
             "/screenshot" -> {
                 val png = screenshot()
                 if (png == null) respond(out, 409, "launcher-ul nu e în față\n")
