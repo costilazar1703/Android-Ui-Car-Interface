@@ -193,7 +193,7 @@ class VolumePopupView(context: Context) : View(context) {
         /** Marginea din stânga și din dreapta (dp). */
         const val SIDE_DP = 40f
         const val POPUP_W = 750f
-        const val POPUP_H = 30f
+        const val POPUP_H = 40f
         /** Jos, aproape de marginea ecranului (cerut 2026-11-19). */
         const val BOTTOM_GAP = 10f
         const val ENTER_MS = 220f
