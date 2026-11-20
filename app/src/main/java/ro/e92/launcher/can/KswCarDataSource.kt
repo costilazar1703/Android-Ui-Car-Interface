@@ -348,6 +348,19 @@ class KswCarDataSource(
     }
 
     /**
+     * Indicatorul 0x69 14: cine primește butoanele iDrive. După pătratul de pe volan (ecranul
+     * original, ceasul CIC) EventCenter trimite 00 și rotița/BACK pleacă la CIC; după voce trimite
+     * 01 și revin la Android (proba din 2026-11-20). [android] = true îl pune înapoi pe 01.
+     */
+    fun sendKeyOwner(android: Boolean): Boolean {
+        val binder = service ?: return false
+        val cmd = byteArrayOf(0xF2.toByte(), 0x00, 0x69, 0x02, 0x14, if (android) 0x01 else 0x00)
+        scope.launch { transact(binder, TX_SEND_MCU) { it.writeByteArray(cmd) } }
+        EventLog.log(TAG, "MCU: butoanele la " + if (android) "Android (0x69 14 01)" else "original (0x69 14 00)")
+        return true
+    }
+
+    /**
      * Cere MCU-ului setările și starea lui, cu aceeași cerere ca EventCenter la pornire
      * (sendKSW_0x00_0x68(1, 0)). Doar citire: răspunsul (cadrul 0x13) apare în /events ca „MCU ←".
      */

@@ -315,6 +315,12 @@ object DiagServer {
             val sent = Services.kswCar?.sendViewMode(view == "original") == true
             return "view=$view trimis=${if (sent) 1 else 0}\n"
         }
+        // Cine primește butoanele iDrive: keys=android|original (0x69 14 01/00).
+        query["keys"]?.let { owner ->
+            if (owner != "android" && owner != "original") return "keys=$owner: permis android sau original, nimic trimis\n"
+            val sent = Services.kswCar?.sendKeyOwner(owner == "android") == true
+            return "keys=$owner trimis=${if (sent) 1 else 0}\n"
+        }
         // Doar citire: MCU-ul își raportează setările (cadrul 0x13), ca la pornire.
         if (query["query"] == "1") {
             val sent = Services.kswCar?.requestMcuInfo() == true
