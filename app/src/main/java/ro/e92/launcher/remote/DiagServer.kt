@@ -254,8 +254,7 @@ object DiagServer {
             // /ksw?key=NUME: citește o setare KSW (SysVar); &set=VAL o scrie (pentru probe la mașină).
             "/ksw" -> {
                 val key = req.query["key"].orEmpty()
-                if (key.isBlank()) respond(out, 400, "lipsește ?key=
-")
+                if (key.isBlank()) respond(out, 400, "lipsește ?key=\n")
                 else {
                     val set = req.query["set"]
                     val before = ro.e92.launcher.core.KswSettings.read(app, key)
@@ -263,8 +262,7 @@ object DiagServer {
                         val ok = ro.e92.launcher.core.KswSettings.write(app, key, set)
                         ro.e92.launcher.core.EventLog.log("Diag", "setare KSW $key: $before → $set" + if (ok) "" else " (eșuat)")
                     }
-                    respond(out, 200, "$key: $before" + (if (set != null) " → ${ro.e92.launcher.core.KswSettings.read(app, key)}" else "") + "
-")
+                    respond(out, 200, "$key: $before" + (if (set != null) " → ${ro.e92.launcher.core.KswSettings.read(app, key)}" else "") + "\n")
                 }
             }
             "/screenshot" -> {
