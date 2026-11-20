@@ -29,5 +29,8 @@ class E92Application : Application() {
 
         // Pe firul lui; doar deschide un socket, nu întârzie home-ul.
         DiagServer.start(this)
+
+        // Cardurile de treaptă și bara de volum și peste CarPlay; ține și procesul în viață.
+        ro.e92.launcher.overlay.OverlayService.start(this)
     }
 }
