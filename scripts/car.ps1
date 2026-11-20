@@ -227,7 +227,8 @@ switch ($Command) {
         $before | Out-File -Encoding utf8 (Join-Path $out "before.txt")
         $before
         # Jurnalul se scrie pe unitate: cand iPhone-ul intra pe Wi-Fi-ul adaptorului, hotspot-ul cade.
-        Shell $base "pkill -f e92-carplay 2>/dev/null; rm -f /sdcard/e92-carplay.log*; logcat -c; nohup logcat -v time -f /sdcard/e92-carplay.log -r 8192 -n 3 >/dev/null 2>&1 & sleep 1; ls -la /sdcard/e92-carplay.log"
+        # Fara pkill -f: ar omori chiar shell-ul care contine textul (asa a esuat prima data, 2026-11-20).
+        Shell $base "[ -f /sdcard/e92cp.pid ] && kill `$(cat /sdcard/e92cp.pid) 2>/dev/null; rm -f /sdcard/e92cp.log*; logcat -c; nohup logcat -v time -f /sdcard/e92cp.log -r 8192 -n 3 >/dev/null 2>&1 & echo `$! > /sdcard/e92cp.pid; sleep 1; ls -la /sdcard/e92cp.log"
         Write-Output ""
         Write-Output "Jurnalul ruleaza pe unitate. Acum: scoate/baga modulul din USB daca vrei, porneste AutoPlay,"
         Write-Output "conecteaza iPhone-ul la CarPlay. Cand termini, porneste iar hotspot-ul si ruleaza carplay-fetch."
@@ -239,10 +240,10 @@ switch ($Command) {
         $after = foreach ($c in $carplayState) { Shell $base $c }
         $after | Out-File -Encoding utf8 (Join-Path $out "after.txt")
         $after
-        Shell $base "pkill -f e92-carplay 2>/dev/null; ls -la /sdcard/e92-carplay.log*" 
+        Shell $base "[ -f /sdcard/e92cp.pid ] && kill `$(cat /sdcard/e92cp.pid) 2>/dev/null; rm -f /sdcard/e92cp.pid; ls -la /sdcard/e92cp.log*"
         # Doar liniile care conteaza, ca sa incapa intr-un raspuns.
         $pattern = 'manstep|autokit|autoplay|carplay|iap|usb|UsbHost|UsbDevice|wifi|wlan|p2p|bluetooth|bt_|ActivityManager: (Start|Displayed|Killing)|FATAL|AndroidRuntime'
-        Shell $base "cat /sdcard/e92-carplay.log.3 /sdcard/e92-carplay.log.2 /sdcard/e92-carplay.log.1 /sdcard/e92-carplay.log 2>/dev/null | grep -i -E '$pattern' | tail -n 8000" |
+        Shell $base "cat /sdcard/e92cp.log.3 /sdcard/e92cp.log.2 /sdcard/e92cp.log.1 /sdcard/e92cp.log 2>/dev/null | grep -i -E '$pattern' | tail -n 8000" |
             Out-File -Encoding utf8 (Join-Path $out "logcat-filtrat.txt")
         $lines = (Get-Content (Join-Path $out "logcat-filtrat.txt")).Count
         Write-Output "Jurnal adus: $lines linii in $out"

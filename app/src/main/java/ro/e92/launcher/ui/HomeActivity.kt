@@ -376,20 +376,22 @@ class HomeActivity : ComponentActivity(), ScreenHost {
 
             LauncherAction.HOME -> { goHome(); true }
             LauncherAction.BACK -> { stack.pop(); true }
-            LauncherAction.OPTION -> focus.option()
-
-            // Butonul hard NAV lansează DIRECT aplicația de navigație — o singură
-            // apăsare în mers. Pop-up-ul cu Waze/Chrome e pentru intrarea din meniu,
-            // unde ai timp să alegi.
-            // Ca MEDIA: butonul deschide meniul dalei, cu Waze, Google Maps și
-            // CarPlay la o rotire distanță, nu o singură aplicație fixă.
-            LauncherAction.NAV -> { openTile(TileAction.NAVIGATION); true }
+            // Butoanele de pe consolă (cerut 2026-11-20): MEDIA → Media, TEL → Bluetooth,
+            // NAV → Trip (consumuri, km), RADIO → Dashboard, OPTION → Setup. BACK rămâne înapoi.
+            LauncherAction.OPTION -> { openTile(TileAction.SETTINGS); true }
+            LauncherAction.NAV -> {
+                pushUnique(ro.e92.launcher.ui.screens.TripScreen::class.java) { ro.e92.launcher.ui.screens.TripScreen(this) }
+                true
+            }
             LauncherAction.MEDIA -> { openTile(TileAction.MEDIA); true }
-            LauncherAction.PHONE -> { openTile(TileAction.TELEPHONE); true }
+            LauncherAction.PHONE -> { openTile(TileAction.BLUETOOTH); true }
             LauncherAction.APPS -> { pushUnique(AppDrawerScreen::class.java) { AppDrawerScreen(this) }; true }
             LauncherAction.DIAGNOSTICS -> { pushUnique(DiagnosticsScreen::class.java) { DiagnosticsScreen(this) }; true }
 
-            LauncherAction.RADIO -> { openOemRadio(); true }
+            LauncherAction.RADIO -> {
+                pushUnique(ro.e92.launcher.ui.screens.DashboardScreen::class.java) { ro.e92.launcher.ui.screens.DashboardScreen(this) }
+                true
+            }
 
             LauncherAction.MEDIA_NEXT -> { Services.media.next(); true }
             LauncherAction.MEDIA_PREV -> { Services.media.previous(); true }
