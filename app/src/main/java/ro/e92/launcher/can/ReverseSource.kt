@@ -285,6 +285,15 @@ class ReverseSource(
         val note = MCU_IN.find(line)?.let { "← " + compact(it.groupValues[1]) }
             ?: MCU_OUT.find(line)?.let { "→ " + compact(it.groupValues[1]) }
             ?: return
+        // EventCenter dă butoanele iDrive ecranului original al mașinii (după pătratul de pe volan
+        // și la ieșirea din marșarier): rotița și BACK nu mai ajung la Android. Șoferul nu vrea
+        // niciodată ecranele KSW, deci le cerem înapoi imediat (proba din 2026-11-20).
+        if (note == KEYS_TO_ORIGINAL) {
+            scope.launch {
+                delay(KEYS_BACK_DELAY_MS)
+                if (Services.kswCar?.sendKeyOwner(true) == true) EventLog.log(TAG, "butoanele iDrive înapoi la Android")
+            }
+        }
         val now = SystemClock.elapsedRealtime()
         if (note == lastNote && now - lastNoteAt < NOTE_REPEAT_MS) return
         lastNote = note
@@ -762,6 +771,9 @@ class ReverseSource(
         const val ID_WHEEL_KEYS = 0x1D6
         /** Butoanele controller-ului iDrive de pe consolă. */
         const val ID_IDRIVE_KEYS = 0x267
+        /** EventCenter trimite butoanele la ecranul original (0x69 14 00). */
+        const val KEYS_TO_ORIGINAL = "→ 69 02 14 00"
+        const val KEYS_BACK_DELAY_MS = 300L
         const val WHEEL_VOLUME_MASK = 0x0C
         const val WHEEL_VOLUME_UP = 0x08
         const val WHEEL_VOLUME_DOWN = 0x04

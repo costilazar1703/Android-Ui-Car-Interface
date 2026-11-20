@@ -985,6 +985,8 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         reverseShown = on
         ro.e92.launcher.core.EventLog.log("Home", "scena de marșarier: $on, sus e ${stack.current?.javaClass?.simpleName}")
         if (on) {
+            // Un card de mod rămas pe ecran (de ex. „Drive" chiar înainte de R) nu mai are rost.
+            if (stack.current is ro.e92.launcher.ui.screens.ModeScreen) stack.pop()
             pushUnique(ro.e92.launcher.ui.screens.ReverseScreen::class.java) {
                 ro.e92.launcher.ui.screens.ReverseScreen(this)
             }

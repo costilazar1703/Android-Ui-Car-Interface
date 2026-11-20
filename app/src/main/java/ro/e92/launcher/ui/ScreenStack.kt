@@ -51,8 +51,11 @@ class ScreenStack(
             // pentru un ecran cu care nu se mai poate interacționa. Doar view-ul
             // rămâne pe ecran sub un pop-up, ca să se vadă peste ce s-a deschis.
             top.screen.hide()
-            if (!screen.isOverlay) top.screen.root?.visibility = View.GONE
         }
+        // Un ecran întreg le ascunde pe TOATE de dedesubt, nu doar pe cel din vârf: sub un card
+        // de mod (overlay) ecranul anterior rămâne vizibil și altfel s-ar fi văzut prin scena de
+        // marșarier (tab-urile din Trip, 2026-11-20).
+        if (!screen.isOverlay) stack.forEach { it.screen.root?.visibility = View.GONE }
 
         val entry = Entry(screen)
         val view = screen.createView(inflater, container)
@@ -82,7 +85,11 @@ class ScreenStack(
         destroyTop()
 
         val top = stack.last()
-        top.screen.root?.visibility = View.VISIBLE
+        // Vizibile din nou: vârful și, dacă el e un overlay, ecranele de sub el până la primul întreg.
+        for (i in stack.indices.reversed()) {
+            stack[i].screen.root?.visibility = View.VISIBLE
+            if (!stack[i].screen.isOverlay) break
+        }
         top.screen.show()
         focus.setTargets(top.screen.focusTargets(), top.savedFocusId)
         onTitleChanged?.invoke(top.screen.title)
