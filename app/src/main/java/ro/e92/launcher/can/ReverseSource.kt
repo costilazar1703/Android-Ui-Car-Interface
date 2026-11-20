@@ -376,13 +376,15 @@ class ReverseSource(
     /**
      * Butoanele de pe consolă (controller-ul iDrive, 0x267; proba din 2026-11-20): octetul 2
      * numără apăsările, octetul 3 = 01 apăsat / 00 lăsat / 02 ținut, octetul 5 = butonul
-     * (01 MENU, 02 BACK, 04 OPTION, 08 RADIO, 10 MEDIA, 20 NAV, 40 TEL). MENU și BACK le trimite
-     * deja unitatea ca taste; pe celelalte le ducem noi la launcher, chiar și din CarPlay.
+     * (01 MENU, 02 BACK, 04 OPTION, 08 RADIO, 10 MEDIA, 20 NAV, 40 TEL). BACK îl trimite deja
+     * unitatea ca tastă; pe celelalte (și MENU → Home) le ducem noi la launcher, chiar și din CarPlay.
      */
     private fun onConsoleKey(counter: Int, state: Int, button: Int) {
         if (state != 1 || counter == lastConsoleCounter) return
         lastConsoleCounter = counter
         val action = when (button) {
+            // MENU: unitatea îl trimite doar uneori ca tastă (nu cu CarPlay în față); îl ducem noi.
+            0x01 -> "HOME"
             0x10 -> "MEDIA"
             0x40 -> "PHONE"
             0x20 -> "NAV"
