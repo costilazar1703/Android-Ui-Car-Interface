@@ -47,6 +47,9 @@ const val NO_OBSTACLE_CM = 999
 /** Launcher-ul adus în față de marșarier, nu de șofer: la ieșire revine unde era. */
 const val EXTRA_REVERSE = "ro.e92.launcher.REVERSE"
 
+/** Un buton de pe consolă (numele unei [ro.e92.launcher.input.LauncherAction]) de executat în launcher. */
+const val EXTRA_CONSOLE_KEY = "ro.e92.launcher.CONSOLE_KEY"
+
 /**
  * Treapta de marșarier pe unitatea KSW.
  *
@@ -344,6 +347,7 @@ class ReverseSource(
             }
             ID_CAR_TIME -> onCarTime(b)
             ID_WHEEL_KEYS -> if (b.isNotEmpty()) onWheelKeys(b[0])
+            ID_IDRIVE_KEYS -> if (b.size >= 6) onConsoleKey(b[2], b[3], b[5])
             ID_BATTERY -> if (b.size >= 2) {
                 // E9x PM: (b1 & 0x0F) << 8 | b0, câte 15 mV (2026-11-15, din capturi: 13,96-14,62 V în mers).
                 val raw = ((b[1] and 0x0F) shl 8) or b[0]
@@ -368,6 +372,37 @@ class ReverseSource(
             ro.e92.launcher.core.KswVolume.step(context, delta)
         }
     }
+
+    /**
+     * Butoanele de pe consolă (controller-ul iDrive, 0x267; proba din 2026-11-20): octetul 2
+     * numără apăsările, octetul 3 = 01 apăsat / 00 lăsat / 02 ținut, octetul 5 = butonul
+     * (01 MENU, 02 BACK, 04 OPTION, 08 RADIO, 10 MEDIA, 20 NAV, 40 TEL). MENU și BACK le trimite
+     * deja unitatea ca taste; pe celelalte le ducem noi la launcher, chiar și din CarPlay.
+     */
+    private fun onConsoleKey(counter: Int, state: Int, button: Int) {
+        if (state != 1 || counter == lastConsoleCounter) return
+        lastConsoleCounter = counter
+        val action = when (button) {
+            0x10 -> "MEDIA"
+            0x40 -> "PHONE"
+            0x20 -> "NAV"
+            0x08 -> "RADIO"
+            0x04 -> "OPTION"
+            else -> return
+        }
+        EventLog.log(TAG, "buton consolă: $action")
+        scope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            runCatching {
+                context.startActivity(
+                    Intent(context, HomeActivity::class.java)
+                        .putExtra(EXTRA_CONSOLE_KEY, action)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                )
+            }.onFailure { EventLog.log(TAG, "butonul $action nu a deschis launcher-ul: ${it.message}") }
+        }
+    }
+
+    private var lastConsoleCounter = -1
 
     /** Ceasul din bord: ora, minut, secundă, zi, lună în nibble-ul de sus, an pe 2 octeți LE. */
     private fun onCarTime(b: List<Int>) {
@@ -635,7 +670,7 @@ class ReverseSource(
         const val TAG = "Reverse"
         val FRAME = Regex("""0xf2 0x00 0x11 0x02 0x0([123]) 0x0([01])""")
         const val LOG_FILTER =
-            "0xf2 0x00 0x11 0x02|0xA1_0x1DEvent: stringBuilder.toString\\(\\) = 0x(01c2|00c4|0304|0338|02f8|03b4|019e|01d2|01d6) |bydata = 0xf2 0x00 0x1[035] |bydata = 0xf2 0x00 0xa1 0x02 0x1a |ES s send: 0xf2 0x00 0x6[79] "
+            "0xf2 0x00 0x11 0x02|0xA1_0x1DEvent: stringBuilder.toString\\(\\) = 0x(01c2|00c4|0304|0338|02f8|03b4|019e|01d2|01d6|0267) |bydata = 0xf2 0x00 0x1[035] |bydata = 0xf2 0x00 0xa1 0x02 0x1a |ES s send: 0xf2 0x00 0x6[79] "
         val CAN_FRAME = Regex("""0xA1_0x1DEvent: .*= 0x([0-9a-f]{4}) \S+ \S+ 0x[0-9a-f]+ ((?:0x[0-9a-f]{2} ?)+)""")
         val BYTE = Regex("""0x([0-9a-f]{2})""")
 
@@ -682,6 +717,8 @@ class ReverseSource(
         const val GEARBOX_MANUAL = 2
         /** Butoanele de pe volan. */
         const val ID_WHEEL_KEYS = 0x1D6
+        /** Butoanele controller-ului iDrive de pe consolă. */
+        const val ID_IDRIVE_KEYS = 0x267
         const val WHEEL_VOLUME_MASK = 0x0C
         const val WHEEL_VOLUME_UP = 0x08
         const val WHEEL_VOLUME_DOWN = 0x04

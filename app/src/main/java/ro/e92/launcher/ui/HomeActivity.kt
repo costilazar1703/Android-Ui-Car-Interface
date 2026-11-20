@@ -198,6 +198,14 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             reverseFromOutside = true
             return
         }
+        // Un buton de pe consolă (MEDIA, TEL, NAV, RADIO, OPTION): deschide ecranul lui, de oriunde.
+        intent.getStringExtra(ro.e92.launcher.can.EXTRA_CONSOLE_KEY)?.let { name ->
+            ro.e92.launcher.input.LauncherAction.byName(name)?.let { action ->
+                if (stack.current !is ro.e92.launcher.ui.screens.HomeWidgetsScreen) goHome()
+                handleAction(action)
+            }
+            return
+        }
         // Apăsarea butonului HOME în timp ce suntem deja în față: înapoi la rădăcină.
         goHome()
     }
