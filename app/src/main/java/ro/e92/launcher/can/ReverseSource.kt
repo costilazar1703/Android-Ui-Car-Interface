@@ -185,6 +185,7 @@ class ReverseSource(
     private val manualTrack = ModeTrack<Int>()
     /** Butoanele de pe volan (0x1D6, octetul 0) la cadrul de dinainte, ca să prindem apăsarea. */
     private var lastWheelKeys = -1
+    private var lastWheelKeys2 = -1
     private var lastGear = -1
 
     private var lastRawLogAt = 0L
@@ -346,7 +347,7 @@ class ReverseSource(
                 }
             }
             ID_CAR_TIME -> onCarTime(b)
-            ID_WHEEL_KEYS -> if (b.isNotEmpty()) onWheelKeys(b[0])
+            ID_WHEEL_KEYS -> if (b.size >= 2) onWheelKeys(b[0], b[1])
             ID_IDRIVE_KEYS -> if (b.size >= 6) onConsoleKey(b[2], b[3], b[5])
             ID_BATTERY -> if (b.size >= 2) {
                 // E9x PM: (b1 & 0x0F) << 8 | b0, câte 15 mV (2026-11-15, din capturi: 13,96-14,62 V în mers).
@@ -357,19 +358,64 @@ class ReverseSource(
     }
 
     /**
-     * Butoanele de pe volan, 0x1D6 octetul 0 (proba din 2026-11-19): C0 liber, C8 volum +,
-     * C4 volum −. Unitatea KSW nu le mai folosește de la resetul ei, așa că volumul îl schimbăm
-     * noi (volumul principal KSW), câte o treaptă la fiecare apăsare, cu bara pe ecran.
+     * Butoanele de pe volan, 0x1D6 (probele din 2026-11-19 și -20). Octetul 0: C0 liber, C8 volum +,
+     * C4 volum −, C1 telefon. Octetul 1: 0C liber, 1C cerc, 4C pătrat, 0D voce. Volumul îl schimbăm
+     * noi (volumul principal KSW), cu bara pe ecran; celelalte deschid ecranele cerute.
      */
-    private fun onWheelKeys(value: Int) {
+    private fun onWheelKeys(value: Int, value2: Int) {
         val prev = lastWheelKeys
+        val prev2 = lastWheelKeys2
         lastWheelKeys = value
-        if (prev == -1 || prev == value) return
-        val pressed = value and WHEEL_VOLUME_MASK
-        if (pressed == 0 || (prev and WHEEL_VOLUME_MASK) == pressed) return
-        val delta = if (pressed == WHEEL_VOLUME_UP) +1 else if (pressed == WHEEL_VOLUME_DOWN) -1 else return
+        lastWheelKeys2 = value2
+        if (prev == -1 || prev2 == -1) return
+        // Apăsare = bitul se aprinde acum și era stins înainte.
+        fun pressed(now: Int, before: Int, bit: Int) = now and bit != 0 && before and bit == 0
+        val volume = value and WHEEL_VOLUME_MASK
+        if (volume != 0 && (prev and WHEEL_VOLUME_MASK) != volume) {
+            val delta = if (volume == WHEEL_VOLUME_UP) +1 else if (volume == WHEEL_VOLUME_DOWN) -1 else 0
+            if (delta != 0) scope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                ro.e92.launcher.core.KswVolume.step(context, delta)
+            }
+        }
+        // Butoanele de pe volan (proba din 2026-11-20), cu ce a cerut șoferul:
+        // cerc → Dashboard, pătrat → Trip, telefon → Bluetooth, voce → Media.
+        val action = when {
+            pressed(value2, prev2, WHEEL_CIRCLE) -> "RADIO"
+            pressed(value2, prev2, WHEEL_SQUARE) -> "NAV"
+            pressed(value, prev, WHEEL_PHONE) -> "PHONE"
+            pressed(value2, prev2, WHEEL_VOICE) -> "MEDIA"
+            else -> return
+        }
+        EventLog.log(TAG, "buton volan → $action")
+        // Unitatea KSW răspunde și ea la unele (pătrat: ceasul ei, voce: CarPlay), cu o mică
+        // întârziere: ne aducem launcher-ul în față imediat și încă o dată după, dacă ne-a acoperit.
+        openInLauncher(action, reclaimAfter = true)
+    }
+
+    /** Deschide în launcher ecranul butonului; cu [reclaimAfter], revine peste ecranele KSW care sar după. */
+    private fun openInLauncher(action: String, reclaimAfter: Boolean = false) {
         scope.launch(kotlinx.coroutines.Dispatchers.Main) {
-            ro.e92.launcher.core.KswVolume.step(context, delta)
+            runCatching {
+                context.startActivity(
+                    Intent(context, HomeActivity::class.java)
+                        .putExtra(EXTRA_CONSOLE_KEY, action)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                )
+            }.onFailure { EventLog.log(TAG, "butonul $action nu a deschis launcher-ul: ${it.message}") }
+            if (!reclaimAfter) return@launch
+            for (wait in RECLAIM_AFTER_MS) {
+                delay(wait)
+                if (!launcherInFront) {
+                    EventLog.log(TAG, "ecran KSW peste launcher după $action - revin")
+                    runCatching {
+                        context.startActivity(
+                            Intent(context, HomeActivity::class.java)
+                                .putExtra("ro.e92.launcher.RECLAIM", true)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -393,15 +439,7 @@ class ReverseSource(
             else -> return
         }
         EventLog.log(TAG, "buton consolă: $action")
-        scope.launch(kotlinx.coroutines.Dispatchers.Main) {
-            runCatching {
-                context.startActivity(
-                    Intent(context, HomeActivity::class.java)
-                        .putExtra(EXTRA_CONSOLE_KEY, action)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
-                )
-            }.onFailure { EventLog.log(TAG, "butonul $action nu a deschis launcher-ul: ${it.message}") }
-        }
+        openInLauncher(action)
     }
 
     private var lastConsoleCounter = -1
@@ -724,6 +762,13 @@ class ReverseSource(
         const val WHEEL_VOLUME_MASK = 0x0C
         const val WHEEL_VOLUME_UP = 0x08
         const val WHEEL_VOLUME_DOWN = 0x04
+        /** Octetul 0: telefon. Octetul 1: cerc, pătrat, voce (0C când nu e nimic apăsat). */
+        const val WHEEL_PHONE = 0x01
+        const val WHEEL_CIRCLE = 0x10
+        const val WHEEL_SQUARE = 0x40
+        const val WHEEL_VOICE = 0x01
+        /** După butoanele de pe volan, verificăm de două ori dacă un ecran KSW ne-a acoperit. */
+        val RECLAIM_AFTER_MS = longArrayOf(900L, 1_800L)
         val LEVER = mapOf(0xE1 to 'P', 0xD2 to 'R', 0xB4 to 'N', 0x78 to 'D')
         const val STABLE_FRAMES = 3
         /** Cât trebuie să stea maneta în N până apare cardul Neutral. */
