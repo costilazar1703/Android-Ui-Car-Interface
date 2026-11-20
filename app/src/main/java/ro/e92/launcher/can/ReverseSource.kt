@@ -379,17 +379,18 @@ class ReverseSource(
         }
         // Butoanele de pe volan (proba din 2026-11-20), cu ce a cerut șoferul:
         // cerc → Dashboard, pătrat → Trip, telefon → Bluetooth, voce → Media.
+        // Pătratul și vocea le prinde și unitatea KSW (MCU „a1 02 1a 02/01": ceasul ei, CarPlay).
+        // Dacă le deschidem noi peste, KSW rămâne crezând că e în CarPlay și dă rotița și butoanele
+        // aplicației CarPlay (proba din 2026-11-20). Până găsim setarea KSW, le lăsăm ei.
         val action = when {
             pressed(value2, prev2, WHEEL_CIRCLE) -> "RADIO"
-            pressed(value2, prev2, WHEEL_SQUARE) -> "NAV"
             pressed(value, prev, WHEEL_PHONE) -> "PHONE"
-            pressed(value2, prev2, WHEEL_VOICE) -> "MEDIA"
+            pressed(value2, prev2, WHEEL_SQUARE) -> { EventLog.log(TAG, "buton volan: pătrat (lăsat unității KSW)"); return }
+            pressed(value2, prev2, WHEEL_VOICE) -> { EventLog.log(TAG, "buton volan: voce (lăsat unității KSW)"); return }
             else -> return
         }
         EventLog.log(TAG, "buton volan → $action")
-        // Unitatea KSW răspunde și ea la unele (pătrat: ceasul ei, voce: CarPlay), cu o mică
-        // întârziere: ne aducem launcher-ul în față imediat și încă o dată după, dacă ne-a acoperit.
-        openInLauncher(action, reclaimAfter = true)
+        openInLauncher(action)
     }
 
     /** Deschide în launcher ecranul butonului; cu [reclaimAfter], revine peste ecranele KSW care sar după. */
