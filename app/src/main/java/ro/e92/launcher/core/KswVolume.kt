@@ -51,8 +51,11 @@ object KswVolume {
         val wanted = Services.prefs.unitVolume
         val current = KswSettings.read(context, MAIN_VOL)?.toIntOrNull() ?: return
         if (current >= wanted) return
-        EventLog.log(TAG, "volumul principal KSW era $current - îl ridic la $wanted")
-        set(context, wanted)
+        // Nu în timpul salutului: volumul ar sări la jumătatea frazei (2026-11-22).
+        ro.e92.launcher.media.GreetingSound.runAfterGreeting {
+            EventLog.log(TAG, "volumul principal KSW era $current - îl ridic la $wanted")
+            set(context, wanted)
+        }
     }
 
     /** Volumul principal KSW, așa cum îl vede EventCenter; null fără KSW. */

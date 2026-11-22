@@ -262,23 +262,12 @@ class SettingsScreen(
     }
 
     /**
-     * Ultimele din Car & unit: salutul de la pornire. Volumul lui, pe scara unității, nu depinde
-     * de cât e dată unitatea; „Play greeting" îl pornește ca să-l reglezi (cerut 2026-11-17).
+     * Ultimele din Car & unit: salutul de la pornire. Se aude la volumul unității, constant, și
+     * se reglează din radio (2026-11-22; volumul separat al salutului a fost scos: comutarea lui
+     * făcea primele cuvinte mai încete). „Play greeting" îl pornește ca să-l asculți.
      */
     private fun greetingRows(): List<DetailRow> {
-        val prefs = Services.prefs
         return listOf(
-            DetailRow(
-                id = "car_greeting_volume",
-                title = context.getString(R.string.set_greeting_volume),
-                value = "${prefs.greetingVolume} / ${KswVolume.MAX}",
-                onActivate = {
-                    val steps = KswVolume.GREETING_STEPS
-                    val i = steps.indexOf(prefs.greetingVolume)
-                    prefs.greetingVolume = steps[(if (i < 0) 0 else i + 1) % steps.size]
-                    reloadDetail("car_greeting_volume")
-                }
-            ),
             DetailRow(
                 id = "car_greeting_play",
                 title = context.getString(R.string.set_greeting_play),
