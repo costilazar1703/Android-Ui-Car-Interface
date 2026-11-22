@@ -359,7 +359,7 @@ class ReverseSource(
             }
             ID_CAR_TIME -> onCarTime(b)
             ID_WHEEL_KEYS -> if (b.size >= 2) onWheelKeys(b[0], b[1])
-            ID_IDRIVE_KEYS -> if (b.size >= 6) onConsoleKey(b[2], b[3], b[5])
+            ID_IDRIVE_KEYS -> if (b.size >= 6) onConsoleKey(b[2], b[3], b[4], b[5])
             ID_BATTERY -> if (b.size >= 2) {
                 // E9x PM: (b1 & 0x0F) << 8 | b0, câte 15 mV (2026-11-15, din capturi: 13,96-14,62 V în mers).
                 val raw = ((b[1] and 0x0F) shl 8) or b[0]
@@ -450,13 +450,17 @@ class ReverseSource(
 
     /**
      * Butoanele de pe consolă (controller-ul iDrive, 0x267; proba din 2026-11-20): octetul 2
-     * numără apăsările, octetul 3 = 01 apăsat / 00 lăsat / 02 ținut, octetul 5 = butonul
+     * numără apăsările, octetul 3 = 01 apăsat / 00 lăsat / 02 ținut, octetul 4 = C0 pentru butoane
+     * (DE pentru rotiță), octetul 5 = butonul
      * (01 MENU, 02 BACK, 04 OPTION, 08 RADIO, 10 MEDIA, 20 NAV, 40 TEL). BACK îl trimite deja
      * unitatea ca tastă; pe celelalte (și MENU → Home) le ducem noi la launcher, chiar și din CarPlay.
      */
-    private fun onConsoleKey(counter: Int, state: Int, button: Int) {
+    private fun onConsoleKey(counter: Int, state: Int, group: Int, button: Int) {
         if (state != 1 || counter == lastConsoleCounter) return
         lastConsoleCounter = counter
+        // Doar butoanele (octetul 4 = C0). Apăsarea rotiței e DE 01 și era luată drept MENU (01),
+        // ducând pe Home la fiecare selectare (2026-11-22); rotița o trimite deja unitatea ca tastă.
+        if (group != CONSOLE_BUTTONS) return
         val action = when (button) {
             // MENU: unitatea îl trimite doar uneori ca tastă (nu cu CarPlay în față); îl ducem noi.
             0x01 -> "HOME"
@@ -788,6 +792,8 @@ class ReverseSource(
         const val ID_WHEEL_KEYS = 0x1D6
         /** Butoanele controller-ului iDrive de pe consolă. */
         const val ID_IDRIVE_KEYS = 0x267
+        /** Octetul 4 din 0x267 pentru butoanele de pe consolă (rotița are alt grup, DE). */
+        const val CONSOLE_BUTTONS = 0xC0
         /** EventCenter trimite butoanele la ecranul original (0x69 14 00). */
         const val KEYS_TO_ORIGINAL = "→ 69 02 14 00"
         const val KEYS_BACK_DELAY_MS = 300L
