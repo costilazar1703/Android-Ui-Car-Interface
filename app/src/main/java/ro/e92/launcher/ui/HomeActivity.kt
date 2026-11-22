@@ -283,7 +283,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
             // Doar ecranele KSW le dăm la o parte. CarPlay wireless se conectează chiar în primul
             // minut și își deschide singur aplicația: aceea trebuie să rămână (2026-11-09).
             val app = foregroundApp()
-            if (!resumedNow && (app == null || app.startsWith(KSW_PREFIX))) bringToFront(0)
+            if (!resumedNow && app !in KSW_NEVER_GUARDED && (app == null || app.startsWith(KSW_PREFIX))) bringToFront(0)
         }, GUARD_RECLAIM_DELAY_MS)
     }
 
@@ -868,7 +868,7 @@ class HomeActivity : ComponentActivity(), ScreenHost {
                 bringToFront(0)
             }
             else if (Services.prefs.reverseScene && !resumedNow && noCall && !reverse && app != null &&
-                app.startsWith(KSW_PREFIX) && app != allowedKswApp
+                app.startsWith(KSW_PREFIX) && app != allowedKswApp && app !in KSW_NEVER_GUARDED
             ) {
                 if (android.os.SystemClock.elapsedRealtime() - lastInputAt < GUARD_INPUT_GRACE_MS) {
                     // Deschisă de șofer (din meniurile noastre): o lăsăm cât stă în față.
@@ -1372,6 +1372,11 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         const val GUARD_WINDOW_MS = 40_000L
         private const val REVERSE_CLOSE_ABOVE_KMH = 25
         const val EXTRA_RECLAIM = "ro.e92.launcher.RECLAIM"
+        /**
+         * Aplicații KSW care nu se deschid niciodată singure, doar la cererea șoferului: garda nu le
+         * închide. Setările KSW erau închise la fiecare apăsare (2026-11-22).
+         */
+        private val KSW_NEVER_GUARDED = setOf("com.szchoiceway.settings")
         /** Cât stă ecranul KSW deschis până revenim: destul cât să-și facă onCreate. */
         val HOST_RETURN_CHECKS_MS = longArrayOf(900L, 1_800L, 3_000L, 4_500L)
         const val HOST_RESUME_PLAY_MS = 1_500L
