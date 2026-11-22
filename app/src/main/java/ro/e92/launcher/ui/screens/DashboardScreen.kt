@@ -38,6 +38,9 @@ class DashboardScreen(host: ScreenHost) : Screen(host) {
         // Scalele copiate după bordul E92 320d: kilometrajul pe un arc lung,
         // 0 jos-stânga (~7 și un sfert) până la 260 jos-dreapta (~4 și jumătate),
         // cifre din 20 în 20. Unghiurile sunt în grade Canvas, 0° = ora 3.
+        // Cifra din mijloc puțin mai mică pe ambele ceasuri mari, ca să rămână simetrice.
+        binding.gaugeSpeed.valueScale = BIG_VALUE_SCALE
+        binding.gaugeRpm.valueScale = BIG_VALUE_SCALE
         binding.gaugeSpeed.configure(
             caption = "SPEED",
             unit = context.getString(R.string.unit_kmh),
@@ -189,6 +192,8 @@ class DashboardScreen(host: ScreenHost) : Screen(host) {
     }
 
     private companion object {
+        /** Cifra vitezei și a turației față de mărimea obișnuită (0,16 din ceas). */
+        private const val BIG_VALUE_SCALE = 0.8f
         /** Etichetele cadranelor mici (BOOST, COOLANT), la aceeași înălțime. */
         const val SMALL_CAPTION_LIFT = 0.2f
         /** Turbo și ulei, față de viteză și turații. */

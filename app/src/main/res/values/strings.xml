@@ -148,6 +148,8 @@
     <string name="set_bt_music_only">Bluetooth: music only (no calls)</string>
     <string name="set_greeting_volume">Greeting volume (start-up voice)</string>
     <string name="set_greeting_play">Play greeting</string>
+    <string name="set_open_ksw_settings">Open KSW settings</string>
+    <string name="set_ksw_settings_missing">KSW settings app not found</string>
     <string name="set_live_can">Live CAN data on Home and menus</string>
     <string name="set_reverse_scene">Reverse screen: E92 instead of KSW</string>
     <string name="mode_drift">Drift Mode</string>

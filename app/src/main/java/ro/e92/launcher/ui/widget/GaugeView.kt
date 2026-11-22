@@ -129,6 +129,17 @@ class GaugeView @JvmOverloads constructor(
      * @param displayDivisor împarte valoarea brută înainte de afișare
      *                       (1000 pentru "x1000 rpm"); se aplică și cifrelor
      */
+    /**
+     * Mărimea cifrei din mijloc față de cea obișnuită. Pe ceasurile mari e mai mică (cerut
+     * 2026-11-22): „159" ajungea lângă gradația 260.
+     */
+    var valueScale = 1f
+        set(value) {
+            field = value
+            buildGeometry(width, height)
+            invalidate()
+        }
+
     fun configure(
         caption: String,
         unit: String,
@@ -193,7 +204,7 @@ class GaugeView @JvmOverloads constructor(
         centerY = h / 2f
         dial = size / 2f * DIAL_RATIO
 
-        valuePaint.textSize = size * 0.16f
+        valuePaint.textSize = size * 0.16f * valueScale
         unitPaint.textSize = max(size * 0.042f, minTextPx)
         valueBaseline = centerY + dial * 0.58f
         unitBaseline = valueBaseline + unitPaint.textSize * 1.9f

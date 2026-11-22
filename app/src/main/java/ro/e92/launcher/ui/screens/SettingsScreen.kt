@@ -283,8 +283,26 @@ class SettingsScreen(
                 id = "car_greeting_play",
                 title = context.getString(R.string.set_greeting_play),
                 onActivate = { ro.e92.launcher.media.GreetingSound.play(context, force = true) }
+            ),
+            // La final: setările unității KSW, ca să poți curăța butoanele pe care le leagă ea
+            // (cerut 2026-11-22). Deschisă de tine, nu e închisă de garda ecranelor KSW.
+            DetailRow(
+                id = "car_ksw_settings",
+                title = context.getString(R.string.set_open_ksw_settings),
+                onActivate = { openKswSettings() }
             )
         )
+    }
+
+    private fun openKswSettings() {
+        val intent = context.packageManager.getLaunchIntentForPackage(KSW_SETTINGS_PACKAGE)
+        if (intent == null) {
+            ro.e92.launcher.core.EventLog.log("Settings", "$KSW_SETTINGS_PACKAGE lipsește")
+            android.widget.Toast.makeText(context, R.string.set_ksw_settings_missing, android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        runCatching { context.startActivity(intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            .onFailure { ro.e92.launcher.core.EventLog.log("Settings", "setările KSW nu se deschid: ${it.message}") }
     }
 
     private fun carTypeValue(): String {
@@ -636,6 +654,8 @@ class SettingsScreen(
     }
 
     companion object {
+        /** Aplicația de setări a unității KSW. */
+        private const val KSW_SETTINGS_PACKAGE = "com.szchoiceway.settings"
         val TILT_ACTIONS = setOf(
             LauncherAction.TILT_UP, LauncherAction.TILT_DOWN, LauncherAction.TILT_LEFT, LauncherAction.TILT_RIGHT
         )

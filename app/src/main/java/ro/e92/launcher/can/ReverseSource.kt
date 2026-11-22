@@ -186,6 +186,8 @@ class ReverseSource(
     /** Butoanele de pe volan (0x1D6, octetul 0) la cadrul de dinainte, ca să prindem apăsarea. */
     private var lastWheelKeys = -1
     private var lastWheelKeys2 = -1
+    private var lastVolumeFrameAt = 0L
+    private var volumeRepeat: Job? = null
     private var lastGear = -1
 
     private var lastRawLogAt = 0L
@@ -380,12 +382,27 @@ class ReverseSource(
         // Apăsare = bitul se aprinde acum și era stins înainte.
         fun pressed(now: Int, before: Int, bit: Int) = now and bit != 0 && before and bit == 0
         val volume = value and WHEEL_VOLUME_MASK
+        if (volume != 0) lastVolumeFrameAt = SystemClock.elapsedRealtime()
         if (volume != 0 && (prev and WHEEL_VOLUME_MASK) != volume) {
             val delta = if (volume == WHEEL_VOLUME_UP) +1 else if (volume == WHEEL_VOLUME_DOWN) -1 else 0
-            if (delta != 0) scope.launch(kotlinx.coroutines.Dispatchers.Main) {
-                ro.e92.launcher.core.KswVolume.step(context, delta)
+            if (delta != 0) {
+                volumeRepeat?.cancel()
+                // O treaptă la apăsare; ținut apăsat, după o pauză urcă/coboară continuu până îl
+                // lași (cerut 2026-11-22). Cadrul vine doar la schimbare și cam o dată pe secundă,
+                // deci ne oprim și dacă n-a mai venit niciunul cu butonul apăsat de [VOLUME_HOLD_LOST_MS].
+                volumeRepeat = scope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                    ro.e92.launcher.core.KswVolume.step(context, delta)
+                    delay(VOLUME_REPEAT_AFTER_MS)
+                    while (lastWheelKeys and WHEEL_VOLUME_MASK == volume &&
+                        SystemClock.elapsedRealtime() - lastVolumeFrameAt < VOLUME_HOLD_LOST_MS
+                    ) {
+                        ro.e92.launcher.core.KswVolume.step(context, delta)
+                        delay(VOLUME_REPEAT_EVERY_MS)
+                    }
+                }
             }
         }
+        if (volume == 0) volumeRepeat?.cancel()
         // Butoanele de pe volan (proba din 2026-11-20), cu ce a cerut șoferul:
         // cerc → Dashboard, pătrat → Trip, telefon → Bluetooth, voce → Media.
         // Pătratul și vocea le prinde și unitatea KSW (MCU „a1 02 1a 02/01": ceasul ei, CarPlay),
@@ -777,6 +794,10 @@ class ReverseSource(
         const val WHEEL_VOLUME_MASK = 0x0C
         const val WHEEL_VOLUME_UP = 0x08
         const val WHEEL_VOLUME_DOWN = 0x04
+        /** Volum ținut apăsat: după cât începe să curgă, la ce pas, și când considerăm butonul lăsat. */
+        const val VOLUME_REPEAT_AFTER_MS = 450L
+        const val VOLUME_REPEAT_EVERY_MS = 160L
+        const val VOLUME_HOLD_LOST_MS = 1_600L
         /** Octetul 0: telefon. Octetul 1: cerc, pătrat, voce (0C când nu e nimic apăsat). */
         const val WHEEL_PHONE = 0x01
         const val WHEEL_CIRCLE = 0x10
