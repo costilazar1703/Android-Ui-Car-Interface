@@ -358,6 +358,7 @@ class ReverseSource(
                 }
             }
             ID_CAR_TIME -> onCarTime(b)
+            ID_SPEED -> if (b.size >= 2) onSpeed(b[0], b[1])
             ID_WHEEL_KEYS -> if (b.size >= 2) onWheelKeys(b[0], b[1])
             ID_IDRIVE_KEYS -> if (b.size >= 6) onConsoleKey(b[2], b[3], b[4], b[5])
             ID_BATTERY -> if (b.size >= 2) {
@@ -371,7 +372,8 @@ class ReverseSource(
     /**
      * Butoanele de pe volan, 0x1D6 (probele din 2026-11-19 și -20). Octetul 0: C0 liber, C8 volum +,
      * C4 volum −, C1 telefon. Octetul 1: 0C liber, 1C cerc, 4C pătrat, 0D voce. Volumul îl schimbăm
-     * noi (volumul principal KSW), cu bara pe ecran; celelalte deschid ecranele cerute.
+     * noi (volumul principal KSW), cu bara pe ecran; celelalte deschid ecranele cerute (cerc și
+     * telefon ținute apăsat → Home).
      */
     private fun onWheelKeys(value: Int, value2: Int) {
         val prev = lastWheelKeys
@@ -409,16 +411,50 @@ class ReverseSource(
         // cu o mică întârziere: deschidem ecranul nostru și revenim peste ce sare după. KSW poate
         // rămâne apoi crezând că e în CarPlay (BACK și apăsarea rotiței merg la CarPlay); se reface
         // intrând în CarPlay și ieșind cu MENU. Acceptat de șofer (2026-11-20).
+        // Cercul și telefonul: apăsat scurt → ecranul lor (la ridicare), ținut apăsat → Home
+        // (cerut 2026-11-23). Cercul → Dashboard, telefonul → Trip (This drive / Long drive).
+        fun released(now: Int, before: Int, bit: Int) = now and bit == 0 && before and bit != 0
+        holdKey(pressed(value2, prev2, WHEEL_CIRCLE), released(value2, prev2, WHEEL_CIRCLE), "RADIO", 0)
+        holdKey(pressed(value, prev, WHEEL_PHONE), released(value, prev, WHEEL_PHONE), "NAV", 1)
         val ksw = pressed(value2, prev2, WHEEL_SQUARE) || pressed(value2, prev2, WHEEL_VOICE)
         val action = when {
-            pressed(value2, prev2, WHEEL_CIRCLE) -> "RADIO"
-            pressed(value, prev, WHEEL_PHONE) -> "PHONE"
             pressed(value2, prev2, WHEEL_SQUARE) -> "NAV"
             pressed(value2, prev2, WHEEL_VOICE) -> "MEDIA"
             else -> return
         }
         EventLog.log(TAG, "buton volan → $action")
         openInLauncher(action, reclaimAfter = ksw)
+    }
+
+    /** Pentru [holdKey]: apăsarea în curs a cercului (0) și a telefonului (1). */
+    private val holdJobs = arrayOfNulls<Job>(2)
+    private val holdFired = BooleanArray(2)
+
+    /**
+     * Un buton cu două funcții: dacă e ținut [WHEEL_HOLD_MS], Home; dacă e lăsat înainte, [shortAction].
+     * Cadrul 0x1D6 vine la schimbare și cam o dată pe secundă cât e ținut, deci „încă apăsat" =
+     * ultima stare văzută.
+     */
+    private fun holdKey(pressedNow: Boolean, releasedNow: Boolean, shortAction: String, slot: Int) {
+        if (pressedNow) {
+            holdFired[slot] = false
+            holdJobs[slot]?.cancel()
+            holdJobs[slot] = scope.launch {
+                delay(WHEEL_HOLD_MS)
+                holdFired[slot] = true
+                EventLog.log(TAG, "buton volan ținut → HOME")
+                openInLauncher("HOME")
+            }
+        }
+        if (releasedNow) {
+            val job = holdJobs[slot]
+            holdJobs[slot] = null
+            if (job != null && !holdFired[slot]) {
+                job.cancel()
+                EventLog.log(TAG, "buton volan → $shortAction")
+                openInLauncher(shortAction)
+            }
+        }
     }
 
     /** Deschide în launcher ecranul butonului; cu [reclaimAfter], revine peste ecranele KSW care sar după. */
@@ -476,6 +512,22 @@ class ReverseSource(
     }
 
     private var lastConsoleCounter = -1
+
+    /**
+     * Viteza de la DSC, 0x1A0: ((octet1 & 0x0F) << 8 | octet0) × 0,1 km/h, de ~10 ori pe secundă
+     * (proba din 2026-11-19: 0 pe loc, ~54 km/h pe bulevard). Cea a unității KSW sărea din 3 în 3
+     * km/h (cerut 2026-11-23). Fiind prima sursă, are întâietate cât vin cadrele; fără ele (motor
+     * oprit) expiră și viteza vine iar de la unitate.
+     */
+    private fun onSpeed(b0: Int, b1: Int) {
+        val raw = ((b1 and 0x0F) shl 8) or b0
+        if (raw >= 0xFFF) return
+        val kmh = kotlin.math.round(raw / 10f).toInt()
+        val now = SystemClock.elapsedRealtime()
+        val s = _state.value
+        if (s.speedKmh == kmh && now - s.timestamp < SPEED_REFRESH_MS) return
+        _state.value = s.copy(speedKmh = kmh, timestamp = now)
+    }
 
     /** Ceasul din bord: ora, minut, secundă, zi, lună în nibble-ul de sus, an pe 2 octeți LE. */
     private fun onCarTime(b: List<Int>) {
@@ -743,7 +795,7 @@ class ReverseSource(
         const val TAG = "Reverse"
         val FRAME = Regex("""0xf2 0x00 0x11 0x02 0x0([123]) 0x0([01])""")
         const val LOG_FILTER =
-            "0xf2 0x00 0x11 0x02|0xA1_0x1DEvent: stringBuilder.toString\\(\\) = 0x(01c2|00c4|0304|0338|02f8|03b4|019e|01d2|01d6|0267) |bydata = 0xf2 0x00 0x1[035] |bydata = 0xf2 0x00 0xa1 0x02 0x1a |ES s send: 0xf2 0x00 0x6[79] "
+            "0xf2 0x00 0x11 0x02|0xA1_0x1DEvent: stringBuilder.toString\\(\\) = 0x(01c2|00c4|0304|0338|02f8|03b4|019e|01d2|01d6|0267|01a0) |bydata = 0xf2 0x00 0x1[035] |bydata = 0xf2 0x00 0xa1 0x02 0x1a |ES s send: 0xf2 0x00 0x6[79] "
         val CAN_FRAME = Regex("""0xA1_0x1DEvent: .*= 0x([0-9a-f]{4}) \S+ \S+ 0x[0-9a-f]+ ((?:0x[0-9a-f]{2} ?)+)""")
         val BYTE = Regex("""0x([0-9a-f]{2})""")
 
@@ -792,6 +844,12 @@ class ReverseSource(
         const val ID_WHEEL_KEYS = 0x1D6
         /** Butoanele controller-ului iDrive de pe consolă. */
         const val ID_IDRIVE_KEYS = 0x267
+        /** Cât trebuie ținut cercul sau telefonul ca să ducă pe Home. */
+        const val WHEEL_HOLD_MS = 700L
+        /** Viteza de la DSC. */
+        const val ID_SPEED = 0x1A0
+        /** Cu viteza neschimbată, starea se reîmprospătează doar atât de des (ca să nu expire). */
+        const val SPEED_REFRESH_MS = 500L
         /** Octetul 4 din 0x267 pentru butoanele de pe consolă (rotița are alt grup, DE). */
         const val CONSOLE_BUTTONS = 0xC0
         /** EventCenter trimite butoanele la ecranul original (0x69 14 00). */
