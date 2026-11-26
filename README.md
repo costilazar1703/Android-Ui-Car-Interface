@@ -25,6 +25,7 @@ Recorded in the car while driving: switching between Comfort, Dynamic Sport and 
 ### Controlled without touching the screen
 - Everything works with the rotary knob and the steering wheel buttons.
 - Turning the knob quickly jumps 2 or 5 items at a time, so long lists are fast to scroll. Changing direction goes back to one item at a time.
+- The iDrive console buttons (MEDIA, TEL, NAV, RADIO, OPTION, MENU) and the steering wheel buttons are read from the CAN bus and open the launcher's screens, also from CarPlay.
 - New buttons can be assigned to actions from the "Learn Key" option in Button mapping.
 
 ### Live data from the car
@@ -32,8 +33,8 @@ The launcher combines several sources and uses the best one available for each v
 
 | Source | What it provides |
 |---|---|
-| CAN bus (through the head unit) | gear lever position (P, R, N, D), Drive Sport on or off, traction control on or off, rear parking sensors, steering angle, battery voltage, the time from the instrument cluster |
-| Head unit car data | speed, rpm, fuel, range, outside temperature, handbrake |
+| CAN bus (through the head unit) | speed (10 times per second), gear lever position (P, R, N, D), Drive Sport, manual mode and its gear (M1 to M6), traction control on or off, rear parking sensors, steering angle, battery voltage, the time from the instrument cluster, iDrive and steering wheel buttons |
+| Head unit car data | rpm, fuel, range, outside temperature, handbrake, and speed as a backup |
 | OBD-II Wi-Fi adapter (ELM327) | speed, rpm, boost, coolant temperature, fuel level |
 | GPS | speed and time when nothing else is available |
 
@@ -48,7 +49,7 @@ The head unit does not normally give CAN data to apps. A factory setting makes i
 - **Two-pane screens** (list on the left, details on the right) for settings, Bluetooth, phone and messages.
 - **Trip computer:** time, distance and averages for the current drive.
 - **Reverse view:** parking sensor distances and steering guide lines when reverse is engaged.
-- **Driving mode scenes:** short animations when Drive Sport or traction control is turned on or off.
+- **Driving mode scenes:** short animations when the gear lever moves to P, N or D, when Drive Sport or manual mode is selected, and when traction control is turned off or on. The gear cards and the volume bar also appear over other apps, such as CarPlay.
 - **Diagnostics:** a screen with the unit's state, and a small built-in web server that lets me install new versions and read logs over Wi-Fi from a laptop.
 
 ### Built for 2 GB of RAM
@@ -74,6 +75,16 @@ Requirements: JDK 21 and the Android SDK. The app is made for a 1280x480 screen 
 ```
 
 The release APK is at `app/build/outputs/apk/release/app-release.apk`. It is signed with the Android debug key of the computer that builds it, so new versions install over the previous one from the same computer. The debug build has a different package name (`ro.e92.launcher.debug`) and installs as a separate app.
+
+### Try it without the car
+
+Every feature can be tested on the Android emulator: the launcher simulates the driving data by itself, and [`scripts/sim.ps1`](scripts/sim.ps1) sends the rest of the car's signals (gear lever, Drive Sport, manual mode, Drift Mode, reverse with parking sensors, Bluetooth music and calls).
+
+```powershell
+.\scripts\sim.ps1 demo
+```
+
+The full guide, with every command and what it should show: [docs/emulator-testing.md](docs/emulator-testing.md).
 
 More details:
 - [docs/prima-instalare.md](docs/prima-instalare.md): first installation on the head unit
