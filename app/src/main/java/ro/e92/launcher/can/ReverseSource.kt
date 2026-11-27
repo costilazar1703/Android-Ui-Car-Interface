@@ -51,6 +51,15 @@ const val EXTRA_REVERSE = "ro.e92.launcher.REVERSE"
 const val EXTRA_CONSOLE_KEY = "ro.e92.launcher.CONSOLE_KEY"
 
 /**
+ * Butonul de telefon de pe volan, apăsat scurt: deschide Trip, iar dacă Trip e deja în față
+ * comută între This drive și Long drive (cerut 2026-11-27).
+ */
+const val CONSOLE_TRIP = "TRIP"
+
+/** Launcher-ul era în față când s-a apăsat butonul (onNewIntent vine după onPause). */
+const val EXTRA_FROM_FRONT = "ro.e92.launcher.FROM_FRONT"
+
+/**
  * Treapta de marșarier pe unitatea KSW.
  *
  * MCU-ul trimite `F2 00 11 02 <01|02|03> <01 intră|00 iese>` (cameră montată
@@ -412,10 +421,11 @@ class ReverseSource(
         // rămâne apoi crezând că e în CarPlay (BACK și apăsarea rotiței merg la CarPlay); se reface
         // intrând în CarPlay și ieșind cu MENU. Acceptat de șofer (2026-11-20).
         // Cercul și telefonul: apăsat scurt → ecranul lor (la ridicare), ținut apăsat → Home
-        // (cerut 2026-11-23). Cercul → Dashboard, telefonul → Trip (This drive / Long drive).
+        // (cerut 2026-11-23). Cercul → Dashboard, telefonul → Trip; cu Trip deja în față, telefonul
+        // comută între This drive și Long drive (cerut 2026-11-27).
         fun released(now: Int, before: Int, bit: Int) = now and bit == 0 && before and bit != 0
         holdKey(pressed(value2, prev2, WHEEL_CIRCLE), released(value2, prev2, WHEEL_CIRCLE), "RADIO", 0)
-        holdKey(pressed(value, prev, WHEEL_PHONE), released(value, prev, WHEEL_PHONE), "NAV", 1)
+        holdKey(pressed(value, prev, WHEEL_PHONE), released(value, prev, WHEEL_PHONE), CONSOLE_TRIP, 1)
         val ksw = pressed(value2, prev2, WHEEL_SQUARE) || pressed(value2, prev2, WHEEL_VOICE)
         val action = when {
             pressed(value2, prev2, WHEEL_SQUARE) -> "NAV"
@@ -459,11 +469,13 @@ class ReverseSource(
 
     /** Deschide în launcher ecranul butonului; cu [reclaimAfter], revine peste ecranele KSW care sar după. */
     private fun openInLauncher(action: String, reclaimAfter: Boolean = false) {
+        val fromFront = launcherInFront
         scope.launch(kotlinx.coroutines.Dispatchers.Main) {
             runCatching {
                 context.startActivity(
                     Intent(context, HomeActivity::class.java)
                         .putExtra(EXTRA_CONSOLE_KEY, action)
+                        .putExtra(EXTRA_FROM_FRONT, fromFront)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
                 )
             }.onFailure { EventLog.log(TAG, "butonul $action nu a deschis launcher-ul: ${it.message}") }

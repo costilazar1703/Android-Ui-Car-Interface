@@ -200,6 +200,17 @@ class HomeActivity : ComponentActivity(), ScreenHost {
         }
         // Un buton de pe consolă (MEDIA, TEL, NAV, RADIO, OPTION): deschide ecranul lui, de oriunde.
         intent.getStringExtra(ro.e92.launcher.can.EXTRA_CONSOLE_KEY)?.let { name ->
+            // Telefonul de pe volan: cu Trip deja în față, comută This drive / Long drive.
+            if (name == ro.e92.launcher.can.CONSOLE_TRIP) {
+                val trip = stack.current as? ro.e92.launcher.ui.screens.TripScreen
+                if (trip != null && intent.getBooleanExtra(ro.e92.launcher.can.EXTRA_FROM_FRONT, false)) {
+                    trip.toggle()
+                } else {
+                    if (stack.current !is ro.e92.launcher.ui.screens.HomeWidgetsScreen) goHome()
+                    handleAction(ro.e92.launcher.input.LauncherAction.NAV)
+                }
+                return
+            }
             ro.e92.launcher.input.LauncherAction.byName(name)?.let { action ->
                 if (action == ro.e92.launcher.input.LauncherAction.HOME) {
                     goHome()

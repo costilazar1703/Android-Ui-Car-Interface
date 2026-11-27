@@ -50,6 +50,9 @@ class TripScreen(host: ScreenHost) : Screen(host) {
         return tabs
     }
 
+    /** Butonul de telefon de pe volan, cu ecranul deschis: celălalt drum. */
+    fun toggle() = select(!long)
+
     private fun select(longTrip: Boolean) {
         if (long == longTrip) return
         long = longTrip
